@@ -25,6 +25,13 @@ For every non-trivial task, delegate work to **at least two sub-agents** before 
 - Do not let sub-agents overwrite the same files concurrently. Assign ownership boundaries or use read-only review tasks.
 - Continue useful main-agent work in parallel where possible.
 
+### Peran agent utama dan sub-agent
+
+- Agent utama bertanggung jawab atas perencanaan, pembagian ownership, integrasi, evaluasi, validasi, dan pelaporan akhir; agent utama tidak menulis atau mengubah kode aplikasi.
+- Sub-agent bertanggung jawab atas analisis kode dan implementasi perubahan. Tetapkan batas file atau komponen yang terpisah agar sub-agent tidak mengubah file yang sama secara bersamaan.
+- Jumlah sub-agent mengikuti kompleksitas dan kemampuan pemecahan tugas. Dua sub-agent adalah minimum untuk pekerjaan non-trivial, bukan batas maksimum.
+- Agent utama menilai hasil sub-agent, menyelesaikan konflik desain, dan memastikan perubahan terintegrasi memenuhi spesifikasi sebelum menyatakan pekerjaan selesai.
+
 ### Allowed exceptions
 
 > Delegate only when the execution environment supports sub-agents and the work can be safely decomposed. If delegation is unavailable, unsafe, or would be disproportionate for a one-step task, proceed without it and explicitly state the reason in the completion summary.
