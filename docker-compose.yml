@@ -1,25 +1,4 @@
 services:
-  postgres:
-    image: pgvector/pgvector:pg16
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-kawal}
-      POSTGRES_USER: ${POSTGRES_USER:-kawal_app}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
-      PGDATA: /var/lib/postgresql/data/pgdata
-    ports:
-      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./infra/initdb:/docker-entrypoint-initdb.d:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    networks:
-      - kawal
-
   redpanda:
     image: docker.redpanda.com/redpandadata/redpanda:v24.3.4
     command:
@@ -49,6 +28,15 @@ services:
     networks:
       - kawal
 
+  ticket-simulator:
+    build:
+      context: .
+      dockerfile: services/simulator/Dockerfile
+    ports:
+      - "127.0.0.1:${TICKET_SIMULATOR_PORT:-8000}:8000"
+    networks:
+      - kawal
+
   opa:
     image: openpolicyagent/opa:0.68.0
     command: ["run", "--server", "--addr=0.0.0.0:8181", "/policies"]
@@ -70,5 +58,4 @@ networks:
     driver: bridge
 
 volumes:
-  postgres_data:
   redpanda_data:

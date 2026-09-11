@@ -56,7 +56,7 @@ Tidak ada *human approval gate* pada runtime. KAWAL memutuskan secara otomatis; 
 WhatsApp / Replay
         |
         v
-Intake -> PostgreSQL/Supabase + private media storage -> Outbox -> Redpanda
+Intake -> Supabase PostgreSQL + bucket Supabase Storage privat -> Outbox -> Redpanda
         |                                                    |
         v                                                    v
 Conversation Assembly                                  Worker pools
@@ -162,7 +162,7 @@ P0 berjalan tanpa model visi lokal maupun redaksi gambar berbasis model lokal. K
 
 Sebelum egress remote, gate deterministik non-visi memeriksa metadata biner/MIME, ukuran, role attachment, kategori aduan, serta flag sensitivitas dari teks/entitas. Bila gambar sensitif atau ambigu:
 
-1. gambar tetap berada pada private storage;
+1. gambar tetap berada pada bucket Supabase Storage privat;
 2. tidak ada VLM call atau signed URL yang dibuat;
 3. gambar tidak dikirim ke broker sebagai binary/base64;
 4. bila bukti visual bersifat decision-critical, KAWAL meminta deskripsi faktual melalui klarifikasi teks;
@@ -211,17 +211,18 @@ Metrik meliputi kualitas aksi, safety/prohibited-action rate, coverage, latency,
 
 ## Status Implementasi Saat Ini
 
-KAWAL saat ini berada pada **prototype M1 in-memory**, bukan implementasi P0 lengkap.
+KAWAL saat ini berada pada **prototype M1 durable**, bukan implementasi P0 lengkap.
 
 | Komponen | Status saat ini |
 |---|---|
-| Replay intake | Tersedia: fixture tiga bubble aduan jalan dibaca secara deterministik. |
+| Replay intake | Tersedia: fixture tiga bubble aduan jalan dibaca secara deterministik dan dapat dipersistenkan atomik. |
 | Kontrak data | Tersedia: model Pydantic untuk snapshot, analysis, policy, command, dan receipt. |
 | Analisis | Dummy statis untuk skenario jalan; belum memakai IndoBERT/NER. |
 | Policy | Stub Python fail-closed untuk `POL-02`, `POL-03`, dan `POL-06` dengan tiga yurisdiksi fiktif. |
 | Orchestrator | Fast path `EXECUTE` untuk skenario valid. Empat mode penuh belum tersedia. |
-| Ticket Simulator | FastAPI in-memory: create, lookup operation, idempotent replay, dan conflict 409. |
-| Tes | Lima tes pytest mencakup happy path, idempotensi, denial evidence, payload conflict, dan operation lookup. |
+| State dan outbox | Supabase PostgreSQL menyimpan inbox, state, snapshot, decision, command, audit trace, dan outbox atomik; relay ber-lease memulihkan event setelah crash. |
+| Ticket Simulator | FastAPI in-memory: create, lookup operation, idempotent replay, conflict 409, dan operasi thread-safe. |
+| Tes | Tujuh tes pytest mencakup happy path, idempotensi, denial evidence, payload conflict, operation lookup, vertical slice durable, dan recovery setelah crash. |
 
 Berkas utama prototype:
 
@@ -233,7 +234,7 @@ Berkas utama prototype:
 - [`services/simulator/store.py`](../services/simulator/store.py): store idempoten in-memory;
 - [`tests/test_m1_slice.py`](../tests/test_m1_slice.py): verifikasi slice M1.
 
-Prototype belum memiliki PostgreSQL/Supabase, private storage, Redpanda, inbox/outbox, OPA/Rego, OpenWA live, media lifecycle, ML lokal, ModelGateway, VLM/LLM remote, trust calculation, conflict engine, klarifikasi interaktif, fault injection lengkap, maupun evaluasi tesis. Status terperinci dicatat pada [milestone.md](milestone.md).
+Prototype belum memvalidasi Supabase Local, Redpanda, inbox/outbox, OPA/Rego, OpenWA live, media lifecycle, ML lokal, ModelGateway, VLM/LLM remote, trust calculation, conflict engine, klarifikasi interaktif, fault injection lengkap, maupun evaluasi tesis. Status terperinci dicatat pada [milestone.md](milestone.md).
 
 ## Roadmap
 

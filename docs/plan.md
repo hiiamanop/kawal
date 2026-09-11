@@ -45,7 +45,7 @@ Membangun dan mengevaluasi orkestrator model-agnostik untuk memproses aduan publ
 
 **Keluaran**
 
-- Docker Compose untuk PostgreSQL/pgvector, storage privat, dan Redpanda.
+- Supabase Local untuk PostgreSQL/pgvector dan bucket Supabase Storage privat, serta Docker Compose untuk Redpanda dan OPA.
 - Migrasi skema inti: raw message immutable, case, snapshot, inbox, outbox, command, audit trace, dan model/policy registry.
 - Kontrak bertipe untuk envelope event, snapshot, hasil agen, keputusan, dan perintah.
 - Transaction runner, outbox relay, policy skeleton, dan Ticket Simulator `POST /v1/tickets`.

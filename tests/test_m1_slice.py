@@ -29,7 +29,7 @@ def test_replay_creates_one_submitted_ticket() -> None:
     receipt = replay_to_ticket(load_fixture(FIXTURE_PATH), simulator)
 
     assert receipt.status == "SUBMITTED"
-    assert receipt.idempotency_key == "research:case-001:ticket:create:v1"
+    assert receipt.idempotency_key == "research:case-sc-road-001-m1:ticket:create:v1"
     assert simulator.ticket_count == 1
 
 
@@ -48,14 +48,14 @@ def test_policy_denies_missing_mandatory_evidence() -> None:
     result = evaluate_ticket_creation(
         PolicyInput(
             tenant_id="research",
-            case_id="case-001",
+            case_id="case-sc-road-001-m1",
             revision=1,
             category=Category.ROAD,
             jurisdiction_id="JUR-FICT-01",
             authority_unit_id="UNIT-BINA-MARGA-01",
             missing_fields=("location",),
             has_mandatory_evidence=False,
-            idempotency_key="research:case-001:ticket:create:v1",
+            idempotency_key="research:case-sc-road-001-m1:ticket:create:v1",
         )
     )
 
@@ -114,7 +114,7 @@ def _build_command():
         for bubble in fixture.bubbles
     )
     snapshot = CaseSnapshot(
-        case_id="case-001",
+        case_id=f"case-{fixture.scenario_id}",
         tenant_id="research",
         conversation_id=fixture.conversation_id,
         revision=1,

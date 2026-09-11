@@ -2,7 +2,7 @@
 
 Dokumen ini adalah catatan progres resmi KAWAL. Item hanya berstatus **SELESAI** bila ada artefak dan bukti yang dapat diverifikasi di repositori.
 
-- **Status proyek:** Spesifikasi dan perencanaan
+- **Status proyek:** M1 selesai
 - **Terakhir diperbarui:** 2026-09-11
 
 ## Status
@@ -39,10 +39,10 @@ Dokumen ini adalah catatan progres resmi KAWAL. Item hanya berstatus **SELESAI**
 
 | ID | Pekerjaan | Status | Bukti | Catatan |
 |---|---|---|---|---|
-| FND-01 | Infrastruktur lokal, migrasi, dan kontrak bertipe | `DALAM_PROGRES` | [`contracts/models.py`](../contracts/models.py), [`docker-compose.yml`](../docker-compose.yml), [`infra/migrations/001_m1_core_schema.sql`](../infra/migrations/001_m1_core_schema.sql) | Kontrak, Compose, dan migrasi PostgreSQL awal tersedia; layanan belum dijalankan dan koneksi aplikasi belum dibuat. |
-| FND-02 | Transaksi state, inbox, dan outbox | `DALAM_PROGRES` | [`infra/migrations/001_m1_core_schema.sql`](../infra/migrations/001_m1_core_schema.sql) | Tabel dan constraint inbox/outbox tersedia; transaction runner dan relay belum dibuat. |
-| FND-03 | Registry model/policy dan manifest | `DALAM_PROGRES` | [`policies/.manifest`](../policies/.manifest), [`policies/policy.rego`](../policies/policy.rego) | Bundle policy M1 berversi tersedia; registry model/manifest eksperimen belum dibuat. |
-| TKT-01 | Ticket Simulator minimal | `DALAM_PROGRES` | [`services/simulator/app.py`](../services/simulator/app.py), [`services/simulator/Dockerfile`](../services/simulator/Dockerfile), [`tests/test_m1_slice.py`](../tests/test_m1_slice.py) | API create/operation lookup, healthcheck, idempotensi in-memory, dan image non-root tersedia; persistence dan fault injection belum dibuat. |
+| FND-01 | Infrastruktur lokal, migrasi, dan kontrak bertipe | `SELESAI` | [`supabase/config.toml`](../supabase/config.toml), [`supabase/migrations`](../supabase/migrations), [`contracts/models.py`](../contracts/models.py) | Supabase Local menyediakan PostgreSQL/pgvector dan bucket `attachments` privat; Compose menjalankan Redpanda, OPA, dan simulator. |
+| FND-02 | Transaksi state, inbox, dan outbox | `SELESAI` | [`infra/db.py`](../infra/db.py), [`services/core/persistence.py`](../services/core/persistence.py), [`services/outbox/relay.py`](../services/outbox/relay.py) | Persistensi atomik dan relay ber-lease tersedia; uji crash setelah commit membuktikan event dapat dipulihkan. |
+| FND-03 | Registry model/policy dan manifest | `SELESAI` | [`supabase/migrations/20260911000001_m1_audit_and_registry.sql`](../supabase/migrations/20260911000001_m1_audit_and_registry.sql), [`policies/.manifest`](../policies/.manifest) | Registry policy/model serta audit trace tersedia; bundle policy M1 berversi. |
+| TKT-01 | Ticket Simulator minimal | `SELESAI` | [`services/simulator/app.py`](../services/simulator/app.py), [`services/simulator/Dockerfile`](../services/simulator/Dockerfile), [`tests/test_m1_durable_slice.py`](../tests/test_m1_durable_slice.py) | API idempoten, simulator thread-safe, persistence, outbox relay, dan recovery setelah crash tervalidasi. |
 
 ## M2 — Intake dan conversation assembly
 
