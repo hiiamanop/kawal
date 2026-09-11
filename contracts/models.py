@@ -73,6 +73,25 @@ class RawMessage(BaseModel):
     received_at: datetime
 
 
+class AttachmentMetadata(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    object_key: str = Field(min_length=1, max_length=512)
+    mime_type: Literal["image/jpeg", "image/png", "image/webp"]
+    size_bytes: int = Field(gt=0, le=10 * 1024 * 1024)
+    content_hash: str = Field(pattern=r"^[0-9a-fA-F]{64}$")
+    received_at: datetime
+    storage_bucket: Literal["attachments"] = "attachments"
+    is_private: Literal[True] = True
+    retention_class: str = Field(min_length=1, max_length=64)
+
+    @model_validator(mode="after")
+    def validate_received_at(self) -> "AttachmentMetadata":
+        if self.received_at.tzinfo is None:
+            raise ValueError("received_at must include a timezone")
+        return self
+
+
 class CaseSnapshot(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 

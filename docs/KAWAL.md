@@ -211,12 +211,14 @@ Metrik meliputi kualitas aksi, safety/prohibited-action rate, coverage, latency,
 
 ## Status Implementasi Saat Ini
 
-KAWAL saat ini berada pada **prototype M1 durable**, bukan implementasi P0 lengkap.
+KAWAL saat ini berada pada **prototype M2 durable**, bukan implementasi P0 lengkap.
 
 | Komponen | Status saat ini |
 |---|---|
-| Replay intake | Tersedia: fixture tiga bubble aduan jalan dibaca secara deterministik dan dapat dipersistenkan atomik. |
-| Kontrak data | Tersedia: model Pydantic untuk snapshot, analysis, policy, command, dan receipt. |
+| Replay intake | Tersedia: replay offline dan adapter OpenWA terisolasi mempersistenkan pesan secara atomik tanpa inferensi pada callback. |
+| Conversation assembly | Timer durable menerapkan debounce 5 detik, batas burst 20 detik, lease recovery, dan asosiasi multi-kasus dengan prioritas quoted reply. |
+| Attachment | Metadata bukti JPEG/PNG/WebP privat hingga 10 MB tersimpan idempoten dan dapat terasosiasi hingga 48 jam. |
+| Kontrak data | Tersedia: model Pydantic untuk snapshot, analysis, policy, command, receipt, dan metadata attachment. |
 | Analisis | Dummy statis untuk skenario jalan; belum memakai IndoBERT/NER. |
 | Policy | Stub Python fail-closed untuk `POL-02`, `POL-03`, dan `POL-06` dengan tiga yurisdiksi fiktif. |
 | Orchestrator | Fast path `EXECUTE` untuk skenario valid. Empat mode penuh belum tersedia. |

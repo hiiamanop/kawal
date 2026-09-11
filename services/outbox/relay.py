@@ -17,7 +17,11 @@ class OutboxRelay:
         return operation.receipt if operation is not None else None
 
     def dispatch_next(self) -> TicketReceipt | None:
-        event = self._transaction_runner.run(self._store.claim_next_outbox_event)
+        event = self._transaction_runner.run(
+            lambda connection: self._store.claim_next_outbox_event(
+                connection, event_type="ticket.create.requested"
+            )
+        )
         if event is None:
             return None
         event_id, payload = event

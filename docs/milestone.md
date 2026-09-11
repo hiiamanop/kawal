@@ -2,7 +2,7 @@
 
 Dokumen ini adalah catatan progres resmi KAWAL. Item hanya berstatus **SELESAI** bila ada artefak dan bukti yang dapat diverifikasi di repositori.
 
-- **Status proyek:** M1 selesai
+- **Status proyek:** M2 selesai
 - **Terakhir diperbarui:** 2026-09-11
 
 ## Status
@@ -48,10 +48,10 @@ Dokumen ini adalah catatan progres resmi KAWAL. Item hanya berstatus **SELESAI**
 
 | ID | Pekerjaan | Status | Bukti | Catatan |
 |---|---|---|---|---|
-| INT-01 | OpenWA dan replay connector | `BELUM_DIMULAI` | Belum ada service | Mulai dengan replay deterministik. |
-| INT-02 | Persist intake non-blocking | `BELUM_DIMULAI` | Belum ada implementasi | Target p95 ≤500 ms. |
-| ASM-01 | Debounce dan timer durable | `BELUM_DIMULAI` | Belum ada implementasi | Quiet window 5 detik, batas 20 detik. |
-| ASM-02 | Asosiasi multi-kasus dan quoted reply | `BELUM_DIMULAI` | Belum ada implementasi | Horizon kandidat 48 jam. |
+| INT-01 | OpenWA dan replay connector | `SELESAI` | [`services/intake/connector.py`](../services/intake/connector.py), [`services/intake/openwa.py`](../services/intake/openwa.py) | Replay offline dan adapter OpenWA terisolasi memfilter pesan self-sent, receipt-only, dan group chat. |
+| INT-02 | Persist intake non-blocking | `SELESAI` | [`services/intake/service.py`](../services/intake/service.py), [`services/intake/assembly.py`](../services/intake/assembly.py), [`tests/test_m2_intake_service.py`](../tests/test_m2_intake_service.py) | Callback hanya melakukan persistensi atomik tanpa inferensi; p95 persist tervalidasi di bawah 500 ms. |
+| ASM-01 | Debounce dan timer durable | `SELESAI` | [`services/intake/assembly.py`](../services/intake/assembly.py), [`tests/test_m2_timer_recovery.py`](../tests/test_m2_timer_recovery.py) | Quiet window 5 detik, batas 20 detik, dan pemulihan lease worker tervalidasi. |
+| ASM-02 | Asosiasi multi-kasus dan quoted reply | `SELESAI` | [`services/intake/assembly.py`](../services/intake/assembly.py), [`services/intake/attachments.py`](../services/intake/attachments.py), [`tests/test_m2_intake.py`](../tests/test_m2_intake.py) | Dua kasus berselang-seling, quoted reply, dan attachment terlambat dalam horizon 48 jam terasosiasi tanpa duplikasi. |
 
 ## M3 — Dataset dan intelligence lokal
 

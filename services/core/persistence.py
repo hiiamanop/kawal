@@ -63,9 +63,10 @@ class M1Store:
                 cursor.execute(
                     """
                     INSERT INTO raw_messages (
-                        message_id, tenant_id, conversation_id, source_message_id, text, received_at
-                    ) VALUES (%s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (tenant_id, source_message_id) DO NOTHING
+                        message_id, tenant_id, conversation_id, source_message_id, text, received_at,
+                        connector_id, account_id
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT ON CONSTRAINT uq_raw_messages_source_identity DO NOTHING
                     """,
                     (
                         message.message_id,
@@ -74,6 +75,8 @@ class M1Store:
                         message.source_message_id,
                         message.text,
                         message.received_at,
+                        getattr(message, "connector_id", None) or "replay",
+                        getattr(message, "account_id", None) or "research",
                     ),
                 )
             cursor.execute(
@@ -182,7 +185,7 @@ class M1Store:
             )
 
     def claim_next_outbox_event(
-        self, connection: Connection
+        self, connection: Connection, event_type: str = "ticket.create.requested"
     ) -> tuple[UUID, dict[str, object]] | None:
         with connection.cursor() as cursor:
             cursor.execute(
@@ -190,7 +193,8 @@ class M1Store:
                 WITH candidate AS (
                     SELECT event_id
                     FROM outbox
-                    WHERE published_at IS NULL
+                    WHERE event_type = %s
+                      AND published_at IS NULL
                       AND (lease_expires_at IS NULL OR lease_expires_at <= clock_timestamp())
                     ORDER BY created_at
                     FOR UPDATE SKIP LOCKED
@@ -203,7 +207,7 @@ class M1Store:
                 WHERE outbox.event_id = candidate.event_id
                 RETURNING outbox.event_id, outbox.payload
                 """,
-                (f"{LEASE_DURATION.total_seconds()} seconds",),
+                (event_type, f"{LEASE_DURATION.total_seconds()} seconds"),
             )
             row = cursor.fetchone()
             return None if row is None else (row[0], row[1])
