@@ -1,0 +1,11 @@
+{
+  "kawal": {
+    "directory": {
+      "authorities": {
+        "JUR-FICT-01_ROAD": "UNIT-BINA-MARGA-01",
+        "JUR-FICT-02_ROAD": "UNIT-BINA-MARGA-02",
+        "JUR-FICT-03_ROAD": "UNIT-BINA-MARGA-03"
+      }
+    }
+  }
+}

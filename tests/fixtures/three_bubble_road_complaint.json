@@ -1,0 +1,22 @@
+{
+  "scenario_id": "sc-road-001-m1",
+  "tenant_id": "research",
+  "conversation_id": "conv-wa-001",
+  "bubbles": [
+    {
+      "source_message_id": "msg-001",
+      "text": "Selamat siang min, mau lapor",
+      "offset_seconds": 0
+    },
+    {
+      "source_message_id": "msg-002",
+      "text": "Ada jalan berlubang besar dan aspal ambles di dekat Pasar Anyar",
+      "offset_seconds": 2
+    },
+    {
+      "source_message_id": "msg-003",
+      "text": "Lokasinya di Kelurahan Sukamaju, Kecamatan Fiktif Satu",
+      "offset_seconds": 4
+    }
+  ]
+}
