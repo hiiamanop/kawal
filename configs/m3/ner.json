@@ -1,0 +1,88 @@
+{
+  "config_version": "1.0.0",
+  "task": "ner",
+  "seed": 42,
+  "model_version": {
+    "base_model": "indobenchmark/indobert-base-p1",
+    "model_version": "v1.0.0",
+    "tokenizer_name": "indobenchmark/indobert-base-p1",
+    "tokenizer_version": "v1.0.0",
+    "max_sequence_length": 448,
+    "vocab_size": 30521,
+    "tokenizer_sha256": null
+  },
+  "split_config": {
+    "seed": 42,
+    "train_ratio": 0.7,
+    "dev_ratio": 0.15,
+    "test_ratio": 0.15,
+    "expected_split_hashes": {}
+  },
+  "hyperparameters": {
+    "learning_rate": 0.00003,
+    "batch_size": 16,
+    "gradient_accumulation_steps": 2,
+    "num_train_epochs": 5,
+    "warmup_ratio": 0.1,
+    "warmup_steps": null,
+    "weight_decay": 0.01,
+    "optimizer": "adamw",
+    "lr_scheduler": "linear",
+    "early_stopping_patience": 2,
+    "task_weights": {
+      "O": 1.0,
+      "B-LOC": 2.5,
+      "I-LOC": 2.0,
+      "B-OBJ": 1.0,
+      "I-OBJ": 1.0,
+      "B-TIME": 3.0,
+      "I-TIME": 2.5
+    },
+    "temperature": null,
+    "masking_probability": null,
+    "extra_params": {
+      "tags": ["O", "B-LOC", "I-LOC", "B-OBJ", "I-OBJ", "B-TIME", "I-TIME"],
+      "class_weights": {
+        "O": 1.0,
+        "B-LOC": 2.5,
+        "I-LOC": 2.0,
+        "B-OBJ": 1.0,
+        "I-OBJ": 1.0,
+        "B-TIME": 3.0,
+        "I-TIME": 2.5
+      },
+      "metric_for_best_model": "entity_f1",
+      "greater_is_better": true,
+      "early_stopping_patience": 2,
+      "target_hardware": "NVIDIA GeForce RTX 3060 12GB",
+      "target_gpu": "NVIDIA GeForce RTX 3060",
+      "target_vram_gb": 12,
+      "target_device": "cuda:0",
+      "fp16": true,
+      "mixed_precision": "fp16",
+      "local_files_only": true,
+      "per_device_train_batch_size": 16,
+      "gradient_accumulation_steps": 2,
+      "effective_batch_size": 32,
+      "dataloader_num_workers": 2,
+      "dataloader_pin_memory": true,
+      "gradient_checkpointing": false,
+      "save_total_limit": 2
+    }
+  },
+  "precision_config": {
+    "device": "cpu",
+    "training_precision": "fp32",
+    "serving_precision": "fp32"
+  },
+  "heldout_manifest": null,
+  "target_metric_thresholds": {
+    "ner_f1": 0.8,
+    "ner_entity_f1": 0.8,
+    "loc_f1": 0.8,
+    "obj_f1": 0.8,
+    "time_f1": 0.8,
+    "latency_p95_ms": 5000.0
+  },
+  "description": "M3 Stage C: Token Classification (NER BIO Spans)"
+}

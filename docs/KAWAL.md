@@ -211,32 +211,42 @@ Metrik meliputi kualitas aksi, safety/prohibited-action rate, coverage, latency,
 
 ## Status Implementasi Saat Ini
 
-KAWAL saat ini berada pada **prototype M2 durable**, bukan implementasi P0 lengkap.
+KAWAL saat ini berada pada tahap **fondasi M3 terverifikasi (M3 DALAM_PROGRES)**, bukan implementasi P0 lengkap.
 
 | Komponen | Status saat ini |
 |---|---|
 | Replay intake | Tersedia: replay offline dan adapter OpenWA terisolasi mempersistenkan pesan secara atomik tanpa inferensi pada callback. |
 | Conversation assembly | Timer durable menerapkan debounce 5 detik, batas burst 20 detik, lease recovery, dan asosiasi multi-kasus dengan prioritas quoted reply. |
 | Attachment | Metadata bukti JPEG/PNG/WebP privat hingga 10 MB tersimpan idempoten dan dapat terasosiasi hingga 48 jam. |
-| Kontrak data | Tersedia: model Pydantic untuk snapshot, analysis, policy, command, receipt, dan metadata attachment. |
-| Analisis | Dummy statis untuk skenario jalan; belum memakai IndoBERT/NER. |
+| Kontrak data | Tersedia: model Pydantic untuk snapshot, analysis, policy, command, receipt, metadata attachment, dan skema M3 (BIO span, chunk coordinate, artifact manifest, benchmark metric). |
+| Dataset & audit kebocoran | Generator trajektori sintetis multi-persona, partisi family terstratifikasi 6 kategori, dan mesin audit zero-leakage ($n$-gram, identifier, label) selesai & tervalidasi. Pengumpulan held-out human data masih menjadi blocker. |
+| Chunking & agregasi teks | Engine sliding window 448/64 token dengan proyeksi dua arah global-lokal offset dan pelestarian source message ID teruji penuh. |
+| Intelligence & kalibrasi lokal | Parser urutan BIO & span merger, TemperatureCalibrator & ECE metric, serta perangkuman densitas leksikal & BM25 reranker selesai. Bobot IndoBERT DAPT, four-head classifier, dan token classification NER head masih pending pelatihan eksternal. |
+| Runtime & registry model | Registry metadata artifak, verifikasi SHA-256 streaming, enforcement zero-network (`allow_network=False`), unavailable-safe fallback downstream, dan harness CPU benchmark selesai. Benchmark CPU FP32 riil menunggu tersedianya checkpoint bobot. |
 | Policy | Stub Python fail-closed untuk `POL-02`, `POL-03`, dan `POL-06` dengan tiga yurisdiksi fiktif. |
 | Orchestrator | Fast path `EXECUTE` untuk skenario valid. Empat mode penuh belum tersedia. |
-| State dan outbox | Supabase PostgreSQL menyimpan inbox, state, snapshot, decision, command, audit trace, dan outbox atomik; relay ber-lease memulihkan event setelah crash. |
+| State dan outbox | Supabase PostgreSQL menyimpan inbox, state, snapshot, decision, command, audit trace, outbox atomik, dan tabel model artifact; relay ber-lease memulihkan event setelah crash. |
 | Ticket Simulator | FastAPI in-memory: create, lookup operation, idempotent replay, conflict 409, dan operasi thread-safe. |
-| Tes | Tujuh tes pytest mencakup happy path, idempotensi, denial evidence, payload conflict, operation lookup, vertical slice durable, dan recovery setelah crash. |
+| Tes | Rangkaian pengujian unit & integrasi mencakup slice M1, intake/assembly M2, serta 114 test M3 (kontrak, dataset anti-leak, intelligence/chunking, dan runtime/manifest). |
 
-Berkas utama prototype:
+Berkas utama implementasi saat ini:
 
 - [`contracts/models.py`](../contracts/models.py): kontrak domain Pydantic;
 - [`services/intake/replay.py`](../services/intake/replay.py): replay fixture menjadi receipt tiket;
+- [`services/intake/assembly.py`](../services/intake/assembly.py): durable debounce dan multi-case assembly;
+- [`services/ml/runtime.py`](../services/ml/runtime.py): runtime ML offline, manifest validator, dan benchmark harness;
+- [`services/intelligence/chunking.py`](../services/intelligence/chunking.py): engine chunking 448/64 dan proyeksi koordinat;
+- [`services/intelligence/ner.py`](../services/intelligence/ner.py): BIO tag parser dan span merger;
+- [`services/intelligence/retrieval.py`](../services/intelligence/retrieval.py): leksikal hashing dan BM25 reranking;
+- [`services/intelligence/calibration.py`](../services/intelligence/calibration.py): kalibrasi temperatur dan ECE;
+- [`services/dataset/`](../services/dataset/): generator trajektori sintetis dan audit kebocoran;
 - [`services/core/policy.py`](../services/core/policy.py): policy gate prototype;
 - [`services/core/orchestrator.py`](../services/core/orchestrator.py): pembentukan command tiket;
 - [`services/simulator/app.py`](../services/simulator/app.py): API FastAPI simulator;
 - [`services/simulator/store.py`](../services/simulator/store.py): store idempoten in-memory;
-- [`tests/test_m1_slice.py`](../tests/test_m1_slice.py): verifikasi slice M1.
+- [`docs/M3.md`](M3.md): arsitektur intelijen lokal, batasan offline CI, dan manifest artifak terpin.
 
-Prototype belum memvalidasi Supabase Local, Redpanda, inbox/outbox, OPA/Rego, OpenWA live, media lifecycle, ML lokal, ModelGateway, VLM/LLM remote, trust calculation, conflict engine, klarifikasi interaktif, fault injection lengkap, maupun evaluasi tesis. Status terperinci dicatat pada [milestone.md](milestone.md).
+Prototype belum memvalidasi Supabase Local live, Redpanda live, OPA/Rego live, OpenWA live, bobot IndoBERT DAPT/four-head/NER terlatih, held-out human-written dataset, benchmark CPU FP32 riil dengan model penuh, ModelGateway, VLM/LLM remote, trust calculation, conflict engine, klarifikasi interaktif, fault injection lengkap, maupun evaluasi tesis. Status terperinci dicatat pada [milestone.md](milestone.md).
 
 ## Roadmap
 

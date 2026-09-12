@@ -23,14 +23,23 @@ For every non-trivial task, delegate work to **at least two sub-agents** before 
 - Do not delegate the exact same task to multiple sub-agents unless independent review is intentionally required.
 - The primary agent remains accountable for integration, final decisions, conflict resolution, validation, and the final response.
 - Do not let sub-agents overwrite the same files concurrently. Assign ownership boundaries or use read-only review tasks.
-- Continue useful main-agent work in parallel where possible.
+- Main agent WAJIB bekerja paralel saat sub-agent berjalan (bukan idle menunggu): kunci kontrak, siapkan scaffold/tes, prefetch konteks/mock, gabung hasil parsial tiap 5-7 menit, re-orkestrasi cepat jika drift.
 
 ### Peran agent utama dan sub-agent
 
-- Agent utama bertanggung jawab atas perencanaan, pembagian ownership, integrasi, evaluasi, validasi, dan pelaporan akhir; agent utama tidak menulis atau mengubah kode aplikasi.
+- Agent utama bertanggung jawab atas perencanaan, pembagian ownership, integrasi, evaluasi, validasi, dan pelaporan akhir; agent utama tidak mengimplementasikan modul fitur (itu milik sub-agent), tetapi WAJIB bekerja paralel: mengunci interface contract, menyiapkan integration scaffold/tes, dan melakukan early-join tiap 5-7 menit.
 - Sub-agent bertanggung jawab atas analisis kode dan implementasi perubahan. Tetapkan batas file atau komponen yang terpisah agar sub-agent tidak mengubah file yang sama secara bersamaan.
 - Jumlah sub-agent mengikuti kompleksitas dan kemampuan pemecahan tugas. Dua sub-agent adalah minimum untuk pekerjaan non-trivial, bukan batas maksimum.
 - Agent utama menilai hasil sub-agent, menyelesaikan konflik desain, dan memastikan perubahan terintegrasi memenuhi spesifikasi sebelum menyatakan pekerjaan selesai.
+- Agent utama memfasilitasi komunikasi timbal-balik (main <-> sub dan sub <-> sub) serta memicu re-orkestrasi bila verifikasi belum terpenuhi.
+- Sub-agent wajib menyelaraskan dependensi interface sebelum implementasi dan dilarang keluar dari boundary file yang ditetapkan.
+
+### Mutual Orchestration & Handoff Protocol
+
+- **Shared Interface Contract**: sebelum eksekusi paralel, sub-agent wajib menyepakati kontrak antarmuka (type/schema/API boundary) yang disetujui main agent.
+- **Upstream-to-Downstream Handoff**: sub-agent hulu (mis. analis) wajib menyerahkan artefak terstruktur sebagai input langsung sub-agent hilir (mis. implementer/tester) melalui main agent, termasuk rilis draf skema/tipe di progres 20-30% agar hilir bisa mulai dengan mock.
+- **Strict Boundary & Conflict Resolution**: sub-agent dilarang mengubah file yang sama secara bersamaan. Jika terjadi bentrok dependensi atau perbedaan interpretasi, main agent menjadi arbiter tunggal sebelum integrasi.
+- **Verification Feedback & Re-orchestration**: jika sub-agent verifikasi menemukan kegagalan tes atau regresi, main agent wajib mere-orkestrasi temuan tersebut ke sub-agent implementor terkait sampai validasi tuntas.
 
 ### Allowed exceptions
 

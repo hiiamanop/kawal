@@ -1,0 +1,58 @@
+{
+  "config_version": "1.0.0",
+  "task": "dapt",
+  "seed": 42,
+  "model_version": {
+    "base_model": "indobenchmark/indobert-base-p1",
+    "model_version": "v1.0.0",
+    "tokenizer_name": "indobenchmark/indobert-base-p1",
+    "tokenizer_version": "v1.0.0",
+    "max_sequence_length": 448,
+    "vocab_size": 30521,
+    "tokenizer_sha256": null
+  },
+  "split_config": {
+    "seed": 42,
+    "train_ratio": 0.7,
+    "dev_ratio": 0.15,
+    "test_ratio": 0.15,
+    "expected_split_hashes": {}
+  },
+  "hyperparameters": {
+    "learning_rate": 0.00002,
+    "batch_size": 8,
+    "gradient_accumulation_steps": 4,
+    "num_train_epochs": 3,
+    "warmup_ratio": 0.06,
+    "warmup_steps": null,
+    "weight_decay": 0.01,
+    "optimizer": "adamw",
+    "lr_scheduler": "linear",
+    "early_stopping_patience": 2,
+    "task_weights": {},
+    "temperature": null,
+    "masking_probability": 0.15,
+    "extra_params": {
+      "target_hardware": "NVIDIA GeForce RTX 3060 12GB",
+      "target_gpu": "NVIDIA GeForce RTX 3060",
+      "target_vram_gb": 12,
+      "target_device": "cuda:0",
+      "fp16": true,
+      "mixed_precision": "fp16",
+      "local_files_only": false,
+      "dataloader_num_workers": 2,
+      "save_total_limit": 2
+    }
+  },
+  "precision_config": {
+    "device": "cpu",
+    "training_precision": "fp32",
+    "serving_precision": "fp32"
+  },
+  "heldout_manifest": null,
+  "target_metric_thresholds": {
+    "mlm_loss": 2.5,
+    "perplexity": 15.0
+  },
+  "description": "M3 Stage A: Domain-Adaptive Pre-Training (DAPT) IndoBERT"
+}

@@ -4,5 +4,11 @@ __pycache__/
 .pytest_cache/
 *.py[cod]
 .venv/
+.venv-ml/
+.cache/
+.cache/huggingface/
+HF_HOME/
+*.onnx
+artifacts/
 
 # docs/

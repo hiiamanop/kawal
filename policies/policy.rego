@@ -4,12 +4,27 @@ import future.keywords.if
 
 default allow := false
 
+valid_categories := {
+    "ROAD",
+    "DRAINAGE_FLOOD",
+    "WASTE",
+    "CLEAN_WATER",
+    "CIVIL_ADMIN",
+    "HEALTH_SERVICE",
+}
+
+valid_category if {
+    valid_categories[input.category]
+}
+
 authority_key := sprintf("%s_%s", [input.jurisdiction_id, input.category])
 expected_authority := data.kawal.directory.authorities[authority_key]
 expected_idempotency_key := sprintf("%s:%s:ticket:create:v1", [input.tenant_id, input.case_id])
 
 valid_authority if {
+    valid_category
     expected_authority != null
+    expected_authority != ""
     input.authority_unit_id == expected_authority
 }
 

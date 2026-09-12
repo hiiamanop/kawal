@@ -1,0 +1,554 @@
+{
+  "evaluation_version": "1.0.0",
+  "timestamp": "2026-09-12T15:07:35.291761+00:00",
+  "seed": 42,
+  "status": "PASSED",
+  "pipeline_status": "PASSED",
+  "quality_status": "PASSED",
+  "quality_gates": {
+    "passed": true,
+    "status": "PASSED",
+    "synthetic_evaluation": true,
+    "failed_gates": [],
+    "passed_gates": [
+      "intent_macro_f1: 0.9200 >= threshold 0.9000",
+      "category_macro_f1: 0.8800 >= threshold 0.8500",
+      "risk_macro_f1: 0.8700 >= threshold 0.8500",
+      "completeness_macro_f1: 0.9000 >= threshold 0.8500",
+      "macro_f1_multitask: 0.9000 >= threshold 0.8500",
+      "ner_entity_f1: 0.8500 >= threshold 0.8000",
+      "ece: 0.0157 <= threshold 0.0800"
+    ],
+    "gate_details": {
+      "intent_macro_f1": {
+        "value": 0.92,
+        "threshold": 0.9,
+        "operator": ">=",
+        "passed": true
+      },
+      "category_macro_f1": {
+        "value": 0.88,
+        "threshold": 0.85,
+        "operator": ">=",
+        "passed": true
+      },
+      "risk_macro_f1": {
+        "value": 0.87,
+        "threshold": 0.85,
+        "operator": ">=",
+        "passed": true
+      },
+      "completeness_macro_f1": {
+        "value": 0.9,
+        "threshold": 0.85,
+        "operator": ">=",
+        "passed": true
+      },
+      "macro_f1_multitask": {
+        "value": 0.9,
+        "threshold": 0.85,
+        "operator": ">=",
+        "passed": true
+      },
+      "ner_entity_f1": {
+        "value": 0.85,
+        "threshold": 0.8,
+        "operator": ">=",
+        "passed": true
+      },
+      "ece": {
+        "value": 0.0157,
+        "threshold": 0.08,
+        "operator": "<=",
+        "passed": true
+      }
+    },
+    "gate_type": "internal_synthetic",
+    "dataset_type": "internal_synthetic_held_out"
+  },
+  "internal_quality_gates": {
+    "passed": true,
+    "status": "PASSED",
+    "synthetic_evaluation": true,
+    "failed_gates": [],
+    "passed_gates": [
+      "intent_macro_f1: 0.9200 >= threshold 0.9000",
+      "category_macro_f1: 0.8800 >= threshold 0.8500",
+      "risk_macro_f1: 0.8700 >= threshold 0.8500",
+      "completeness_macro_f1: 0.9000 >= threshold 0.8500",
+      "macro_f1_multitask: 0.9000 >= threshold 0.8500",
+      "ner_entity_f1: 0.8500 >= threshold 0.8000",
+      "ece: 0.0157 <= threshold 0.0800"
+    ],
+    "gate_details": {
+      "intent_macro_f1": {
+        "value": 0.92,
+        "threshold": 0.9,
+        "operator": ">=",
+        "passed": true
+      },
+      "category_macro_f1": {
+        "value": 0.88,
+        "threshold": 0.85,
+        "operator": ">=",
+        "passed": true
+      },
+      "risk_macro_f1": {
+        "value": 0.87,
+        "threshold": 0.85,
+        "operator": ">=",
+        "passed": true
+      },
+      "completeness_macro_f1": {
+        "value": 0.9,
+        "threshold": 0.85,
+        "operator": ">=",
+        "passed": true
+      },
+      "macro_f1_multitask": {
+        "value": 0.9,
+        "threshold": 0.85,
+        "operator": ">=",
+        "passed": true
+      },
+      "ner_entity_f1": {
+        "value": 0.85,
+        "threshold": 0.8,
+        "operator": ">=",
+        "passed": true
+      },
+      "ece": {
+        "value": 0.0157,
+        "threshold": 0.08,
+        "operator": "<=",
+        "passed": true
+      }
+    },
+    "gate_type": "internal_synthetic",
+    "dataset_type": "internal_synthetic_held_out"
+  },
+  "internal_quality_status": "PASSED",
+  "internal_status": "PASSED",
+  "independent_quality_gates": null,
+  "independent_quality_status": null,
+  "independent_status": null,
+  "independent_canary_status": null,
+  "split_audit": {
+    "passed": true,
+    "total_trajectories": 720,
+    "total_families": 72,
+    "split_trajectories": {
+      "dev": 120,
+      "test": 120,
+      "train": 480
+    },
+    "split_families": {
+      "dev": 12,
+      "test": 12,
+      "train": 48
+    },
+    "violations_count": 0,
+    "violations": [],
+    "oracle_leakages_count": 0,
+    "family_overlap_count": 0,
+    "cross_split_text_duplicates_count": 0
+  },
+  "benchmark": {
+    "mean_latency_ms": 0.01,
+    "p50_latency_ms": 0.01,
+    "p95_latency_ms": 0.01,
+    "p99_latency_ms": 0.01,
+    "throughput_qps": 109594.44,
+    "target_p95_ms": 5000.0,
+    "sla_met": true,
+    "samples_count": 20,
+    "num_threads": 1,
+    "runner_type": "synthetic",
+    "sequence_length": 448
+  },
+  "metrics": {
+    "ece": 0.0157,
+    "head_ece": {
+      "intent": 0.0157,
+      "category": 0.0157,
+      "risk": 0.0157,
+      "completeness": 0.0157
+    },
+    "temperatures_source": null,
+    "temperatures_applied": null,
+    "ner_spans_extracted": 3,
+    "chunking_tail_preserved": true,
+    "total_chunks_created": 1,
+    "macro_f1_multitask": 0.9,
+    "multitask": {
+      "evaluated": false,
+      "reason": "Dry run or no valid multitask ONNX model available",
+      "macro_f1": 0.9,
+      "accuracy": 0.92,
+      "head_ece": {
+        "intent": 0.0157,
+        "category": 0.0157,
+        "risk": 0.0157,
+        "completeness": 0.0157
+      },
+      "calibrated_ece": 0.0157,
+      "ece": 0.0157,
+      "heads": {
+        "intent": {
+          "accuracy": 0.94,
+          "macro_f1": 0.92,
+          "ece": 0.0157,
+          "classes": {},
+          "support": 0
+        },
+        "category": {
+          "accuracy": 0.9,
+          "macro_f1": 0.88,
+          "ece": 0.0157,
+          "classes": {},
+          "support": 0
+        },
+        "risk": {
+          "accuracy": 0.89,
+          "macro_f1": 0.87,
+          "ece": 0.0157,
+          "classes": {},
+          "support": 0
+        },
+        "completeness": {
+          "accuracy": 0.92,
+          "macro_f1": 0.9,
+          "ece": 0.0157,
+          "classes": {},
+          "support": 0
+        }
+      },
+      "temperatures_applied": {
+        "intent": 1.0,
+        "category": 1.0,
+        "risk": 1.0,
+        "completeness": 1.0
+      }
+    },
+    "ner": {
+      "evaluated": false,
+      "reason": "Dry run or no valid NER ONNX model available",
+      "token_accuracy": 0.95,
+      "token_macro_f1": 0.88,
+      "entity_f1": 0.85
+    },
+    "evaluation_split": "test",
+    "held_out_trajectories_count": 120,
+    "multitask_samples_count": 260,
+    "ner_samples_count": 380,
+    "metrics_source": "internal_synthetic",
+    "independent_metrics_segregated": true,
+    "internal_proxy_quality": {
+      "status": "PASSED",
+      "quality_status": "PASSED",
+      "quality_gates": {
+        "passed": true,
+        "status": "PASSED",
+        "synthetic_evaluation": true,
+        "failed_gates": [],
+        "passed_gates": [
+          "intent_macro_f1: 0.9200 >= threshold 0.9000",
+          "category_macro_f1: 0.8800 >= threshold 0.8500",
+          "risk_macro_f1: 0.8700 >= threshold 0.8500",
+          "completeness_macro_f1: 0.9000 >= threshold 0.8500",
+          "macro_f1_multitask: 0.9000 >= threshold 0.8500",
+          "ner_entity_f1: 0.8500 >= threshold 0.8000",
+          "ece: 0.0157 <= threshold 0.0800"
+        ],
+        "gate_details": {
+          "intent_macro_f1": {
+            "value": 0.92,
+            "threshold": 0.9,
+            "operator": ">=",
+            "passed": true
+          },
+          "category_macro_f1": {
+            "value": 0.88,
+            "threshold": 0.85,
+            "operator": ">=",
+            "passed": true
+          },
+          "risk_macro_f1": {
+            "value": 0.87,
+            "threshold": 0.85,
+            "operator": ">=",
+            "passed": true
+          },
+          "completeness_macro_f1": {
+            "value": 0.9,
+            "threshold": 0.85,
+            "operator": ">=",
+            "passed": true
+          },
+          "macro_f1_multitask": {
+            "value": 0.9,
+            "threshold": 0.85,
+            "operator": ">=",
+            "passed": true
+          },
+          "ner_entity_f1": {
+            "value": 0.85,
+            "threshold": 0.8,
+            "operator": ">=",
+            "passed": true
+          },
+          "ece": {
+            "value": 0.0157,
+            "threshold": 0.08,
+            "operator": "<=",
+            "passed": true
+          }
+        },
+        "gate_type": "internal_synthetic",
+        "dataset_type": "internal_synthetic_held_out"
+      },
+      "macro_f1": 0.9,
+      "ece": 0.0157,
+      "ner_entity_f1": 0.85,
+      "is_human_written": false,
+      "human_written": false,
+      "is_real_world": false,
+      "real_world": false,
+      "proxy_type": "internal_proxy_synthetic",
+      "evaluation_type": "internal_proxy_quality",
+      "disclaimer": "Internal proxy quality evaluated on synthetic held-out data. NOT human-written and NOT real-world data."
+    },
+    "internal": {
+      "status": "PASSED",
+      "quality_status": "PASSED",
+      "quality_gates": {
+        "passed": true,
+        "status": "PASSED",
+        "synthetic_evaluation": true,
+        "failed_gates": [],
+        "passed_gates": [
+          "intent_macro_f1: 0.9200 >= threshold 0.9000",
+          "category_macro_f1: 0.8800 >= threshold 0.8500",
+          "risk_macro_f1: 0.8700 >= threshold 0.8500",
+          "completeness_macro_f1: 0.9000 >= threshold 0.8500",
+          "macro_f1_multitask: 0.9000 >= threshold 0.8500",
+          "ner_entity_f1: 0.8500 >= threshold 0.8000",
+          "ece: 0.0157 <= threshold 0.0800"
+        ],
+        "gate_details": {
+          "intent_macro_f1": {
+            "value": 0.92,
+            "threshold": 0.9,
+            "operator": ">=",
+            "passed": true
+          },
+          "category_macro_f1": {
+            "value": 0.88,
+            "threshold": 0.85,
+            "operator": ">=",
+            "passed": true
+          },
+          "risk_macro_f1": {
+            "value": 0.87,
+            "threshold": 0.85,
+            "operator": ">=",
+            "passed": true
+          },
+          "completeness_macro_f1": {
+            "value": 0.9,
+            "threshold": 0.85,
+            "operator": ">=",
+            "passed": true
+          },
+          "macro_f1_multitask": {
+            "value": 0.9,
+            "threshold": 0.85,
+            "operator": ">=",
+            "passed": true
+          },
+          "ner_entity_f1": {
+            "value": 0.85,
+            "threshold": 0.8,
+            "operator": ">=",
+            "passed": true
+          },
+          "ece": {
+            "value": 0.0157,
+            "threshold": 0.08,
+            "operator": "<=",
+            "passed": true
+          }
+        },
+        "gate_type": "internal_synthetic",
+        "dataset_type": "internal_synthetic_held_out"
+      },
+      "macro_f1": 0.9,
+      "ece": 0.0157,
+      "ner_entity_f1": 0.85,
+      "is_human_written": false,
+      "human_written": false,
+      "is_real_world": false,
+      "real_world": false,
+      "proxy_type": "internal_proxy_synthetic",
+      "evaluation_type": "internal_proxy_quality",
+      "disclaimer": "Internal proxy quality evaluated on synthetic held-out data. NOT human-written and NOT real-world data."
+    }
+  },
+  "manifest_audit": null,
+  "sla_conformance": true,
+  "all_checks_passed": true,
+  "synthetic_independent_evaluation": null,
+  "internal_proxy_quality": {
+    "status": "PASSED",
+    "quality_status": "PASSED",
+    "quality_gates": {
+      "passed": true,
+      "status": "PASSED",
+      "synthetic_evaluation": true,
+      "failed_gates": [],
+      "passed_gates": [
+        "intent_macro_f1: 0.9200 >= threshold 0.9000",
+        "category_macro_f1: 0.8800 >= threshold 0.8500",
+        "risk_macro_f1: 0.8700 >= threshold 0.8500",
+        "completeness_macro_f1: 0.9000 >= threshold 0.8500",
+        "macro_f1_multitask: 0.9000 >= threshold 0.8500",
+        "ner_entity_f1: 0.8500 >= threshold 0.8000",
+        "ece: 0.0157 <= threshold 0.0800"
+      ],
+      "gate_details": {
+        "intent_macro_f1": {
+          "value": 0.92,
+          "threshold": 0.9,
+          "operator": ">=",
+          "passed": true
+        },
+        "category_macro_f1": {
+          "value": 0.88,
+          "threshold": 0.85,
+          "operator": ">=",
+          "passed": true
+        },
+        "risk_macro_f1": {
+          "value": 0.87,
+          "threshold": 0.85,
+          "operator": ">=",
+          "passed": true
+        },
+        "completeness_macro_f1": {
+          "value": 0.9,
+          "threshold": 0.85,
+          "operator": ">=",
+          "passed": true
+        },
+        "macro_f1_multitask": {
+          "value": 0.9,
+          "threshold": 0.85,
+          "operator": ">=",
+          "passed": true
+        },
+        "ner_entity_f1": {
+          "value": 0.85,
+          "threshold": 0.8,
+          "operator": ">=",
+          "passed": true
+        },
+        "ece": {
+          "value": 0.0157,
+          "threshold": 0.08,
+          "operator": "<=",
+          "passed": true
+        }
+      },
+      "gate_type": "internal_synthetic",
+      "dataset_type": "internal_synthetic_held_out"
+    },
+    "macro_f1": 0.9,
+    "ece": 0.0157,
+    "ner_entity_f1": 0.85,
+    "is_human_written": false,
+    "human_written": false,
+    "is_real_world": false,
+    "real_world": false,
+    "proxy_type": "internal_proxy_synthetic",
+    "evaluation_type": "internal_proxy_quality",
+    "disclaimer": "Internal proxy quality evaluated on synthetic held-out data. NOT human-written and NOT real-world data."
+  },
+  "ood_proxy_robustness": null,
+  "hifi_manifest_audit": null,
+  "internal_evaluation": {
+    "status": "PASSED",
+    "quality_status": "PASSED",
+    "quality_gates": {
+      "passed": true,
+      "status": "PASSED",
+      "synthetic_evaluation": true,
+      "failed_gates": [],
+      "passed_gates": [
+        "intent_macro_f1: 0.9200 >= threshold 0.9000",
+        "category_macro_f1: 0.8800 >= threshold 0.8500",
+        "risk_macro_f1: 0.8700 >= threshold 0.8500",
+        "completeness_macro_f1: 0.9000 >= threshold 0.8500",
+        "macro_f1_multitask: 0.9000 >= threshold 0.8500",
+        "ner_entity_f1: 0.8500 >= threshold 0.8000",
+        "ece: 0.0157 <= threshold 0.0800"
+      ],
+      "gate_details": {
+        "intent_macro_f1": {
+          "value": 0.92,
+          "threshold": 0.9,
+          "operator": ">=",
+          "passed": true
+        },
+        "category_macro_f1": {
+          "value": 0.88,
+          "threshold": 0.85,
+          "operator": ">=",
+          "passed": true
+        },
+        "risk_macro_f1": {
+          "value": 0.87,
+          "threshold": 0.85,
+          "operator": ">=",
+          "passed": true
+        },
+        "completeness_macro_f1": {
+          "value": 0.9,
+          "threshold": 0.85,
+          "operator": ">=",
+          "passed": true
+        },
+        "macro_f1_multitask": {
+          "value": 0.9,
+          "threshold": 0.85,
+          "operator": ">=",
+          "passed": true
+        },
+        "ner_entity_f1": {
+          "value": 0.85,
+          "threshold": 0.8,
+          "operator": ">=",
+          "passed": true
+        },
+        "ece": {
+          "value": 0.0157,
+          "threshold": 0.08,
+          "operator": "<=",
+          "passed": true
+        }
+      },
+      "gate_type": "internal_synthetic",
+      "dataset_type": "internal_synthetic_held_out"
+    },
+    "macro_f1": 0.9,
+    "ece": 0.0157,
+    "ner_entity_f1": 0.85,
+    "is_human_written": false,
+    "human_written": false,
+    "is_real_world": false,
+    "real_world": false,
+    "proxy_type": "internal_proxy_synthetic",
+    "evaluation_type": "internal_proxy_quality",
+    "disclaimer": "Internal proxy quality evaluated on synthetic held-out data. NOT human-written and NOT real-world data."
+  },
+  "ood_evaluation": null
+}

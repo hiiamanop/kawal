@@ -2,7 +2,7 @@
 
 Dokumen ini adalah catatan progres resmi KAWAL. Item hanya berstatus **SELESAI** bila ada artefak dan bukti yang dapat diverifikasi di repositori.
 
-- **Status proyek:** M2 selesai
+- **Status proyek:** M3 dalam progres (fondasi M3 selesai)
 - **Terakhir diperbarui:** 2026-09-11
 
 ## Status
@@ -55,13 +55,16 @@ Dokumen ini adalah catatan progres resmi KAWAL. Item hanya berstatus **SELESAI**
 
 ## M3 — Dataset dan intelligence lokal
 
+Status: `DALAM_PROGRES` (Fondasi logika & arsitektur offline selesai; menunggu bobot terlatih & evaluasi data riil).
+
 | ID | Pekerjaan | Status | Bukti | Catatan |
 |---|---|---|---|---|
-| DAT-01 | Dataset sintetis dan split anti-kebocoran | `BELUM_DIMULAI` | Belum ada dataset/generator | Prasyarat evaluasi yang valid. |
-| ML-01 | DAPT IndoBERT | `BELUM_DIMULAI` | Belum ada checkpoint | CPU FP32 menjadi baseline. |
-| ML-02 | Klasifikasi multi-task | `BELUM_DIMULAI` | Belum ada kode/model | Intent, kategori, risiko, kelengkapan. |
-| ML-03 | NER BIO spans | `BELUM_DIMULAI` | Belum ada kode/model | Lokasi, objek, dan waktu. |
-| ML-04 | Chunking dan agregasi aduan panjang | `BELUM_DIMULAI` | Belum ada implementasi | 448 token dengan overlap 64. |
+| DAT-01 | Dataset sintetis dan split anti-kebocoran | `DALAM_PROGRES` | [`services/dataset/`](../services/dataset/), [`tests/test_m3_dataset.py`](../tests/test_m3_dataset.py) | Generator sintetis multi-persona, stratifikasi family split, dan mesin audit zero-leakage ($n$-gram, identifier, label) selesai & tervalidasi. Blocked: pengumpulan & anotasi held-out human-written dataset. |
+| ML-01 | DAPT IndoBERT | `DALAM_PROGRES` | [`services/ml/runtime.py`](../services/ml/runtime.py), [`docs/M3.md`](M3.md) | Kontrak manifest artifak terpin (SHA-256), offline runtime fail-safe, dan engine benchmark CPU terimplementasi. Blocked: training DAPT korpus aduan untuk bobot checkpoint FP32. |
+| ML-02 | Klasifikasi multi-task | `DALAM_PROGRES` | [`services/intelligence/calibration.py`](../services/intelligence/calibration.py), [`contracts/models.py`](../contracts/models.py), [`tests/test_m3_intelligence.py`](../tests/test_m3_intelligence.py) | Kontrak 4 head (intent, kategori, risiko, kelengkapan), TemperatureCalibrator, ECE metric, dan retrieval leksikal/BM25 selesai. Blocked: trained head weights. |
+| ML-03 | NER BIO spans | `DALAM_PROGRES` | [`services/intelligence/ner.py`](../services/intelligence/ner.py), [`tests/test_m3_intelligence.py`](../tests/test_m3_intelligence.py) | BIO tag parser, span confidence aggregator, span merger, dan heuristik regex fallback selesai & tervalidasi. Blocked: bobot IndoBERT token classification head. |
+| ML-04 | Chunking dan agregasi aduan panjang | `SELESAI` | [`services/intelligence/chunking.py`](../services/intelligence/chunking.py), [`tests/test_m3_intelligence.py`](../tests/test_m3_intelligence.py) | Sliding window 448 token / 64 overlap, proyeksi koordinat offset global-lokal dua arah, dan pelestarian source message ID tervalidasi penuh. |
+| INF-M3 | Registry artifak dan offline runtime abstraction | `SELESAI` | [`services/ml/runtime.py`](../services/ml/runtime.py), [`supabase/migrations/20260911000007_m3_model_artifacts.sql`](../supabase/migrations/20260911000007_m3_model_artifacts.sql), [`tests/test_m3_runtime.py`](../tests/test_m3_runtime.py) | Registry skema database, verifikasi SHA-256 streaming, isolasi zero-network (`allow_network=False`), unavailable-safe fallback, dan runner benchmark. Blocked: benchmark CPU riil dengan bobot checkpoint penuh. |
 
 ## M4 — Orkestrasi, trust, konflik, dan policy
 
@@ -98,3 +101,4 @@ Dokumen ini adalah catatan progres resmi KAWAL. Item hanya berstatus **SELESAI**
 | 2026-09-11 | Prototype M1 replay tiga bubble hingga receipt tiket idempoten dibuat. | [`../contracts/models.py`](../contracts/models.py), [`../services/`](../services/), [`../tests/test_m1_slice.py`](../tests/test_m1_slice.py) |
 | 2026-09-11 | Fondasi Compose, skema PostgreSQL, dan bundle OPA M1 ditambahkan. | [`../docker-compose.yml`](../docker-compose.yml), [`../infra/migrations/001_m1_core_schema.sql`](../infra/migrations/001_m1_core_schema.sql), [`../policies/`](../policies/) |
 | 2026-09-11 | Image Ticket Simulator dan CI Docker Hub disiapkan; Git lokal diinisialisasi pada branch `main`. | [`../services/simulator/Dockerfile`](../services/simulator/Dockerfile), [`../.github/workflows/simulator-ci.yml`](../.github/workflows/simulator-ci.yml) |
+| 2026-09-11 | Fondasi M3 (synthetic dataset generator, zero-leak audit, chunking 448/64, BIO parser/retrieval/kalibrasi, registry & offline runtime) terverifikasi. M3 berstatus DALAM_PROGRES menunggu bobot terlatih, benchmark CPU riil, dan data held-out. | [`docs/M3.md`](M3.md), [`services/ml/runtime.py`](../services/ml/runtime.py), [`services/intelligence/`](../services/intelligence/), [`services/dataset/`](../services/dataset/), [`tests/test_m3_*.py`](../tests/) |
