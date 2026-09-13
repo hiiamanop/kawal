@@ -555,3 +555,42 @@ class AgentResultV1(BaseModel):
 
 
 AgentResult = AgentResultV1
+
+
+class DeliveryStatus(StrEnum):
+    PENDING = "PENDING"
+    SENT = "SENT"
+    DELIVERED = "DELIVERED"
+    DELIVERY_UNKNOWN = "DELIVERY_UNKNOWN"
+    FAILED = "FAILED"
+
+
+class OutboundPurpose(StrEnum):
+    CLARIFICATION = "CLARIFICATION"
+    STATUS_UPDATE = "STATUS_UPDATE"
+    RECEIPT = "RECEIPT"
+
+
+class OutboundMessageCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    tenant_id: str = Field(min_length=1)
+    conversation_id: str = Field(min_length=1)
+    case_id: str | None = None
+    recipient_phone: str = Field(min_length=1)
+    text: str = Field(min_length=1, max_length=4096)
+    quoted_source_message_id: str | None = None
+    idempotency_key: str = Field(min_length=1)
+    purpose: OutboundPurpose = OutboundPurpose.CLARIFICATION
+    payload_hash: str = Field(pattern=r"^[0-9a-fA-F]{64}$")
+
+
+class OutboundSendReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    send_id: str = Field(min_length=1)
+    idempotency_key: str = Field(min_length=1)
+    source_message_id: str | None = None
+    status: DeliveryStatus
+    sent_at: datetime
+    payload_hash: str = Field(pattern=r"^[0-9a-fA-F]{64}$")
