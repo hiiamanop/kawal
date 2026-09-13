@@ -95,6 +95,9 @@ class DecisionMode(StrEnum):
 
 class TicketStatus(StrEnum):
     SUBMITTED = "SUBMITTED"
+    IN_PROGRESS = "IN_PROGRESS"
+    RESOLVED = "RESOLVED"
+    CLOSED = "CLOSED"
 
 
 class TicketPriority(StrEnum):

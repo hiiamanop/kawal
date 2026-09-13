@@ -80,9 +80,9 @@ Status: `DALAM_PROGRES` (Fondasi logika & arsitektur offline selesai; menunggu b
 
 | ID | Pekerjaan | Status | Bukti | Catatan |
 |---|---|---|---|---|
-| TKT-02 | Simulator lengkap dan fault injection | `BELUM_DIMULAI` | Belum ada service | Create, update, transfer, close, status. |
-| CLR-01 | Mesin klarifikasi | `BELUM_DIMULAI` | Belum ada implementasi | Maks. 2 pertanyaan/ronde, 3 ronde, 72 jam; meminta fakta teks saat gambar sensitif/ambigu tertahan policy. |
-| REL-01 | Retry, DLQ, circuit breaker, rekonsiliasi | `BELUM_DIMULAI` | Belum ada implementasi | Harus menjamin nol tiket ganda. |
+| TKT-02 | Simulator lengkap dan fault injection | `SELESAI` | [`services/simulator/store.py`](../services/simulator/store.py), [`services/simulator/app.py`](../services/simulator/app.py), [`tests/test_m5_simulator.py`](../tests/test_m5_simulator.py) | Create, update (If-Match), transfer (custody trail), close, get status, fault profiles (commit-then-timeout, fail-before-commit, HTTP 429/500). |
+| CLR-01 | Mesin klarifikasi | `SELESAI` | [`services/clarification/engine.py`](../services/clarification/engine.py), [`tests/test_m5_clarification.py`](../tests/test_m5_clarification.py) | Template-first, maks. 2 pertanyaan/ronde, maks. 3 ronde, kedaluwarsa 72 jam, fallback teks jika gambar tertahan policy. |
+| REL-01 | Retry, DLQ, circuit breaker, rekonsiliasi | `SELESAI` | [`services/reliability/`](../services/reliability/), [`tests/test_m5_reliability.py`](../tests/test_m5_reliability.py) | Circuit breaker (5 fail, 30s cooldown, half-open probe), DLQ, ReliableTicketClient dengan rekonsiliasi unknown-outcome menjamin nol tiket ganda (10 retry pada commit-then-timeout menghasilkan tepat 1 tiket). |
 
 ## M6 — Evaluasi tesis
 
