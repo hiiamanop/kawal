@@ -70,11 +70,11 @@ Status: `DALAM_PROGRES` (Fondasi logika & arsitektur offline selesai; menunggu b
 
 | ID | Pekerjaan | Status | Bukti | Catatan |
 |---|---|---|---|---|
-| ORC-01 | Fungsi keputusan murni | `BELUM_DIMULAI` | Belum ada implementasi | Empat mode keputusan KAWAL. |
-| ORC-02 | Contextual trust | `BELUM_DIMULAI` | Belum ada implementasi | Kontribusi riset utama. |
-| ORC-03 | Diagnosis konflik | `BELUM_DIMULAI` | Belum ada implementasi | Tujuh kelas konflik. |
-| ORC-04 | Adaptive escalation dan budget | `BELUM_DIMULAI` | Belum ada implementasi | Berbasis VOI. |
-| POL-01 | Hard policy gate | `BELUM_DIMULAI` | Belum ada Rego/policy service | Fail-closed untuk egress dan eksekusi; egress gambar memakai sinyal deterministik non-visi. |
+| ORC-01 | Fungsi keputusan murni | `SELESAI` | [`services/core/decision.py`](../services/core/decision.py), [`tests/test_m4_decision.py`](../tests/test_m4_decision.py) | Empat mode keputusan KAWAL: EXECUTE, RE_EVALUATE, REQUEST_CLARIFICATION, REJECT_IGNORE; state transitions; deduplikasi task. |
+| ORC-02 | Contextual trust | `SELESAI` | [`services/core/decision.py`](../services/core/decision.py), [`tests/test_m4_decision.py`](../tests/test_m4_decision.py) | Hierarchical Beta posterior shrinkage, ECE calibration discount, evidence quality rubric, drift penalty, lower bound 10%. |
+| ORC-03 | Diagnosis konflik | `SELESAI` | [`services/core/decision.py`](../services/core/decision.py), [`tests/test_m4_decision.py`](../tests/test_m4_decision.py) | 7 kelas: CLASSIFICATION, ENTITY, LOCATION, RISK, EVIDENCE, TEXT_IMAGE, AUTHORITY; severity & resolution capability mapping. |
+| ORC-04 | Adaptive escalation dan budget | `SELESAI` | [`services/core/decision.py`](../services/core/decision.py), [`tests/test_m4_decision.py`](../tests/test_m4_decision.py) | Expected Value of Information (VOI) ranking, budget ledger (USD, latency, egress), TaskResultCache per siklus. |
+| POL-01 | Hard policy gate | `SELESAI` | [`services/core/decision.py`](../services/core/decision.py), [`policies/policy.rego`](../policies/policy.rego), [`tests/test_m4_decision.py`](../tests/test_m4_decision.py) | ModelGateway fail-closed: provider allowlist, data class, PII check, non-vision deterministic image egress denial, budget limit. |
 
 ## M5 — Eksekusi dan keandalan
 
