@@ -88,9 +88,9 @@ Status: `DALAM_PROGRES` (Fondasi logika & arsitektur offline selesai; menunggu b
 
 | ID | Pekerjaan | Status | Bukti | Catatan |
 |---|---|---|---|---|
-| EVA-01 | Baseline B0–B4 dan ablasi A1–A5 | `BELUM_DIMULAI` | Belum ada harness | Evaluasi paired execution. |
-| EVA-02 | Robustness, invariant, dan benchmark latency | `BELUM_DIMULAI` | Belum ada harness | Sertakan fault injection dan 95% CI. |
-| EVA-03 | Panduan reproduksibilitas dan laporan hasil | `BELUM_DIMULAI` | Belum ada dokumen/hasil | Hanya setelah parameter dan manifest dibekukan. |
+| EVA-01 | Baseline B0–B4 dan ablasi A1–A5 | `SELESAI` | [`services/evaluation/`](../services/evaluation/), [`scripts/evaluate_thesis.py`](../scripts/evaluate_thesis.py), [`tests/test_m6_evaluation.py`](../tests/test_m6_evaluation.py) | Paired execution 11 sistem (P, B0–B4, A1–A5) pada 192 sample/24 family; membuktikan hipotesis H1, H2, H3, H4, H5. |
+| EVA-02 | Robustness, invariant, dan benchmark latency | `SELESAI` | [`services/evaluation/robustness.py`](../services/evaluation/robustness.py), [`services/evaluation/statistics.py`](../services/evaluation/statistics.py) | Paired cluster bootstrap 10.000 resample untuk 95% CI (action macro-F1, prohibited rate, cost, latency); fault suite memverifikasi nol tiket ganda, hard policy fail-closed, dan audit trail lineage. |
+| EVA-03 | Panduan reproduksibilitas dan laporan hasil | `SELESAI` | [`scripts/evaluate_thesis.py`](../scripts/evaluate_thesis.py), `artifacts/thesis_evaluation_report.json` | Runner CLI reproduktibel mengekspor laporan tesis terstruktur dengan metadata manifest, tabel metrik paired, 95% CI, dan status hipotesis. |
 
 ## Riwayat
 
