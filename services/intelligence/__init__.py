@@ -14,6 +14,10 @@ from services.intelligence.ner import (
     merge_overlapping_spans,
     parse_bio_tags,
 )
+from services.intelligence.completeness import (
+    COMPLETENESS_LABELS,
+    resolve_location_completeness,
+)
 from services.intelligence.retrieval import (
     BM25Retriever,
     IndexedDocument,
@@ -43,7 +47,9 @@ __all__ = [
     "chunk_messages",
     "tokenize_with_offsets",
     "SUPPORTED_ENTITY_TYPES",
+    "COMPLETENESS_LABELS",
     "EntitySpan",
+    "resolve_location_completeness",
     "parse_bio_tags",
     "extract_entities_from_text",
     "merge_overlapping_spans",

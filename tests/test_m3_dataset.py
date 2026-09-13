@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import tempfile
 import pytest
+from pydantic import ValidationError
 
 from contracts.models import (
     Category,
@@ -1285,6 +1287,211 @@ def test_category_anchor_composition_injection_in_reporter_bubbles() -> None:
         assert "clean_water" not in b1_text
         assert "civil_admin" not in b1_text
         assert "health_service" not in b1_text
+
+
+def test_city12_load_trajectories_with_world_truth_metadata() -> None:
+    raw_city12_record = {
+        "scenario_id": "city12_train_00_01_00",
+        "family_id": "city12-fam-tr-00-01",
+        "split": "train",
+        "category": "PUBLIC_ORDER",
+        "concept_id": 7,
+        "risk_evidence_kind": "safety_hazard",
+        "style_family": "bureaucratic",
+        "world_truth": {
+            "category": "PUBLIC_ORDER",
+            "risk": "HIGH",
+            "domain": "PUBLIC_ORDER",
+            "provenance": "synthetic_hifi",
+            "canonical_spans": [[0, 16, "OBJ"], [20, 39, "LOC"], [40, 49, "TIME"]],
+            "bubble_canonical_spans": {
+                "msg_city12_001": [[0, 16, "OBJ"], [20, 39, "LOC"], [40, 49, "TIME"]]
+            },
+        },
+        "observable_facts": ["juru parkir liar", "pasar simpang lima", "sore hari"],
+        "hidden_facts": [],
+        "location_completeness": "COMPLETE",
+        "duration": "OBSERVED",
+        "claim_certainty": "FIRST_HAND",
+        "persona": "CITIZEN",
+        "noise": {"style": "informal_whatsapp"},
+        "attachment_role": "NONE",
+        "turns": [
+            {
+                "turn": 1,
+                "bubbles": [
+                    {
+                        "source_message_id": "msg_city12_001",
+                        "text": "juru parkir liar di pasar simpang lima sore hari meresahkan warga sekitar",
+                        "offset_seconds": 0,
+                        "canonical_spans": [[0, 16, "OBJ"], [20, 39, "LOC"], [40, 49, "TIME"]],
+                    }
+                ],
+                "observable_facts": ["juru parkir liar", "pasar simpang lima", "sore hari"],
+                "hidden_facts": [],
+                "expected_action": {
+                    "turn": 1,
+                    "allowed_actions": ["EXECUTE"],
+                    "missing": [],
+                    "strategy": "EXECUTE",
+                },
+            }
+        ],
+        "expected_action_by_turn": [
+            {
+                "turn": 1,
+                "allowed_actions": ["EXECUTE"],
+                "missing": [],
+                "strategy": "EXECUTE",
+            }
+        ],
+        "canonical_spans": [[0, 16, "OBJ"], [20, 39, "LOC"], [40, 49, "TIME"]],
+    }
+
+    with tempfile.TemporaryDirectory() as td:
+        file_path = Path(td) / "city12_sample.jsonl"
+        file_path.write_text(json.dumps(raw_city12_record) + "\n", encoding="utf-8")
+
+        trajectories = load_trajectories_from_jsonl(file_path)
+        assert len(trajectories) == 1
+        traj = trajectories[0]
+        assert isinstance(traj, ComplaintTrajectory)
+        assert traj.scenario_id == "city12_train_00_01_00"
+        assert traj.family_id == "city12-fam-tr-00-01"
+        assert traj.category == Category.PUBLIC_ORDER
+        # Verify world_truth metadata preserved
+        assert traj.world_truth["concept_id"] == 7
+        assert traj.world_truth["risk_evidence_kind"] == "safety_hazard"
+        assert traj.world_truth["style_family"] == "bureaucratic"
+        assert traj.world_truth["domain"] == "PUBLIC_ORDER"
+        assert traj.world_truth["risk"] == "HIGH"
+        # Verify canonical spans preserved
+        assert len(traj.canonical_spans) == 3
+        assert traj.canonical_spans[0].label.value == "OBJ"
+        assert traj.canonical_spans[1].label.value == "LOC"
+        assert traj.canonical_spans[2].label.value == "TIME"
+        assert len(traj.turns[0].bubbles[0].canonical_spans) == 3
+        assert "canonical_spans" in traj.world_truth
+        assert "bubble_canonical_spans" in traj.world_truth
+
+
+def test_city12_load_trajectories_rejects_unsafe_top_level_extras() -> None:
+    raw_record_with_unsafe_top_level = {
+        "scenario_id": "city12_sc_unsafe_01",
+        "family_id": "city12-fam-unsafe-01",
+        "split": "train",
+        "category": "ROAD",
+        "concept_id": 1,
+        "risk_evidence_kind": "safety_hazard",
+        "style_family": "bureaucratic",
+        "unsafe_injected_top_level": "malicious_payload",
+        "turns": [
+            {
+                "turn": 1,
+                "bubbles": [
+                    {
+                        "source_message_id": "msg_01",
+                        "text": "Laporan aspal bolong di jalan raya",
+                    }
+                ],
+                "expected_action": {
+                    "turn": 1,
+                    "allowed_actions": ["EXECUTE"],
+                },
+            }
+        ],
+    }
+
+    with tempfile.TemporaryDirectory() as td:
+        file_path = Path(td) / "unsafe_top.jsonl"
+        file_path.write_text(json.dumps(raw_record_with_unsafe_top_level) + "\n", encoding="utf-8")
+
+        with pytest.raises(ValidationError) as exc_info:
+            load_trajectories_from_jsonl(file_path)
+        assert "unsafe_injected_top_level" in str(exc_info.value)
+        assert "extra_forbidden" in str(exc_info.value)
+
+
+def test_city12_load_trajectories_rejects_unsafe_bubble_extras() -> None:
+    raw_record_with_unsafe_bubble = {
+        "scenario_id": "city12_sc_unsafe_02",
+        "family_id": "city12-fam-unsafe-02",
+        "split": "train",
+        "category": "ROAD",
+        "concept_id": 2,
+        "risk_evidence_kind": "cosmetic_minor",
+        "style_family": "formal",
+        "turns": [
+            {
+                "turn": 1,
+                "bubbles": [
+                    {
+                        "source_message_id": "msg_02",
+                        "text": "Laporan aspal bolong di jalan raya",
+                        "unsafe_injected_bubble_field": "unauthorized",
+                    }
+                ],
+                "expected_action": {
+                    "turn": 1,
+                    "allowed_actions": ["EXECUTE"],
+                },
+            }
+        ],
+    }
+
+    with tempfile.TemporaryDirectory() as td:
+        file_path = Path(td) / "unsafe_bubble.jsonl"
+        file_path.write_text(json.dumps(raw_record_with_unsafe_bubble) + "\n", encoding="utf-8")
+
+        with pytest.raises(ValidationError) as exc_info:
+            load_trajectories_from_jsonl(file_path)
+        assert "unsafe_injected_bubble_field" in str(exc_info.value)
+        assert "extra_forbidden" in str(exc_info.value)
+
+
+def test_city12_load_trajectories_preserves_canonical_spans_when_nested_in_world_truth() -> None:
+    raw_record = {
+        "scenario_id": "city12_sc_nested_01",
+        "family_id": "city12-fam-nested-01",
+        "split": "dev",
+        "category": "DRAINAGE_FLOOD",
+        "world_truth": {
+            "concept_id": 3,
+            "risk_evidence_kind": "operational_disruption",
+            "style_family": "narrative_slang",
+            "canonical_spans": [[0, 12, "OBJ"], [16, 28, "LOC"]],
+        },
+        "turns": [
+            {
+                "turn": 1,
+                "bubbles": [
+                    {
+                        "source_message_id": "msg_nested_01",
+                        "text": "gorong-gorong mampet di jalan sudirman",
+                    }
+                ],
+                "expected_action": {
+                    "turn": 1,
+                    "allowed_actions": ["EXECUTE"],
+                },
+            }
+        ],
+    }
+
+    with tempfile.TemporaryDirectory() as td:
+        file_path = Path(td) / "nested_spans.jsonl"
+        file_path.write_text(json.dumps(raw_record) + "\n", encoding="utf-8")
+
+        trajs = load_trajectories_from_jsonl(file_path)
+        assert len(trajs) == 1
+        traj = trajs[0]
+        assert len(traj.canonical_spans) == 2
+        assert traj.canonical_spans[0].label.value == "OBJ"
+        assert traj.canonical_spans[1].label.value == "LOC"
+        assert traj.world_truth["concept_id"] == 3
+        assert traj.world_truth["risk_evidence_kind"] == "operational_disruption"
+        assert traj.world_truth["style_family"] == "narrative_slang"
+
 
 
 

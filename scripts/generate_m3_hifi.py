@@ -45,6 +45,7 @@ BALANCED_TRIPLETS: tuple[tuple[str, str, str], ...] = tuple(
     for r in range(4)
 )
 
+
 ISSUES: dict[Category, tuple[str, ...]] = {
     Category.ROAD: (
         'Aspal bolong parah di turunan/tanjakan membahayakan pemotor',
@@ -875,68 +876,56 @@ def build_split_paraphrases(issue: str, surface_variant: int = 0) -> dict[str, s
 
     def render_internal(split_name: str, form_idx: int) -> str:
         sc = [sub_syn(c, split_name) for c in chunks]
-        f = form_idx % 4
-        if k >= 3:
-            if f == 0:
-                return " ".join(sc)
-            elif f == 1:
+        if split_name == "train":
+            pref = "masalah"
+            tail = "di kawasan lingkungan"
+            if k >= 3:
+                body = f"{sc[0]} dan {sc[1]} serta " + " dan ".join(sc[2:])
+            elif k == 2:
+                body = f"{sc[0]} dan {sc[1]}"
+            else:
+                body = sc[0]
+            return f"{pref} {body} {tail}"
+        if split_name == "dev":
+            pref = "kendala"
+            tail = "di lokasi sekitar"
+            if k >= 3:
                 c_s = sc[1:] + sc[:1]
-                v = f"{c_s[0]} terkait {c_s[1]}"
-                if len(c_s) > 2:
-                    v += " serta " + " dan ".join(c_s[2:])
-                return v
-            elif f == 2:
-                c_s = sc[2:] + sc[:2]
-                v = f"{c_s[0]} akibat {c_s[1]}"
-                if len(c_s) > 2:
-                    v += " pada " + " kemudian ".join(c_s[2:])
-                return v
+                body = f"{c_s[0]} terkait {c_s[1]} sehubungan " + " terkait ".join(c_s[2:])
+            elif k == 2:
+                body = f"{sc[1]} terkait {sc[0]}"
             else:
-                c_s = sc[3:] + sc[:3] if k > 3 else sc[:1] + list(reversed(sc[1:]))
-                v = f"{c_s[0]} mengenai {c_s[1]}"
-                if len(c_s) > 2:
-                    v += " disertai " + " beserta ".join(c_s[2:])
-                return v
+                body = sc[0]
+            return f"{pref} {body} {tail}"
+        pref = "persoalan"
+        tail = "di area kawasan"
+        if k >= 3:
+            c_s = sc[2:] + sc[:2]
+            body = f"{c_s[0]} perihal {c_s[1]} mengenai " + " perihal ".join(c_s[2:])
         elif k == 2:
-            if f == 0:
-                return f"{sc[0]} {sc[1]}"
-            elif f == 1:
-                return f"{sc[1]} terkait {sc[0]}"
-            elif f == 2:
-                return f"{sc[1]} akibat {sc[0]}"
-            else:
-                return f"{sc[1]} mengenai {sc[0]}"
+            body = f"{sc[0]} perihal {sc[1]}"
         else:
-            if f == 0:
-                return sc[0]
-            elif f == 1:
-                return f"kondisi {sc[0]} di lapangan"
-            elif f == 2:
-                return f"laporan tentang {sc[0]} di tempat"
-            else:
-                return f"adanya {sc[0]} di area"
+            body = sc[0]
+        return f"{pref} {body} {tail}"
 
     def render_ood(form_idx: int) -> str:
         sc = [sub_syn(c, "ood") for c in chunks]
+        pref = "gangguan"
+        tail = "di wilayah setempat"
         if k >= 2:
             ood_chunks = list(reversed(sc))
-            v = f"{ood_chunks[0]} perihal {ood_chunks[1]}"
+            result = f"{pref} {ood_chunks[0]} dalam hal {ood_chunks[1]}"
             if len(ood_chunks) > 2:
-                v += " dalam hal " + " dan ".join(ood_chunks[2:])
-            v += " di wilayah setempat"
-            return v
-        else:
-            return f"kejadian mengenai {sc[0]} di wilayah setempat"
+                result += " pada " + " dan ".join(ood_chunks[2:])
+            return f"{result} {tail}"
+        return f"{pref} mengenai {sc[0]} {tail}"
 
-    res = {}
+    result: dict[str, str] = {}
     offsets = {"train": 0, "dev": 1, "test": 2, "ood": 3}
-    for s_name in ("train", "dev", "test", "ood"):
-        f_idx = surface_variant + offsets[s_name]
-        if s_name == "ood":
-            res[s_name] = render_ood(f_idx)
-        else:
-            res[s_name] = render_internal(s_name, f_idx)
-    return res
+    for split_name in offsets:
+        form_idx = surface_variant + offsets[split_name]
+        result[split_name] = render_ood(form_idx) if split_name == "ood" else render_internal(split_name, form_idx)
+    return result
 
 
 STYLE_FAMILIES: tuple[str, ...] = ("direct_report", "field_observation", "community_concern")
@@ -1012,9 +1001,24 @@ INTENT_POOLS_OOD: dict[str, tuple[str, ...]] = {
 }
 
 AMBIGUITY_CLAUSES_INTERNAL: dict[str, tuple[str, ...]] = {
-    "train": ("titiknya kurang spesifik nih", "titiknya belum pasti nih"),
-    "dev": ("posisinya masih samar nih", "lokasinya belum bisa dipastikan"),
-    "test": ("titiknya masih ambigu membingungkan", "informasi lokasinya belum jelas"),
+    "train": (
+        "titiknya kurang spesifik nih",
+        "titiknya belum pasti nih",
+        "patokannya belum jelas menurut warga",
+        "letak rincinya belum diketahui",
+    ),
+    "dev": (
+        "posisinya masih samar nih",
+        "lokasinya belum bisa dipastikan",
+        "acuan tempatnya belum cukup jelas",
+        "warga belum yakin titik persisnya",
+    ),
+    "test": (
+        "titiknya masih ambigu membingungkan",
+        "informasi lokasinya belum jelas",
+        "petunjuk tempatnya belum lengkap",
+        "posisi lapangannya belum teridentifikasi",
+    ),
 }
 
 AMBIGUITY_CLAUSES_OOD: tuple[str, ...] = (
@@ -1023,6 +1027,7 @@ AMBIGUITY_CLAUSES_OOD: tuple[str, ...] = (
     "acuan titik tepatnya masih belum terinci",
     "posisi bidang pastinya belum terverifikasi",
 )
+
 
 SAFE_CATEGORY_NOUNS: dict[Category, tuple[str, ...]] = {
     Category.ROAD: (
@@ -1219,20 +1224,30 @@ RISK_EVIDENCE_HIGH: dict[str, dict[Category, tuple[str, ...]]] = {
     "test": {
         Category.ROAD: ("pengguna motor rawan tergelincir", "berisiko kecelakaan pengguna motor", "bahayakan keselamatan pengguna motor", "pengguna motor hampir celaka"),
         Category.DRAINAGE_FLOOD: ("luapan banjir berpotensi merusak", "luapan air rawan menjebak", "tanggul rembes parit saluran", "parit saluran mampet berpotensi"),
-        Category.WASTE: ("limbah sampah berisiko infeksi", "ceceran limbah sampah lukai", "gas limbah sampah menyulut", "limbah sampah memicu lalat"),
-        Category.CLEAN_WATER: ("saluran pipa kikis badan jalan", "semburan saluran pipa rusak", "saluran pipa picu selip", "pasokan air keruh membahayakan"),
+        Category.WASTE: ("sisa limbah berisiko infeksi", "ceceran limbah sampah lukai", "gas limbah sampah menyulut", "timbunan sampah memicu lalat"),
+        Category.CLEAN_WATER: ("saluran pipa kikis badan jalan", "semburan saluran pipa rusak", "saluran pipa picu selip", "suplai air keruh membahayakan"),
         Category.CIVIL_ADMIN: ("antrean urusan layanan ribut", "tarif bayar rugikan warga", "kamar ruang memicu pingsan", "antrean kantor picu perselisihan"),
-        Category.HEALTH_SERVICE: ("pasien faskes terancam tertunda", "kamar ruang tularkan infeksi", "ketiadaan tenaga dokter berisiko", "stok obat berisiko salah"),
+        Category.HEALTH_SERVICE: ("pasien klinik terancam tertunda", "kamar ruang tularkan infeksi", "ketiadaan tenaga dokter berisiko", "stok obat berisiko salah"),
         Category.PUBLIC_ORDER: ("gesekan warga sekitar rawan", "premanisme ancam warga sekitar", "balapan liar timbulkan tabrakan", "kerumunan liar picu kejahatan"),
         Category.TRANSPORTATION: ("pintu armada bus transit buka", "rambu pos halte picu tabrakan", "pos halte malam rawan", "mobil angkot timbulkan tabrakan"),
-        Category.FIRE_RESCUE: ("korsleting atap rumah warga", "sarang tawon atap rumah", "kebocoran gas ruko warga", "pohon peneduh rawan tumbang"),
+        Category.FIRE_RESCUE: ("korsleting instalasi rumah warga", "sarang lebah atap rumah", "kebocoran tabung ruko warga", "pohon peneduh rawan tumbang"),
         Category.SOCIAL_AFFAIRS: ("orang tua lansia dehidrasi", "program bantuan lukai warga", "anak kecil rawan eksploitasi", "warga sekitar terancam terlantar"),
         Category.EDUCATION: ("plafon area sekolah ambrol", "kabel area sekolah menyengat", "tembok area sekolah roboh", "kaca area sekolah melukai"),
-        Category.PARKS_HOUSING: ("pohon peneduh rawan patah", "tiang lampu taman roboh", "fasilitas taman rawan melukai", "paving taman lukai warga"),
+        Category.PARKS_HOUSING: ("pohon peneduh rawan patah", "tiang lampu jalan roboh", "fasilitas taman rawan melukai", "paving taman lukai warga"),
     },
     "ood": {
-        cat: tuple(f"kondisi berisiko ancam penduduk {cat.value.lower()}" for _ in range(4))
-        for cat in Category
+        Category.ROAD: ("kondisi berisiko ancam pengendara jalan raya", "situasi rawan celakakan pengguna jalur", "keadaan berbahaya pada perlintasan aspal", "kondisi rawan ganggu keselamatan berkendara"),
+        Category.DRAINAGE_FLOOD: ("aliran genangan berpotensi rendam pemukiman", "luapan air selokan rawan jebol", "tanggul penahan berisiko runtuh tergerus", "genangan air berpotensi masuki pertokoan"),
+        Category.WASTE: ("tumpukan sisa kotoran berisiko infeksi", "limbah buangan padat mengganggu pernapasan", "ceceran kotoran sampah picu penyakit", "bau buangan kotor mengancam kesehatan"),
+        Category.CLEAN_WATER: ("pipa pasokan leding bocor mengikis tanah", "aliran leding bersih macet total berhari-hari", "semburan pipa transmisi ancam fondasi", "rembesan instalasi pipa genangi perumahan"),
+        Category.CIVIL_ADMIN: ("antrean berkas kependudukan berlarut ribut", "pengurusan dokumen warga terhenti sepihak", "loket layanan publik terhambat total", "sengketa administrasi kependudukan meresahkan"),
+        Category.HEALTH_SERVICE: ("pasien butuh pertolongan terancam telantar", "ketiadaan ruang tindakan bahayakan pasien", "antrean obat medis memicu kepanikan", "layanan berobat mendesak tidak tertangani"),
+        Category.PUBLIC_ORDER: ("gesekan massa ancam ketentraman lingkungan", "gangguan ketertiban umum resahkan masyarakat", "kegaduhan malam ancam keamanan kawasan", "aksi anarkis berpotensi timbulkan keributan"),
+        Category.TRANSPORTATION: ("kendaraan angkutan umum mogok di tengah jalur", "fasilitas armada transit alami kerusakan parah", "penumpang angkutan kota terancam bahaya", "kerusakan armada publik halangi rute jalan"),
+        Category.FIRE_RESCUE: ("instalasi listrik atap terpercik api membahayakan", "ancaman api pemukiman berpotensi merembet", "potensi kebakaran gedung padat membahayakan", "kebocoran gas hunian warga timbulkan ledakan"),
+        Category.SOCIAL_AFFAIRS: ("penduduk lanjut usia telantar tanpa penanganan", "anak terlantar di jalan berisiko kekerasan", "warga kurang mampu tidak terima bantuan pangan", "keluarga telantar membutuhkan uluran tangan segera"),
+        Category.EDUCATION: ("atap ruang kelas murid terancam runtuh", "bangunan belajar mengajar rusak bahayakan siswa", "kerusakan sarana gedung sekolah cederai murid", "instalasi listrik gedung pendidikan menyengat"),
+        Category.PARKS_HOUSING: ("pohon penghijauan taman rapuh rawan tumbang", "fasilitas arena bermain anak rusak membahayakan", "tiang penerangan ruang publik miring", "pagar pembatas kawasan hijau patah mencuat"),
     },
 }
 
@@ -1254,7 +1269,7 @@ RISK_EVIDENCE_URGENT: dict[str, dict[Category, tuple[str, ...]]] = {
     "dev": {
         Category.ROAD: ("jembatan ruas jalan putus darurat", "longsor tebing tertimbun darurat", "tabrakan beruntun para pemotor darurat", "amblesan ruas jalan korban darurat"),
         Category.DRAINAGE_FLOOD: ("banjir masyarakat tenggelam darurat", "arus banjir hanyutkan darurat", "tanggul jebol genang darurat", "luapan air bah darurat"),
-        Category.WASTE: ("ledakan buangan sampah darurat", "kebakaran sampah korban darurat", "longsor tumpukan sampah darurat", "kebakaran limbah kotoran darurat"),
+        Category.WASTE: ("ledakan buangan sampah darurat", "kebakaran limbah korban darurat", "longsor tumpukan sampah darurat", "kebakaran limbah kotoran darurat"),
         Category.CLEAN_WATER: ("semburan pipa saluran trafo darurat", "ledakan pipa saluran darurat", "bocoran pipa saluran darurat", "aliran pipa saluran darurat"),
         Category.CIVIL_ADMIN: ("kerusuhan tempat kantor layanan darurat", "kebakaran tempat kantor layanan darurat", "runtuh gedung kantor layanan darurat", "bentrok tempat kantor darurat"),
         Category.HEALTH_SERVICE: ("pasien berobat napas darurat", "pasien berobat pendarahan darurat", "keracunan massal warga berobat darurat", "warga berobat kritis darurat"),
@@ -1270,44 +1285,48 @@ RISK_EVIDENCE_URGENT: dict[str, dict[Category, tuple[str, ...]]] = {
         Category.DRAINAGE_FLOOD: ("banjir warga sekitar tenggelam darurat", "arus banjir korban jiwa darurat", "tanggul jebol banjir parah darurat", "luapan air banjir lebat darurat"),
         Category.WASTE: ("ledakan limbah sampah darurat", "kebakaran limbah sampah korban darurat", "longsor limbah sampah darurat", "kebakaran buangan sampah darurat"),
         Category.CLEAN_WATER: ("semburan saluran pipa trafo darurat", "ledakan saluran pipa darurat", "bocoran saluran pipa darurat", "aliran saluran pipa deras darurat"),
-        Category.CIVIL_ADMIN: ("kerusuhan tempat kantor layanan darurat", "kebakaran tempat kantor darurat", "runtuh tempat kantor darurat", "bentrok tempat kantor darurat"),
+        Category.CIVIL_ADMIN: ("kerusuhan gedung kantor layanan darurat", "kebakaran tempat kantor darurat", "runtuh tempat kantor darurat", "bentrok gedung kantor darurat"),
         Category.HEALTH_SERVICE: ("pasien faskes gagal napas darurat", "pasien faskes pendarahan darurat", "keracunan massal pasien faskes darurat", "pasien faskes kritis darurat"),
         Category.PUBLIC_ORDER: ("tawuran senjata korban celaka darurat", "penyerangan rumah warga darurat", "kerusuhan massa bakar sarana darurat", "anarkis kelompok serang darurat"),
         Category.TRANSPORTATION: ("tabrakan armada bus umum darurat", "rem blong armada bus darurat", "armada bus umum terbakar darurat", "kecelakaan armada bus umum darurat"),
         Category.FIRE_RESCUE: ("kebakaran rumah warga sekitar darurat", "kebakaran ruko warga sekitar darurat", "anak kecil terjebak kebakaran darurat", "kebakaran fasilitas bangunan darurat"),
         Category.SOCIAL_AFFAIRS: ("tenda bencana korban celaka darurat", "orang tua lansia pingsan darurat", "orang tua lansia kritis darurat", "anak kecil sakit darurat"),
-        Category.EDUCATION: ("atap area sekolah darurat", "kebakaran laboratorium sekolah darurat", "tembok area sekolah roboh darurat", "keracunan murid siswa darurat"),
+        Category.EDUCATION: ("atap area sekolah darurat", "kebakaran lab gedung sekolah darurat", "tembok area sekolah roboh darurat", "keracunan murid siswa darurat"),
         Category.PARKS_HOUSING: ("pohon peneduh tumbang darurat", "kabel taman kota darurat", "wahana taman kota darurat", "lampu taman kota darurat"),
     },
     "ood": {
-        cat: tuple(f"ancaman kritis penduduk korban sarana {cat.value.lower()} darurat" for _ in range(4))
-        for cat in Category
+        Category.ROAD: ("jembatan lintas retak darurat ambruk", "tebing lereng longsor butuh evakuasi segera", "tabrakan parah timbulkan korban kritis", "jalan amblas parah butuh penanganan darurat"),
+        Category.DRAINAGE_FLOOD: ("banjir bah rendam pemukiman butuh evakuasi", "arus luapan deras timbulkan korban hanyut darurat", "tanggul utama jebol warga mengungsi segera", "banjir besar kepung perkampungan kondisi kritis"),
+        Category.WASTE: ("kebakaran timbunan sampah merembet darurat", "ledakan gas sampah timbulkan korban luka segera", "gunungan sampah longsor butuh evakuasi darurat", "asap pekat kebakaran sampah kondisi kritis"),
+        Category.CLEAN_WATER: ("semburan pipa raksasa jebol darurat", "ledakan pipa utama timbulkan korban luka darurat", "kebocoran pipa gas leding butuh evakuasi segera", "aliran leding terputus total rumah sakit kritis"),
+        Category.CIVIL_ADMIN: ("kebakaran ruang arsip kantor layanan darurat", "kericuhan massa loket butuh evakuasi petugas segera", "atap kantor administrasi runtuh timbulkan korban", "ledakan gardu kantor layanan kondisi darurat"),
+        Category.HEALTH_SERVICE: ("pasien gagal napas butuh penanganan kritis segera", "insiden faskes timbulkan korban pendarahan darurat", "ruang rawat kekurangan oksigen kondisi kritis darurat", "ambulans darurat terhambat bawa pasien kritis"),
+        Category.PUBLIC_ORDER: ("bentrokan massa senjata tajam ada korban darurat", "kerusuhan anarkis serang pemukiman warga evakuasi segera", "penyerangan kelompok preman timbulkan korban kritis", "tawuran antargang lempar bom molotov darurat"),
+        Category.TRANSPORTATION: ("armada angkutan terbakar hebat evakuasi segera", "bus rem blong tabrak warga ada korban kritis", "kecelakaan beruntun angkutan kota butuh ambulans darurat", "tabrakan armada umum timbulkan korban darurat"),
+        Category.FIRE_RESCUE: ("kobaran api hanguskan blok pertokoan darurat", "anak terjebak kebakaran butuh evakuasi segera", "kebakaran ruko padat timbulkan korban kritis darurat", "semburan kobaran gas hunian butuh pertolongan segera"),
+        Category.SOCIAL_AFFAIRS: ("tenda pengungsi bencana roboh timbulkan korban darurat", "lansia sakit kritis di pengungsian butuh ambulans segera", "bayi telantar sakit parah butuh pertolongan darurat", "orang tua pingsan dehidrasi kondisi kritis darurat"),
+        Category.EDUCATION: ("plafon ruang ujian runtuh timbulkan korban darurat", "kebakaran laboratorium murid butuh evakuasi segera", "keracunan massal murid sekolah butuh ambulans darurat", "tembok sekolah roboh timpa anak kondisi kritis"),
+        Category.PARKS_HOUSING: ("pohon raksasa tumbang timpa pengendara korban darurat", "kabel tegangan tinggi putus di taman evakuasi segera", "wahana bermain ambruk timbulkan korban anak darurat", "tiang besi penerangan roboh timpa warga luka kritis"),
     },
 }
 
-STRUCTURE_TEMPLATES_BY_FAMILY: dict[str, dict[str, tuple[str, str, str]]] = {
-    "direct_report": {
-        "train": ("Saya melihat {issue}", "Mulainya {time_str}", "Dampak ke warga: {risk_phrase}."),
-        "dev": ("Yang saya temui adalah {issue}", "Sudah berlangsung {time_str}", "Dampak di lapangan: {risk_phrase}."),
-        "test": ("Warga mengeluhkan {issue}", "Keluhan ini muncul {time_str}", "Dampak yang terlihat: {risk_phrase}."),
-    },
-    "field_observation": {
-        "train": ("Warga mengabarkan {issue}", "Kondisinya mulai {time_str}", "Situasi saat ini {risk_phrase}."),
-        "dev": ("Kami mendapati {issue}", "Ini terjadi {time_str}", "Kondisi ini membuat {risk_phrase}."),
-        "test": ("Diadukan masalah {issue}", "Saya melihatnya {time_str}", "Situasi sekitar {risk_phrase}."),
-    },
-    "community_concern": {
-        "train": ("Ada laporan {issue}", "Terpantau sejak {time_str}", "Perlu diantisipasi karena {risk_phrase}."),
-        "dev": ("Ditemukan {issue}", "Kejadiannya {time_str}", "Perlu perhatian mengingat {risk_phrase}."),
-        "test": ("Informasi warga menyebut {issue}", "Laporan masuk {time_str}", "Keadaan lingkungan sehingga {risk_phrase}."),
-    },
+STRUCTURE_TEMPLATES_BY_FAMILY: dict[str, tuple[str, str, str]] = {
+    "direct_report": (
+        "Laporan: {issue}",
+        "Waktu: {time_str}",
+        "Dampak: {risk_phrase}.",
+    ),
+    "field_observation": (
+        "Kondisi: {issue}",
+        "Terpantau: {time_str}",
+        "Risiko: {risk_phrase}.",
+    ),
+    "community_concern": (
+        "Aduan: {issue}",
+        "Kejadian: {time_str}",
+        "Situasi: {risk_phrase}.",
+    ),
 }
-
-STRUCTURE_TEMPLATES_OOD: tuple[tuple[str, str, str], ...] = (
-    ("Saya menjumpai {issue}", "Waktu terpantau {time_str}", "Catatan risiko: {risk_phrase}."),
-    ("Tampak persoalan {issue}", "Pengamatan semenjak {time_str}", "Tinjauan kondisi: {risk_phrase}."),
-    ("Terjadi {issue}", "Kejadian berlangsung {time_str}", "Perkiraan dampak: {risk_phrase}."),
-)
 
 def safe_issue_surface(category: Category, concept_id: int, split_mode: str = "train", independent: bool = False) -> str:
     nouns = SAFE_CATEGORY_NOUNS[category]
@@ -1506,7 +1525,8 @@ def _build(
         amb_clauses = AMBIGUITY_CLAUSES_INTERNAL[name]
         amb_phrase = amb_clauses[(family_index + variant) % len(amb_clauses)]
 
-    intent_phrase = intent_pool[(concept_id + variant) % len(intent_pool)]
+    phrase_offset = 4 if independent else 0
+    intent_phrase = intent_pool[(concept_id + variant + phrase_offset) % len(intent_pool)]
 
     risk_phrase, risk_evidence_kind = make_risk_evidence(
         category=category,
@@ -1535,18 +1555,11 @@ def _build(
     style_idx = (family_index * 3 + variant) % len(STYLE_FAMILIES) if style_index is None else style_index % len(STYLE_FAMILIES)
     style_family = STYLE_FAMILIES[style_idx]
 
-    if not independent:
-        lead_templ, time_templ, risk_templ = STRUCTURE_TEMPLATES_BY_FAMILY[style_family][name]
-        lead_clause = lead_templ.format(issue=issue)
-        time_clause = time_templ.format(time_str=time_str)
-        risk_clause = risk_templ.format(risk_phrase=risk_phrase)
-        text = f"{opening}, {intent_phrase}. {lead_clause}{delimiter}{loc_expr}. {time_clause}. {risk_clause}"
-    else:
-        lead_templ, time_templ, risk_templ = STRUCTURE_TEMPLATES_OOD[style_idx]
-        lead_clause = lead_templ.format(issue=issue)
-        time_clause = time_templ.format(time_str=time_str)
-        risk_clause = risk_templ.format(risk_phrase=risk_phrase)
-        text = f"{opening}; {intent_phrase}. {lead_clause}{delimiter}{loc_expr}. {time_clause}. {risk_clause}"
+    lead_templ, time_templ, risk_templ = STRUCTURE_TEMPLATES_BY_FAMILY[style_family]
+    lead_clause = lead_templ.format(issue=issue)
+    time_clause = time_templ.format(time_str=time_str)
+    risk_clause = risk_templ.format(risk_phrase=risk_phrase)
+    text = f"{opening}, {intent_phrase}. {lead_clause}{delimiter}{loc_expr}. {time_clause}. {risk_clause}"
 
     spans = _spans(
         text,

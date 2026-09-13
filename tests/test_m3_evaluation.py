@@ -576,6 +576,8 @@ from scripts.evaluate_m3 import (
     build_arg_parser,
     compute_classification_metrics,
     compute_head_class_offsets,
+    deduplicate_evaluation_multitask_samples,
+    deduplicate_evaluation_ner_samples,
     evaluate_multitask_model,
     evaluate_ner_model,
     evaluate_synthetic_quality_gates,
@@ -4110,5 +4112,289 @@ def test_internal_dataset_with_canonical_spans_evaluated_in_pipeline(tmp_path: P
     assert report.status == "PASSED"
     assert report.internal_proxy_quality["status"] == "PASSED"
     assert report.internal_evaluation["proxy_type"] == "internal_proxy_synthetic"
+
+
+# ---------------------------------------------------------------------------
+# One-turn / one-bubble evaluation deduplication parity tests
+# ---------------------------------------------------------------------------
+
+
+def test_deduplicate_evaluation_multitask_samples_one_turn_parity() -> None:
+    """Ensure evaluation uses same dedup semantics as training for 1-turn/1-bubble trajectories."""
+    sample_full = {
+        "scenario_id": "sc-one-turn-1",
+        "text": "Lampu jalan padam total di depan RSUD Sleman",
+        "intent": "COMPLAINT",
+        "category": "STREETLIGHT",
+        "risk": "HIGH",
+        "completeness": "SUFFICIENT",
+        "granularity": "full",
+    }
+    sample_turn1 = {
+        "scenario_id": "sc-one-turn-1",
+        "text": "Lampu jalan padam total di depan RSUD Sleman",
+        "intent": "COMPLAINT",
+        "category": "STREETLIGHT",
+        "risk": "HIGH",
+        "completeness": "SUFFICIENT",
+        "granularity": "turn_1",
+    }
+    sample_sc2 = {
+        "scenario_id": "sc-one-turn-2",
+        "text": "Pipa PDAM pecah air menggenang",
+        "intent": "COMPLAINT",
+        "category": "CLEAN_WATER",
+        "risk": "MEDIUM",
+        "completeness": "SUFFICIENT",
+        "granularity": "full",
+    }
+
+    deduped = deduplicate_evaluation_multitask_samples([sample_full, sample_turn1, sample_sc2])
+    assert len(deduped) == 2
+    assert deduped[0]["scenario_id"] == "sc-one-turn-1"
+    assert deduped[0]["granularity"] == "full"
+    assert deduped[1]["scenario_id"] == "sc-one-turn-2"
+
+
+def test_deduplicate_evaluation_multitask_preserves_multi_turn_coverage() -> None:
+    """Multi-turn trajectories must retain turn-level progressive evaluation samples."""
+    samples = [
+        {
+            "scenario_id": "sc-multi-1",
+            "text": "Selamat siang min",
+            "intent": "INQUIRY",
+            "category": "ROAD",
+            "risk": "LOW",
+            "completeness": "INCOMPLETE",
+            "granularity": "turn_1",
+        },
+        {
+            "scenario_id": "sc-multi-1",
+            "text": "Selamat siang min jalan kaliurang amblas parah",
+            "intent": "COMPLAINT",
+            "category": "ROAD",
+            "risk": "HIGH",
+            "completeness": "SUFFICIENT",
+            "granularity": "turn_2",
+        },
+        {
+            "scenario_id": "sc-multi-1",
+            "text": "Selamat siang min\njalan kaliurang amblas parah",
+            "intent": "COMPLAINT",
+            "category": "ROAD",
+            "risk": "HIGH",
+            "completeness": "SUFFICIENT",
+            "granularity": "full",
+        },
+    ]
+    deduped = deduplicate_evaluation_multitask_samples(samples)
+    assert len(deduped) == 3
+    assert [s["granularity"] for s in deduped] == ["turn_1", "turn_2", "full"]
+
+
+def test_deduplicate_evaluation_ner_samples_one_turn_parity() -> None:
+    """Ensure NER evaluation dedup removes identical bubble/full pairs without changing multi-bubble."""
+    bubble_sample = {
+        "scenario_id": "sc-ner-1",
+        "text": "Pohon tumbang menutup jalan di Kotabaru",
+        "spans": [(0, 13, "OBJ"), (30, 38, "LOC")],
+        "canonical_spans": [(0, 13, "OBJ"), (30, 38, "LOC")],
+        "granularity": "bubble",
+    }
+    full_sample = {
+        "scenario_id": "sc-ner-1",
+        "text": "Pohon tumbang menutup jalan di Kotabaru",
+        "spans": [(0, 13, "OBJ"), (30, 38, "LOC")],
+        "canonical_spans": [(0, 13, "OBJ"), (30, 38, "LOC")],
+        "granularity": "full",
+    }
+
+    deduped = deduplicate_evaluation_ner_samples([bubble_sample, full_sample])
+    assert len(deduped) == 1
+    assert deduped[0]["granularity"] == "bubble"
+
+
+def test_deduplicate_evaluation_ner_preserves_multi_bubble_coverage() -> None:
+    """Multi-bubble trajectories with different partial and full texts must retain all samples."""
+    samples = [
+        {
+            "scenario_id": "sc-ner-multi",
+            "text": "Ada sampah menumpuk",
+            "spans": [(4, 18, "OBJ")],
+            "canonical_spans": [(4, 18, "OBJ")],
+            "granularity": "bubble",
+        },
+        {
+            "scenario_id": "sc-ner-multi",
+            "text": "Lokasinya di depan pasar Kranggan",
+            "spans": [(13, 33, "LOC")],
+            "canonical_spans": [(13, 33, "LOC")],
+            "granularity": "bubble",
+        },
+        {
+            "scenario_id": "sc-ner-multi",
+            "text": "Ada sampah menumpuk\nLokasinya di depan pasar Kranggan",
+            "spans": [(4, 18, "OBJ"), (33, 53, "LOC")],
+            "canonical_spans": [(4, 18, "OBJ"), (33, 53, "LOC")],
+            "granularity": "full",
+        },
+    ]
+    deduped = deduplicate_evaluation_ner_samples(samples)
+    assert len(deduped) == 3
+
+
+def test_evaluate_multitask_model_no_double_weighting_on_one_turn() -> None:
+    """evaluate_multitask_model must evaluate duplicate 1-turn samples only once."""
+    samples = [
+        {
+            "scenario_id": "sc-dup-1",
+            "text": "jalan rusak di kaliurang",
+            "intent": "COMPLAINT",
+            "category": "ROAD",
+            "risk": "MEDIUM",
+            "completeness": "SUFFICIENT",
+            "granularity": "full",
+        },
+        {
+            "scenario_id": "sc-dup-1",
+            "text": "jalan rusak di kaliurang",
+            "intent": "COMPLAINT",
+            "category": "ROAD",
+            "risk": "MEDIUM",
+            "completeness": "SUFFICIENT",
+            "granularity": "turn_1",
+        },
+    ]
+
+    class MockONNXSession:
+        def get_inputs(self) -> list[Any]:
+            m1 = mock.Mock(name="input_ids")
+            m2 = mock.Mock(name="attention_mask")
+            return [m1, m2]
+
+        def get_outputs(self) -> list[Any]:
+            return [mock.Mock(name=h) for h in ("intent_logits", "category_logits", "risk_logits", "completeness_logits")]
+
+        def run(self, output_names: Any, feed_dict: dict[str, Any]) -> list[Any]:
+            n = len(feed_dict["input_ids"])
+            return [
+                [[10.0, 0.0, 0.0] for _ in range(n)],
+                [[10.0, 0.0, 0.0, 0.0, 0.0, 0.0] for _ in range(n)],
+                [[0.0, 10.0, 0.0, 0.0] for _ in range(n)],
+                [[10.0, 0.0, 0.0] for _ in range(n)],
+            ]
+
+    res = evaluate_multitask_model(
+        model=MockONNXSession(),
+        samples=samples,
+        tokenizer=SimpleOfflineTokenizer(),
+        batch_size=2,
+    )
+    assert res["evaluated"] is True
+    assert res["sample_count"] == 1
+    assert res["heads"]["intent"]["support"] == 1
+
+
+def test_evaluate_ner_model_no_double_weighting_on_one_turn_one_bubble() -> None:
+    """evaluate_ner_model must evaluate duplicate 1-turn/1-bubble NER samples only once when granularity=None."""
+    samples = [
+        {
+            "scenario_id": "sc-ner-dup",
+            "text": "jalan berlubang di Sleman",
+            "spans": [(0, 15, "OBJ"), (19, 25, "LOC")],
+            "canonical_spans": [(0, 15, "OBJ"), (19, 25, "LOC")],
+            "granularity": "bubble",
+        },
+        {
+            "scenario_id": "sc-ner-dup",
+            "text": "jalan berlubang di Sleman",
+            "spans": [(0, 15, "OBJ"), (19, 25, "LOC")],
+            "canonical_spans": [(0, 15, "OBJ"), (19, 25, "LOC")],
+            "granularity": "full",
+        },
+    ]
+
+    class MockNERONNXSession:
+        def get_inputs(self) -> list[Any]:
+            return [mock.Mock(name="input_ids"), mock.Mock(name="attention_mask")]
+
+        def run(self, output_names: Any, feed_dict: dict[str, Any]) -> list[Any]:
+            seq_len = len(feed_dict["input_ids"][0]) if isinstance(feed_dict["input_ids"], list) else feed_dict["input_ids"].shape[1]
+            num_tags = len(DEFAULT_TAGSET)
+            logits_token = [0.0] * num_tags
+            logits_token[0] = 10.0
+            return [[[list(logits_token) for _ in range(seq_len)]]]
+
+    res = evaluate_ner_model(
+        model=MockNERONNXSession(),
+        samples=samples,
+        tokenizer=SimpleOfflineTokenizer(),
+        tagset=DEFAULT_TAGSET,
+    )
+    assert res["evaluated"] is True
+    assert res["sample_count"] == 1
+
+
+def test_load_independent_held_out_dataset_dedup_and_multi_turn(tmp_path: Path) -> None:
+    """Independent held-out loader must deduplicate single-turn while preserving multi-turn."""
+    single_turn_record = {
+        "scenario_id": "indep-single",
+        "family_id": "sep-road-01",
+        "provenance": PROVENANCE_SYNTHETIC_INDEPENDENT,
+        "world_truth": {
+            "intent": "COMPLAINT",
+            "category": "ROAD",
+            "risk": "HIGH",
+            "completeness": "SUFFICIENT",
+            "spans": [[0, 12, "OBJ"]],
+        },
+        "turns": [
+            {
+                "turn": 1,
+                "bubbles": [{"text": "Jalan rusak parah."}],
+            }
+        ],
+    }
+    multi_turn_record = {
+        "scenario_id": "indep-multi",
+        "family_id": "sep-road-02",
+        "provenance": PROVENANCE_SYNTHETIC_INDEPENDENT,
+        "world_truth": {
+            "intent": "COMPLAINT",
+            "category": "ROAD",
+            "risk": "HIGH",
+            "completeness": "SUFFICIENT",
+            "spans": [[0, 12, "OBJ"]],
+        },
+        "turns": [
+            {
+                "turn": 1,
+                "bubbles": [{"text": "Pagi pak."}],
+            },
+            {
+                "turn": 2,
+                "bubbles": [{"text": "Jalan rusak parah."}],
+            },
+        ],
+    }
+
+    indep_file = tmp_path / "indep_test_dedup.jsonl"
+    with open(indep_file, "w", encoding="utf-8") as f:
+        f.write(json.dumps(single_turn_record) + "\n")
+        f.write(json.dumps(multi_turn_record) + "\n")
+
+    mt_samples, ner_samples, raw_records, _ = load_independent_held_out_dataset(indep_file)
+    assert len(raw_records) == 2
+
+    # Single-turn trajectory produces exactly 1 multitask sample and 1 NER sample
+    single_mt = [s for s in mt_samples if s.get("scenario_id") == "indep-single"]
+    single_ner = [s for s in ner_samples if s.get("scenario_id") == "indep-single"]
+    assert len(single_mt) == 1
+    assert len(single_ner) == 1
+
+    # Multi-turn trajectory preserves turn-level progressive samples
+    multi_mt = [s for s in mt_samples if s.get("scenario_id") == "indep-multi"]
+    assert len(multi_mt) >= 2
+
 
 

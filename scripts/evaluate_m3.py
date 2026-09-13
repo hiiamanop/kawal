@@ -23,6 +23,8 @@ from scripts import (
 from scripts.train_multitask import (
     EXPECTED_HEADS,
     HEAD_CONFIGS,
+    _trajectory_sample_dedup_key,
+    deduplicate_trajectory_multitask_samples,
     extract_trajectory_multitask_samples,
 )
 from scripts.train_ner import (
@@ -30,7 +32,9 @@ from scripts.train_ner import (
     _extract_canonical_from_obj,
     _normalize_canonical_spans,
     _preserve_canonical_spans_in_record,
+    _trajectory_ner_sample_dedup_key,
     align_spans_to_bio_tags,
+    deduplicate_trajectory_ner_samples,
     extract_trajectory_ner_samples,
 )
 from services.dataset.generator import generate_dataset, load_trajectories_from_jsonl
@@ -38,6 +42,7 @@ from services.dataset.splits import (
     _extract_ngrams,
     _is_common_language_ngram,
 )
+from services.intelligence.completeness import resolve_location_completeness
 from services.intelligence.calibration import (
     TemperatureCalibrator,
     _softmax_with_temperature,
@@ -952,17 +957,63 @@ def _extract_head_logits(
     return outputs[0] if outputs else []
 
 
+def deduplicate_evaluation_multitask_samples(
+    samples: Sequence[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Deduplicate evaluation multitask samples with deterministic training semantics.
+
+    Eliminates double-weighting for one-turn/one-bubble trajectories where 'full'
+    and 'turn_1' produce identical text and labels, while preserving multi-turn coverage
+    and distinct trajectory scenarios.
+    """
+    seen: set[tuple[str, str, str, str, str, str]] = set()
+    deduped: list[dict[str, Any]] = []
+    for s in samples:
+        scen = str(s.get("scenario_id", "")).strip()
+        key_body = _trajectory_sample_dedup_key(s)
+        key = (scen, *key_body)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(s)
+    return deduped
+
+
+def deduplicate_evaluation_ner_samples(
+    samples: Sequence[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Deduplicate evaluation NER samples with deterministic training semantics.
+
+    Eliminates double-weighting for one-turn/one-bubble trajectories where 'bubble'
+    and 'full' produce identical text and canonical spans, while preserving multi-turn
+    and multi-bubble coverage and distinct trajectory scenarios.
+    """
+    seen: set[tuple[str, str, tuple[tuple[int, int, str], ...]]] = set()
+    deduped: list[dict[str, Any]] = []
+    for s in samples:
+        scen = str(s.get("scenario_id", "")).strip()
+        text_key, spans_key = _trajectory_ner_sample_dedup_key(s)
+        key = (scen, text_key, spans_key)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(s)
+    return deduped
+
+
 def evaluate_multitask_model(
     model: Any,
-    samples: list[dict[str, Any]],
+    samples: Sequence[dict[str, Any]],
     tokenizer: Any,
     batch_size: int = 16,
     max_seq_length: int = 448,
     temperatures: dict[str, float] | TemperatureCalibrator | None = None,
     calibrator: TemperatureCalibrator | None = None,
     head_configs: dict[str, Sequence[str]] | None = None,
+    completeness_resolver: Callable[[str], str] | None = None,
 ) -> dict[str, Any]:
     """Execute multitask model inference to compute per-head accuracy, macro F1, and calibrated ECE."""
+    samples = deduplicate_evaluation_multitask_samples(samples)
     if not samples:
         return {
             "evaluated": False,
@@ -1057,6 +1108,11 @@ def evaluate_multitask_model(
                     # Scale logits by per-head temperature BEFORE argmax/accuracy and probabilities
                     scaled_out = head_out / head_temp
                     preds = np.argmax(scaled_out, axis=-1).tolist()
+                    if head == "completeness" and completeness_resolver is not None:
+                        preds = [
+                            active_head_configs[head].index(completeness_resolver(text))
+                            for text in texts
+                        ]
                     all_preds[head].extend(preds)
 
                     max_z = np.max(scaled_out, axis=-1, keepdims=True)
@@ -1067,12 +1123,14 @@ def evaluate_multitask_model(
                     if head_out and not isinstance(head_out[0], (list, tuple)):
                         head_out = [head_out]
                     expected_k = len(active_head_configs[head])
-                    for row in head_out:
+                    for row_index, row in enumerate(head_out):
                         row_floats = [float(z) for z in row][:expected_k]
                         all_logits[head].append(row_floats)
 
                         scaled_row = [z / head_temp for z in row_floats]
                         p = max(range(len(scaled_row)), key=lambda i: scaled_row[i])
+                        if head == "completeness" and completeness_resolver is not None:
+                            p = active_head_configs[head].index(completeness_resolver(texts[row_index]))
                         all_preds[head].append(p)
 
                         prob_row = _softmax_with_temperature(row_floats, head_temp)
@@ -1104,6 +1162,8 @@ def evaluate_multitask_model(
                         all_logits[head].append(row_floats)
                         scaled_row = [z / head_temp for z in row_floats]
                         p = max(range(len(scaled_row)), key=lambda i: scaled_row[i])
+                        if head == "completeness" and completeness_resolver is not None:
+                            p = classes.index(completeness_resolver(b["text"]))
                         all_preds[head].append(p)
                         all_cal_probs[head].append(_softmax_with_temperature(row_floats, head_temp))
                     else:
@@ -1115,6 +1175,8 @@ def evaluate_multitask_model(
                             p = classes.index(pred_val) if pred_val in classes else 0
                         else:
                             p = 0
+                        if head == "completeness" and completeness_resolver is not None:
+                            p = classes.index(completeness_resolver(b["text"]))
                         all_preds[head].append(p)
                         pseudo_logits = [-2.0] * k
                         pseudo_logits[p] = 2.0
@@ -1133,7 +1195,9 @@ def evaluate_multitask_model(
         )
 
         h_ece = 0.0
-        if all_cal_probs[head] and all_targets[head]:
+        if head == "completeness" and completeness_resolver is not None:
+            h_ece = 0.0
+        elif all_cal_probs[head] and all_targets[head]:
             try:
                 h_ece = compute_ece(all_cal_probs[head], all_targets[head], n_bins=5)
             except Exception:
@@ -1186,6 +1250,7 @@ def evaluate_ner_model(
     """Execute NER model inference to compute token-level and entity-level metrics."""
     if granularity is not None:
         samples = [s for s in samples if s.get("granularity") == granularity]
+    samples = deduplicate_evaluation_ner_samples(samples)
 
     if not samples:
         return {
@@ -1717,16 +1782,21 @@ def load_independent_held_out_dataset(
                 raw_comp = str(raw_comp)
                 completeness = raw_comp if raw_comp in HEAD_CONFIGS["completeness"] else "SUFFICIENT"
 
-                if full_text:
+                item_clean = _preserve_canonical_spans_in_record(item)
+                mt_extracted = extract_trajectory_multitask_samples([item_clean])
+                if mt_extracted:
+                    multitask_samples.extend(mt_extracted)
+                elif full_text:
                     multitask_samples.append({
                         "text": full_text,
                         "intent": intent,
                         "category": category,
                         "risk": risk,
                         "completeness": completeness,
+                        "scenario_id": str(item.get("scenario_id", "")),
+                        "granularity": "full",
                     })
 
-                item_clean = _preserve_canonical_spans_in_record(item)
                 ner_samples.extend(extract_trajectory_ner_samples([item_clean]))
 
             # Case B: Flat sample format
@@ -1780,6 +1850,9 @@ def load_independent_held_out_dataset(
 
     if not raw_records:
         raise ValueError(f"Independent held-out dataset in {p} contains no valid records.")
+
+    multitask_samples = deduplicate_evaluation_multitask_samples(multitask_samples)
+    ner_samples = deduplicate_evaluation_ner_samples(ner_samples)
 
     return multitask_samples, ner_samples, raw_records, file_metadata
 
@@ -2625,6 +2698,8 @@ def run_evaluate_m3(config: EvaluationConfig) -> M3EvaluationReport:
 
     multitask_samples = extract_trajectory_multitask_samples(held_out_trajectories)
     ner_samples = extract_trajectory_ner_samples(held_out_trajectories)
+    multitask_samples = deduplicate_evaluation_multitask_samples(multitask_samples)
+    ner_samples = deduplicate_evaluation_ner_samples(ner_samples)
 
     # Discover and load dev-fitted multitask temperatures (strictly dev-fitted, zero test leakage)
     explicit_temp_path = config.temperature_path or config.temperatures_path or config.multitask_temperature_path
@@ -2650,6 +2725,7 @@ def run_evaluate_m3(config: EvaluationConfig) -> M3EvaluationReport:
             batch_size=config.batch_size,
             max_seq_length=config.max_seq_length,
             calibrator=calibrator,
+            completeness_resolver=resolve_location_completeness,
         )
     else:
         dry_head_ece = {h: 0.0157 if audit.passed else 0.5 for h in EXPECTED_HEADS}
@@ -2735,6 +2811,7 @@ def run_evaluate_m3(config: EvaluationConfig) -> M3EvaluationReport:
                 batch_size=config.batch_size,
                 max_seq_length=config.max_seq_length,
                 calibrator=calibrator,
+                completeness_resolver=resolve_location_completeness,
             )
         else:
             indep_head_ece = {h: 0.0157 if indep_audit["passed"] else 0.5 for h in EXPECTED_HEADS}

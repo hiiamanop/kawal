@@ -1,6 +1,6 @@
 {
   "evaluation_version": "1.0.0",
-  "timestamp": "2026-09-13T07:06:56.063139+00:00",
+  "timestamp": "2026-09-13T08:33:21.748861+00:00",
   "seed": 42,
   "status": "PASSED",
   "pipeline_status": "PASSED",
@@ -156,9 +156,9 @@
   "benchmark": {
     "mean_latency_ms": 0.01,
     "p50_latency_ms": 0.01,
-    "p95_latency_ms": 0.01,
-    "p99_latency_ms": 0.01,
-    "throughput_qps": 104439.19,
+    "p95_latency_ms": 0.02,
+    "p99_latency_ms": 0.02,
+    "throughput_qps": 96618.81,
     "target_p95_ms": 5000.0,
     "sla_met": true,
     "samples_count": 20,

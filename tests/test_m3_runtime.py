@@ -469,6 +469,7 @@ def test_local_runtime_available_with_mock_backend() -> None:
     assert result.prediction is not None
     assert result.prediction.category == "ROAD"
     assert result.prediction.confidence == 0.94
+    assert result.prediction.completeness == "INCOMPLETE"
     assert len(result.entities) == 2
     assert result.entities[0].label == "B-LOC"
     assert result.entities[0].text == "Jalan Sudirman"
@@ -754,7 +755,7 @@ def test_successful_backend_does_not_retain_unavailable_fallback_semantics() -> 
     assert result.analysis_fallback.authority_unit_id == "UNIT-BPBD-01"
     assert result.analysis_fallback.has_mandatory_evidence is True
     assert "ml_model_unavailable" not in result.analysis_fallback.missing_fields
-    assert result.analysis_fallback.missing_fields == ()
+    assert result.analysis_fallback.missing_fields == ("completeness_incomplete",)
 
 
 def test_adapter_agent_result_v1_succeeded_mapping() -> None:

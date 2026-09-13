@@ -41,6 +41,7 @@ from scripts.train_multitask import (
     BertForMultiTaskClassification,
     MultiTaskOutput,
     calibrate_temperatures,
+    deduplicate_trajectory_multitask_samples,
     extract_trajectory_multitask_samples,
     get_multitask_model_class,
     parse_config_file as parse_multitask_config_file,
@@ -53,6 +54,7 @@ from scripts.train_ner import (
     align_spans_to_bio_tags,
     align_spans_with_tokenizer,
     compute_ner_metrics,
+    deduplicate_trajectory_ner_samples,
     extract_grounded_object_candidates,
     extract_trajectory_ner_samples,
     get_weighted_ner_trainer_class,
@@ -4669,3 +4671,384 @@ def test_dapt_lineage_backward_compatibility_with_synthetic_default(tmp_path: Pa
         meta = json.load(f)
     assert meta["dataset_lineage"]["is_synthetic"] is True
     assert meta["dataset_lineage"]["record_count"] > 0
+
+
+def test_multitask_sample_extraction_one_turn_dedup() -> None:
+    """Ensure 1-turn/1-bubble trajectory emits only one deterministic sample instead of duplicate full and turn samples."""
+    from contracts.models import (
+        Category,
+        ComplaintTrajectory,
+        DatasetSplit,
+        DecisionMode,
+        TrajectoryBubble,
+        TrajectoryTurn,
+        TurnExpectedAction,
+    )
+
+    bubble = TrajectoryBubble(source_message_id="msg_001", text="Lampu jalan padam total di Sudirman.")
+    turn = TrajectoryTurn(
+        turn=1,
+        bubbles=(bubble,),
+        expected_action=TurnExpectedAction(turn=1, allowed_actions=(DecisionMode.EXECUTE,)),
+    )
+    traj = ComplaintTrajectory(
+        scenario_id="sc-dedup-1t-001",
+        family_id="fam-dedup-1t",
+        split=DatasetSplit.TRAIN,
+        category=Category.ROAD,
+        world_truth={
+            "category": "ROAD",
+            "intent": "COMPLAINT",
+            "risk": "HIGH",
+            "completeness": "SUFFICIENT",
+            "provenance": "synthetic_proxy",
+        },
+        turns=(turn,),
+    )
+
+    samples = extract_trajectory_multitask_samples([traj])
+    assert len(samples) == 1
+    sample = samples[0]
+    assert sample["text"] == "Lampu jalan padam total di Sudirman."
+    assert sample["granularity"] == "full"
+    assert sample["intent"] == "COMPLAINT"
+    assert sample["category"] == "ROAD"
+    assert sample["risk"] == "HIGH"
+    assert sample["completeness"] == "SUFFICIENT"
+    assert sample["scenario_id"] == "sc-dedup-1t-001"
+
+
+def test_multitask_sample_extraction_multi_turn_preservation() -> None:
+    """Ensure multi-turn trajectories preserve full sample and all distinct partial-context turn samples."""
+    from contracts.models import (
+        Category,
+        ComplaintTrajectory,
+        DatasetSplit,
+        DecisionMode,
+        TrajectoryBubble,
+        TrajectoryTurn,
+        TurnExpectedAction,
+    )
+
+    t1_bubble = TrajectoryBubble(source_message_id="msg_101", text="Pipa PDAM pecah di trotoar.")
+    t2_bubble = TrajectoryBubble(source_message_id="msg_102", text="Lokasi persis depan kantor pos.")
+
+    turn1 = TrajectoryTurn(
+        turn=1,
+        bubbles=(t1_bubble,),
+        expected_action=TurnExpectedAction(turn=1, allowed_actions=(DecisionMode.REQUEST_CLARIFICATION,)),
+    )
+    turn2 = TrajectoryTurn(
+        turn=2,
+        bubbles=(t2_bubble,),
+        expected_action=TurnExpectedAction(turn=2, allowed_actions=(DecisionMode.EXECUTE,)),
+    )
+    traj = ComplaintTrajectory(
+        scenario_id="sc-preserve-mt-001",
+        family_id="fam-preserve-mt",
+        split=DatasetSplit.DEV,
+        category=Category.CLEAN_WATER,
+        world_truth={
+            "category": "CLEAN_WATER",
+            "intent": "COMPLAINT",
+            "risk": "HIGH",
+            "completeness": "SUFFICIENT",
+            "provenance": "synthetic_proxy",
+        },
+        turns=(turn1, turn2),
+    )
+
+    samples = extract_trajectory_multitask_samples([traj])
+    assert len(samples) == 3
+
+    granularities = [s["granularity"] for s in samples]
+    assert granularities == ["full", "turn_1", "turn_2"]
+
+    full_s = samples[0]
+    turn1_s = samples[1]
+    turn2_s = samples[2]
+
+    assert full_s["text"] == "Pipa PDAM pecah di trotoar.\nLokasi persis depan kantor pos."
+    assert turn1_s["text"] == "Pipa PDAM pecah di trotoar."
+    assert turn2_s["text"] == "Pipa PDAM pecah di trotoar. Lokasi persis depan kantor pos."
+
+    for s in samples:
+        assert s["category"] == "CLEAN_WATER"
+        assert s["intent"] == "COMPLAINT"
+        assert s["risk"] == "HIGH"
+        assert s["completeness"] == "SUFFICIENT"
+        assert s["split"] == "dev"
+
+
+def test_multitask_sample_extraction_does_not_collapse_separate_trajectories() -> None:
+    """Ensure identical user bubbles/text across separate trajectories are preserved and NOT collapsed."""
+    from contracts.models import (
+        Category,
+        ComplaintTrajectory,
+        DatasetSplit,
+        DecisionMode,
+        TrajectoryBubble,
+        TrajectoryTurn,
+        TurnExpectedAction,
+    )
+
+    def _make_traj(scenario_id: str) -> ComplaintTrajectory:
+        bubble = TrajectoryBubble(source_message_id=f"msg_{scenario_id}", text="Tumpukan sampah liar menumpuk.")
+        turn = TrajectoryTurn(
+            turn=1,
+            bubbles=(bubble,),
+            expected_action=TurnExpectedAction(turn=1, allowed_actions=(DecisionMode.EXECUTE,)),
+        )
+        return ComplaintTrajectory(
+            scenario_id=scenario_id,
+            family_id="fam-waste-repeat",
+            split=DatasetSplit.TRAIN,
+            category=Category.WASTE,
+            world_truth={
+                "category": "WASTE",
+                "intent": "COMPLAINT",
+                "risk": "MEDIUM",
+                "completeness": "SUFFICIENT",
+                "provenance": "synthetic_proxy",
+            },
+            turns=(turn,),
+        )
+
+    traj_a = _make_traj("sc-sep-001")
+    traj_b = _make_traj("sc-sep-002")
+
+    samples = extract_trajectory_multitask_samples([traj_a, traj_b])
+    assert len(samples) == 2
+    scenario_ids = [s["scenario_id"] for s in samples]
+    assert scenario_ids == ["sc-sep-001", "sc-sep-002"]
+    assert samples[0]["text"] == samples[1]["text"] == "Tumpukan sampah liar menumpuk."
+
+
+def test_deduplicate_trajectory_multitask_samples_helper_direct() -> None:
+    """Directly test deduplicate_trajectory_multitask_samples helper preserves first-seen and distinct samples."""
+    raw_samples = [
+        {"text": "Halo", "intent": "A", "category": "B", "risk": "C", "completeness": "D", "granularity": "full"},
+        {"text": "Halo", "intent": "A", "category": "B", "risk": "C", "completeness": "D", "granularity": "turn_1"},
+        {"text": "Halo", "intent": "DIFF", "category": "B", "risk": "C", "completeness": "D", "granularity": "turn_2"},
+        {"text": "Halo lagi", "intent": "A", "category": "B", "risk": "C", "completeness": "D", "granularity": "turn_3"},
+    ]
+    deduped = deduplicate_trajectory_multitask_samples(raw_samples)
+    assert len(deduped) == 3
+    assert deduped[0]["granularity"] == "full"
+    assert deduped[1]["intent"] == "DIFF"
+    assert deduped[2]["text"] == "Halo lagi"
+
+
+def test_ner_sample_extraction_one_turn_dedup() -> None:
+    """Ensure 1-turn/1-bubble trajectory emits only one deterministic sample instead of duplicate full and bubble samples."""
+    from contracts.models import (
+        Category,
+        ComplaintTrajectory,
+        DatasetSplit,
+        DecisionMode,
+        TrajectoryBubble,
+        TrajectoryTurn,
+        TurnExpectedAction,
+    )
+
+    bubble = TrajectoryBubble(source_message_id="msg_ner_001", text="Lampu jalan padam total di Jalan Sudirman.")
+    turn = TrajectoryTurn(
+        turn=1,
+        bubbles=(bubble,),
+        expected_action=TurnExpectedAction(turn=1, allowed_actions=(DecisionMode.EXECUTE,)),
+    )
+    traj = ComplaintTrajectory(
+        scenario_id="sc-ner-dedup-1t-001",
+        family_id="fam-ner-dedup-1t",
+        split=DatasetSplit.TRAIN,
+        category=Category.ROAD,
+        turns=(turn,),
+    )
+
+    samples = extract_trajectory_ner_samples([traj])
+    assert len(samples) == 1
+    sample = samples[0]
+    assert sample["text"] == "Lampu jalan padam total di Jalan Sudirman."
+    assert sample["granularity"] == "bubble"
+    assert sample["scenario_id"] == "sc-ner-dedup-1t-001"
+    assert sample["split"] == "train"
+
+
+def test_ner_sample_extraction_one_turn_dedup_with_canonical_spans() -> None:
+    """Ensure 1-turn/1-bubble trajectory with explicit canonical spans emits only one sample without heuristic contamination."""
+    raw_record = {
+        "scenario_id": "sc-ner-canon-1t-001",
+        "family_id": "fam-ner-canon-1t",
+        "split": "train",
+        "category": "ROAD",
+        "turns": [
+            {
+                "turn": 1,
+                "bubbles": [
+                    {
+                        "source_message_id": "msg_c_01",
+                        "text": "Pipa air bocor parah di Jalan Malioboro tadi pagi.",
+                        "canonical_spans": [(0, 14, "OBJ")],
+                    }
+                ],
+            }
+        ],
+    }
+
+    samples = extract_trajectory_ner_samples([raw_record])
+    assert len(samples) == 1
+    sample = samples[0]
+    assert sample["text"] == "Pipa air bocor parah di Jalan Malioboro tadi pagi."
+    assert sample["granularity"] == "bubble"
+    assert sample["spans"] == [(0, 14, "OBJ")]
+    assert sample["canonical_spans"] == [(0, 14, "OBJ")]
+
+
+def test_ner_sample_extraction_preserves_multiturn_bubbles_and_full() -> None:
+    """Ensure multi-turn/multi-bubble trajectories preserve both individual bubble samples and full combined sample."""
+    from contracts.models import (
+        Category,
+        ComplaintTrajectory,
+        DatasetSplit,
+        DecisionMode,
+        TrajectoryBubble,
+        TrajectoryTurn,
+        TurnExpectedAction,
+    )
+
+    t1_bubble = TrajectoryBubble(source_message_id="msg_m_1", text="Pipa PDAM pecah di trotoar.")
+    t2_bubble = TrajectoryBubble(source_message_id="msg_m_2", text="Lokasi persis depan kantor pos.")
+
+    turn1 = TrajectoryTurn(
+        turn=1,
+        bubbles=(t1_bubble,),
+        expected_action=TurnExpectedAction(turn=1, allowed_actions=(DecisionMode.REQUEST_CLARIFICATION,)),
+    )
+    turn2 = TrajectoryTurn(
+        turn=2,
+        bubbles=(t2_bubble,),
+        expected_action=TurnExpectedAction(turn=2, allowed_actions=(DecisionMode.EXECUTE,)),
+    )
+    traj = ComplaintTrajectory(
+        scenario_id="sc-ner-preserve-mt-001",
+        family_id="fam-ner-preserve-mt",
+        split=DatasetSplit.DEV,
+        category=Category.CLEAN_WATER,
+        turns=(turn1, turn2),
+    )
+
+    samples = extract_trajectory_ner_samples([traj])
+    assert len(samples) == 3
+
+    granularities = [s["granularity"] for s in samples]
+    assert granularities == ["bubble", "bubble", "full"]
+
+    bubble1_s = samples[0]
+    bubble2_s = samples[1]
+    full_s = samples[2]
+
+    assert bubble1_s["text"] == "Pipa PDAM pecah di trotoar."
+    assert bubble2_s["text"] == "Lokasi persis depan kantor pos."
+    assert full_s["text"] == "Pipa PDAM pecah di trotoar.\nLokasi persis depan kantor pos."
+
+
+def test_ner_sample_extraction_does_not_collapse_separate_trajectories() -> None:
+    """Ensure identical text/spans across separate trajectories are preserved and NOT collapsed across trajectories."""
+    from contracts.models import (
+        Category,
+        ComplaintTrajectory,
+        DatasetSplit,
+        DecisionMode,
+        TrajectoryBubble,
+        TrajectoryTurn,
+        TurnExpectedAction,
+    )
+
+    def _make_traj(scenario_id: str) -> ComplaintTrajectory:
+        bubble = TrajectoryBubble(source_message_id=f"msg_{scenario_id}", text="Tumpukan sampah liar menumpuk di jalan.")
+        turn = TrajectoryTurn(
+            turn=1,
+            bubbles=(bubble,),
+            expected_action=TurnExpectedAction(turn=1, allowed_actions=(DecisionMode.EXECUTE,)),
+        )
+        return ComplaintTrajectory(
+            scenario_id=scenario_id,
+            family_id="fam-waste-repeat",
+            split=DatasetSplit.TRAIN,
+            category=Category.WASTE,
+            turns=(turn,),
+        )
+
+    traj_a = _make_traj("sc-ner-sep-001")
+    traj_b = _make_traj("sc-ner-sep-002")
+
+    samples = extract_trajectory_ner_samples([traj_a, traj_b])
+    assert len(samples) == 2
+    scenario_ids = [s["scenario_id"] for s in samples]
+    assert scenario_ids == ["sc-ner-sep-001", "sc-ner-sep-002"]
+    assert samples[0]["text"] == samples[1]["text"] == "Tumpukan sampah liar menumpuk di jalan."
+
+
+def test_ner_sample_extraction_heuristic_fallback_no_contamination_when_bubble_lacks_canonical() -> None:
+    """Ensure that when bubble lacks canonical spans, its heuristic spans do not contaminate traj_canonical."""
+    raw_record = {
+        "scenario_id": "sc-ner-contam-check-001",
+        "family_id": "fam-ner-contam",
+        "split": "train",
+        "category": "ROAD",
+        "world_truth": {
+            "canonical_spans": [(0, 11, "OBJ")],
+        },
+        "turns": [
+            {
+                "turn": 1,
+                "bubbles": [
+                    {
+                        "source_message_id": "msg_contam_1",
+                        "text": "Lampu padam di Jalan Sudirman tadi malam.",
+                    }
+                ],
+            }
+        ],
+    }
+    samples = extract_trajectory_ner_samples([raw_record])
+    assert len(samples) == 1
+    sample = samples[0]
+    # Because total_bubbles_count == 1, b_canonical falls back to traj canonical_spans [(0, 11, "OBJ")].
+    # It must NOT include heuristic LOC ("Jalan Sudirman") or TIME ("tadi malam").
+    assert sample["spans"] == [(0, 11, "OBJ")]
+
+
+def test_ner_sample_extraction_ood_regression_protection() -> None:
+    """Ensure OOD canary scenario in train/dev split still raises DatasetAuditError."""
+    ood_record = {
+        "scenario_id": "ood_canary_ner_001",
+        "family_id": "fam-canary-ner",
+        "split": "train",
+        "turns": [
+            {
+                "turn": 1,
+                "bubbles": [{"text": "Pohon tumbang menutup jalan."}],
+            }
+        ],
+    }
+    with pytest.raises(DatasetAuditError) as exc_info:
+        extract_trajectory_ner_samples([ood_record])
+    assert "OOD training contamination detected" in str(exc_info.value)
+
+
+def test_deduplicate_trajectory_ner_samples_helper_direct() -> None:
+    """Directly test deduplicate_trajectory_ner_samples helper preserves first-seen and distinct samples."""
+    raw_samples = [
+        {"text": "Halo Bandung", "canonical_spans": [(5, 12, "LOC")], "spans": [(5, 12, "LOC")], "granularity": "bubble"},
+        {"text": "Halo Bandung", "canonical_spans": [(5, 12, "LOC")], "spans": [(5, 12, "LOC")], "granularity": "full"},
+        {"text": "Halo Bandung", "canonical_spans": [(0, 4, "OBJ")], "spans": [(0, 4, "OBJ")], "granularity": "bubble_2"},
+        {"text": "Lapor jalan rusak", "canonical_spans": [(6, 17, "OBJ")], "spans": [(6, 17, "OBJ")], "granularity": "bubble_3"},
+    ]
+    deduped = deduplicate_trajectory_ner_samples(raw_samples)
+    assert len(deduped) == 3
+    assert deduped[0]["granularity"] == "bubble"
+    assert deduped[1]["canonical_spans"] == [(0, 4, "OBJ")]
+    assert deduped[2]["text"] == "Lapor jalan rusak"
+
+

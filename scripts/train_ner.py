@@ -1067,6 +1067,44 @@ def _extract_spans_for_text(
     return resolve_overlapping_spans(raw_spans, text=text)
 
 
+def _trajectory_ner_sample_dedup_key(
+    sample: dict[str, Any],
+) -> tuple[str, tuple[tuple[int, int, str], ...]]:
+    """Return deterministic key composed of sample text and canonical spans."""
+    raw_spans = sample.get("canonical_spans") if sample.get("canonical_spans") is not None else sample.get("spans", [])
+    norm_spans: list[tuple[int, int, str]] = []
+    for item in raw_spans:
+        if isinstance(item, (list, tuple)) and len(item) >= 3:
+            norm_spans.append((int(item[0]), int(item[1]), str(item[2])))
+        elif isinstance(item, dict):
+            norm_spans.append((int(item.get("start", 0)), int(item.get("end", 0)), str(item.get("label", ""))))
+        elif hasattr(item, "start") and hasattr(item, "end") and hasattr(item, "label"):
+            lbl = getattr(item, "label")
+            lbl_str = lbl.value if hasattr(lbl, "value") else str(lbl)
+            norm_spans.append((int(item.start), int(item.end), str(lbl_str)))
+    norm_spans.sort()
+    return (str(sample.get("text", "")).strip(), tuple(norm_spans))
+
+
+def deduplicate_trajectory_ner_samples(
+    samples: Sequence[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Deduplicate NER samples from a single trajectory by exact (text, canonical_spans).
+
+    Preserves meaningful multi-turn/individual bubble training samples, but emits
+    only one deterministic sample for any exact duplicate text+canonical spans per trajectory.
+    """
+    seen: set[tuple[str, tuple[tuple[int, int, str], ...]]] = set()
+    deduped: list[dict[str, Any]] = []
+    for s in samples:
+        key = _trajectory_ner_sample_dedup_key(s)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(s)
+    return deduped
+
+
 def extract_trajectory_ner_samples(
     trajectories: Sequence[Any],
     granularity: str | None = None,
@@ -1129,6 +1167,7 @@ def extract_trajectory_ner_samples(
             for t in turns_data
         )
 
+        traj_samples: list[dict[str, Any]] = []
         turn_texts: list[str] = []
         bubble_canonical_projected: list[tuple[int, int, str]] = []
         has_any_bubble_canonical = False
@@ -1180,7 +1219,7 @@ def extract_trajectory_ner_samples(
                     text, traj, expanded_loc_targets, canonical_spans=b_canonical
                 )
 
-                if b_canonical is not None or clean_spans:
+                if b_canonical is not None:
                     for s_s, s_e, s_lbl in clean_spans:
                         turn_bubble_spans.append((current_turn_offset, (s_s, s_e, s_lbl)))
 
@@ -1194,7 +1233,7 @@ def extract_trajectory_ner_samples(
                 }
                 if prov:
                     sample_dict["provenance"] = prov
-                samples.append(sample_dict)
+                traj_samples.append(sample_dict)
 
                 current_turn_offset += len(text) + 1
 
@@ -1232,11 +1271,11 @@ def extract_trajectory_ner_samples(
                 }
                 if prov:
                     sample_dict["provenance"] = prov
-                samples.append(sample_dict)
+                traj_samples.append(sample_dict)
 
         if turn_texts:
             full_text = "\n".join(turn_texts)
-            if has_any_bubble_canonical or bubble_canonical_projected:
+            if has_any_bubble_canonical:
                 traj_canonical = bubble_canonical_projected
             else:
                 traj_canonical = _extract_canonical_from_obj(traj)
@@ -1256,7 +1295,12 @@ def extract_trajectory_ner_samples(
             }
             if prov:
                 sample_dict["provenance"] = prov
-            samples.append(sample_dict)
+            traj_samples.append(sample_dict)
+
+        if granularity is not None:
+            traj_samples = [s for s in traj_samples if s.get("granularity") == granularity]
+
+        samples.extend(deduplicate_trajectory_ner_samples(traj_samples))
 
     if granularity is not None:
         return [s for s in samples if s.get("granularity") == granularity]

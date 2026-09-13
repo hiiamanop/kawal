@@ -58,6 +58,8 @@
         "completeness"
       ],
       "temperature_scaling": true,
+      "label_smoothing": 0.0,
+      "train_text_augmentation_probability": 0.5,
       "save_total_limit": 2
     }
   },

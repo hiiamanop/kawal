@@ -33,6 +33,7 @@ from services.intelligence.chunking import (
     chunk_text as _intelligence_chunk_text,
     tokenize_with_offsets,
 )
+from services.intelligence.completeness import resolve_location_completeness
 from services.intelligence.ner import EntitySpan
 from services.ml.manifest import (
     ArtifactManifest,
@@ -547,8 +548,9 @@ class LocalMLRuntime:
         missing: list[str] = []
         if not text.strip():
             missing.append("text_empty")
-        if prediction.completeness in ("INCOMPLETE", "AMBIGUOUS"):
-            missing.append(f"completeness_{prediction.completeness.lower()}")
+        completeness = resolve_location_completeness(text, entities)
+        if completeness in ("INCOMPLETE", "AMBIGUOUS"):
+            missing.append(f"completeness_{completeness.lower()}")
 
         has_evidence = len(entities) > 0
 
@@ -651,6 +653,10 @@ class LocalMLRuntime:
                 reason="Inference backend produced no valid prediction or entities; running in safe local fallback mode without network access",
             )
 
+        if prediction is not None:
+            prediction = prediction.model_copy(
+                update={"completeness": resolve_location_completeness(text, entities)}
+            )
         analysis_result = (
             self.build_prediction_analysis(
                 prediction=prediction,

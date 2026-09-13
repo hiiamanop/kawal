@@ -4,6 +4,7 @@ import argparse
 from dataclasses import dataclass
 import json
 from pathlib import Path
+import random
 import sys
 from typing import Any
 
@@ -93,7 +94,9 @@ class MultitaskTrainConfig(BaseModel):
             "completeness": 1.0,
         }
     )
+    label_smoothing: float = Field(default=0.0, ge=0.0, lt=1.0)
     temperature_scaling: bool = True
+    train_text_augmentation_probability: float = Field(default=0.0, ge=0.0, le=1.0)
     audit_splits: bool = True
     version: str = Field(default="v1.0.0", min_length=1)
     head_configs: dict[str, list[str]] | None = None
@@ -167,7 +170,9 @@ def parse_multitask_config_dict(data: dict[str, Any]) -> MultitaskTrainConfig:
             dataloader_num_workers=extra.get("dataloader_num_workers", 2),
             save_total_limit=extra.get("save_total_limit", 2),
             loss_weights=loss_weights,
+            label_smoothing=float(extra.get("label_smoothing", hp.get("label_smoothing", 0.0))),
             temperature_scaling=extra.get("temperature_scaling", True),
+            train_text_augmentation_probability=float(extra.get("train_text_augmentation_probability", 0.0)),
             audit_splits=True,
             version=mv.get("model_version", "v1.0.0"),
         )
@@ -254,6 +259,86 @@ def _preserve_canonical_spans_in_record(item: dict[str, Any]) -> dict[str, Any]:
             wt["canonical_spans"] = next(iter(bubble_map.values()))
 
     return item
+
+
+def _trajectory_sample_dedup_key(
+    sample: dict[str, Any],
+) -> tuple[str, str, str, str, str]:
+    """Return deterministic key composed of sample text and multitask classification labels."""
+    return (
+        str(sample.get("text", "")),
+        str(sample.get("intent", "")),
+        str(sample.get("category", "")),
+        str(sample.get("risk", "")),
+        str(sample.get("completeness", "")),
+    )
+
+
+def deduplicate_trajectory_multitask_samples(
+    samples: Sequence[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Deduplicate classification samples from a single trajectory by exact (text, labels).
+
+    Preserves full sample and distinct multi-turn partial-context samples, but emits
+    only one deterministic sample for any exact duplicate text+labels from the given trajectory.
+    """
+    seen: set[tuple[str, str, str, str, str]] = set()
+    deduped: list[dict[str, Any]] = []
+    for s in samples:
+        key = _trajectory_sample_dedup_key(s)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(s)
+    return deduped
+
+
+def augment_multitask_training_text(
+    text: str,
+    seed: int,
+    completeness: str | None = None,
+) -> str:
+    import random
+
+    rng = random.Random(seed)
+    replacements = {
+        "jalan": ("ruas jalan", "badan jalan", "jalur"),
+        "selokan": ("saluran", "parit", "drainase"),
+        "sampah": ("limbah", "buangan", "tumpukan sampah"),
+        "air": ("aliran air", "pasokan air", "suplai air"),
+        "laporan": ("aduan", "keluhan", "informasi"),
+        "lokasinya": ("titiknya", "tempatnya", "posisinya"),
+        "warga": ("masyarakat", "penduduk", "warga sekitar"),
+        "petugas": ("staf", "pihak terkait", "aparat"),
+    }
+    words = text.split()
+    augmented: list[str] = []
+    for word in words:
+        key = word.lower().strip(".,;:!?()")
+        if key in replacements and rng.random() < 0.45:
+            replacement = rng.choice(replacements[key])
+            augmented.append(word.replace(key, replacement).replace(key.capitalize(), replacement.capitalize()))
+        else:
+            augmented.append(word)
+    if len(augmented) > 12 and rng.random() < 0.5:
+        pivot = max(1, len(augmented) // 3)
+        augmented = augmented[pivot:] + augmented[:pivot]
+    augmented_text = " ".join(augmented)
+    if completeness == "INCOMPLETE":
+        suffixes = (
+            " Titik pastinya belum dicantumkan pelapor.",
+            " Belum ada nomor rumah atau patokan rinci.",
+            " Informasi alamatnya masih terbatas.",
+        )
+        augmented_text += suffixes[seed % len(suffixes)]
+    elif completeness == "AMBIGUOUS":
+        suffixes = (
+            " Patokannya bisa merujuk ke beberapa tempat.",
+            " Warga belum dapat memastikan arah titik tersebut.",
+            " Lokasi itu masih sulit dibedakan dari tempat lain.",
+        )
+        augmented_text += suffixes[seed % len(suffixes)]
+    return augmented_text
 
 
 def extract_trajectory_multitask_samples(
@@ -382,6 +467,8 @@ def extract_trajectory_multitask_samples(
             if direct_text:
                 all_bubbles = [direct_text]
 
+        traj_samples: list[dict[str, Any]] = []
+
         if all_bubbles:
             full_text = "\n".join(all_bubbles)
             sample_dict = {
@@ -396,7 +483,7 @@ def extract_trajectory_multitask_samples(
             }
             if prov:
                 sample_dict["provenance"] = prov
-            samples.append(sample_dict)
+            traj_samples.append(sample_dict)
 
         accumulated_bubbles: list[str] = []
         for turn_num, turn_bubbles in turn_items:
@@ -413,7 +500,9 @@ def extract_trajectory_multitask_samples(
             }
             if prov:
                 sample_dict["provenance"] = prov
-            samples.append(sample_dict)
+            traj_samples.append(sample_dict)
+
+        samples.extend(deduplicate_trajectory_multitask_samples(traj_samples))
 
     return samples
 
@@ -600,6 +689,7 @@ def get_multitask_model_class() -> type:
             dropout_prob: float = 0.1,
             loss_weights: dict[str, float] | None = None,
             head_configs: dict[str, list[str]] | None = None,
+            label_smoothing: float = 0.0,
         ) -> None:
             super().__init__()
             self.encoder = encoder
@@ -608,6 +698,7 @@ def get_multitask_model_class() -> type:
             self.dropout = nn.Dropout(dropout_prob)
             self.head_configs = head_configs or HEAD_CONFIGS
             self.loss_weights = loss_weights or {h: 1.0 for h in EXPECTED_HEADS}
+            self.label_smoothing = float(label_smoothing)
 
             self.intent_head = nn.Linear(hidden_size, len(self.head_configs["intent"]))
             self.category_head = nn.Linear(hidden_size, len(self.head_configs["category"]))
@@ -729,7 +820,10 @@ def get_multitask_model_class() -> type:
 
             loss = None
             if has_labels:
-                loss_fct = nn.CrossEntropyLoss()
+                try:
+                    loss_fct = nn.CrossEntropyLoss(label_smoothing=self.label_smoothing)
+                except TypeError:
+                    loss_fct = nn.CrossEntropyLoss()
                 total_loss = None
 
                 head_pairs = [
@@ -955,6 +1049,7 @@ def train_transformers_multitask(
         dropout_prob=dropout_prob,
         loss_weights=config.loss_weights,
         head_configs=effective_heads,
+        label_smoothing=config.label_smoothing,
     )
 
     train_samples = [s for s in samples if s.get("split") == DatasetSplit.TRAIN.value]
@@ -965,30 +1060,41 @@ def train_transformers_multitask(
         train_samples = samples[:split_idx]
         dev_samples = samples[split_idx:]
 
-    def encode_samples(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def encode_samples(data: list[dict[str, Any]], augment: bool = False) -> list[dict[str, Any]]:
         encodings = []
-        for item in data:
-            tok = tokenizer(
-                item["text"],
-                max_length=config.max_seq_length,
-                padding="max_length",
-                truncation=True,
-                return_tensors=None,
-            )
-            item_dict: dict[str, Any] = {
-                "input_ids": tok["input_ids"],
-                "attention_mask": tok["attention_mask"],
-                "intent_labels": label_mappings["intent"][item["intent"]],
-                "category_labels": label_mappings["category"][item["category"]],
-                "risk_labels": label_mappings["risk"][item["risk"]],
-                "completeness_labels": label_mappings["completeness"][item["completeness"]],
-            }
-            if "token_type_ids" in tok:
-                item_dict["token_type_ids"] = tok["token_type_ids"]
-            encodings.append(item_dict)
+        augmentation_rng = random.Random(config.seed)
+        for sample_index, item in enumerate(data):
+            texts = [item["text"]]
+            if augment and augmentation_rng.random() < config.train_text_augmentation_probability:
+                texts.append(
+                    augment_multitask_training_text(
+                        item["text"],
+                        config.seed + sample_index,
+                        completeness=item["completeness"],
+                    )
+                )
+            for text in texts:
+                tok = tokenizer(
+                    text,
+                    max_length=config.max_seq_length,
+                    padding="max_length",
+                    truncation=True,
+                    return_tensors=None,
+                )
+                item_dict: dict[str, Any] = {
+                    "input_ids": tok["input_ids"],
+                    "attention_mask": tok["attention_mask"],
+                    "intent_labels": label_mappings["intent"][item["intent"]],
+                    "category_labels": label_mappings["category"][item["category"]],
+                    "risk_labels": label_mappings["risk"][item["risk"]],
+                    "completeness_labels": label_mappings["completeness"][item["completeness"]],
+                }
+                if "token_type_ids" in tok:
+                    item_dict["token_type_ids"] = tok["token_type_ids"]
+                encodings.append(item_dict)
         return encodings
 
-    train_encodings = encode_samples(train_samples)
+    train_encodings = encode_samples(train_samples, augment=True)
     dev_encodings = encode_samples(dev_samples) if dev_samples else []
 
     class TorchMultitaskDataset(torch.utils.data.Dataset):
@@ -1136,6 +1242,7 @@ def train_transformers_multitask(
             for head, classes in effective_heads.items()
         },
         "loss_weights": config.loss_weights,
+        "label_smoothing": config.label_smoothing,
         "temperature_scaling": config.temperature_scaling,
         "training_samples": len(samples),
         "fp16": use_fp16,
@@ -1255,6 +1362,7 @@ def run_train_multitask(
             for head, classes in effective_heads.items()
         },
         "loss_weights": config.loss_weights,
+        "label_smoothing": config.label_smoothing,
         "temperature_scaling": config.temperature_scaling,
         "training_samples": len(samples),
         "fp16": config.fp16,

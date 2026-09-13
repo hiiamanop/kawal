@@ -815,12 +815,91 @@ def export_trajectories_to_jsonl(
                 f.write(json.dumps(item) + "\n")
 
 
+ALLOWED_WORLD_TRUTH_METADATA_FIELDS: frozenset[str] = frozenset({
+    "concept_id",
+    "risk_evidence_kind",
+    "style_family",
+})
+
+
+def _prepare_trajectory_record(record: dict[str, Any]) -> dict[str, Any]:
+    wt = record.get("world_truth")
+    if not isinstance(wt, dict):
+        wt = dict(wt) if hasattr(wt, "__dict__") else {}
+        record["world_truth"] = wt
+
+    # Migrate allowed world_truth metadata from top-level if present
+    for field_name in ALLOWED_WORLD_TRUTH_METADATA_FIELDS:
+        if field_name in record:
+            val = record.pop(field_name)
+            if field_name not in wt:
+                wt[field_name] = val
+
+    # Preserve canonical spans between top-level, world_truth, and bubbles
+    top_spans = record.get("canonical_spans")
+    wt_spans = wt.get("canonical_spans")
+
+    if top_spans and not wt_spans:
+        wt["canonical_spans"] = [
+            list(s) if isinstance(s, (list, tuple)) else s
+            for s in top_spans
+        ]
+    elif wt_spans and not top_spans:
+        record["canonical_spans"] = wt_spans
+
+    if not record.get("canonical_spans") and not wt.get("canonical_spans"):
+        turns = record.get("turns", [])
+        if isinstance(turns, (list, tuple)):
+            for turn in turns:
+                if isinstance(turn, dict):
+                    bubbles = turn.get("bubbles", [])
+                    if isinstance(bubbles, (list, tuple)):
+                        for bubble in bubbles:
+                            if isinstance(bubble, dict) and bubble.get("canonical_spans"):
+                                b_spans = bubble["canonical_spans"]
+                                record["canonical_spans"] = b_spans
+                                wt["canonical_spans"] = [
+                                    list(s) if isinstance(s, (list, tuple)) else s
+                                    for s in b_spans
+                                ]
+                                break
+                if record.get("canonical_spans"):
+                    break
+
+    if "bubble_canonical_spans" not in wt:
+        bubble_map: dict[str, Any] = {}
+        turns = record.get("turns", [])
+        if isinstance(turns, (list, tuple)):
+            for t_idx, turn in enumerate(turns):
+                if isinstance(turn, dict):
+                    bubbles = turn.get("bubbles", [])
+                    if isinstance(bubbles, (list, tuple)):
+                        for b_idx, bubble in enumerate(bubbles):
+                            if isinstance(bubble, dict) and bubble.get("canonical_spans"):
+                                b_spans = [
+                                    list(s) if isinstance(s, (list, tuple)) else s
+                                    for s in bubble["canonical_spans"]
+                                ]
+                                msg_id = bubble.get("source_message_id")
+                                if msg_id:
+                                    bubble_map[str(msg_id)] = b_spans
+                                bubble_map[f"{t_idx}_{b_idx}"] = b_spans
+        if bubble_map:
+            wt["bubble_canonical_spans"] = bubble_map
+
+    return record
+
+
 def load_trajectories_from_jsonl(path: Path | str) -> list[ComplaintTrajectory]:
     source_path = Path(path)
     trajectories: list[ComplaintTrajectory] = []
     with source_path.open("r", encoding="utf-8") as f:
         for line in f:
             line_str = line.strip()
-            if line_str:
-                trajectories.append(ComplaintTrajectory.model_validate_json(line_str))
+            if not line_str:
+                continue
+            item = json.loads(line_str)
+            if isinstance(item, dict):
+                item = _prepare_trajectory_record(item)
+            trajectories.append(ComplaintTrajectory.model_validate(item))
     return trajectories
