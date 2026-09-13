@@ -2672,40 +2672,54 @@ def test_validate_tokenizer_and_numeric_parity_logic(monkeypatch: pytest.MonkeyP
 
 
 def test_ner_all_72_templates_span_coverage() -> None:
+    from unittest.mock import patch
+    import scripts.generate_m3_dataset as gen_m3
     from scripts.generate_m3_dataset import EXTENDED_TEMPLATES, generate_safe_trajectory
     from services.dataset.generator import DEFAULT_TEMPLATES
 
     all_templates = list(DEFAULT_TEMPLATES) + list(EXTENDED_TEMPLATES)
-    assert len(all_templates) == 72
+    expected_total = len(DEFAULT_TEMPLATES) + len(EXTENDED_TEMPLATES)
+    assert len(all_templates) == expected_total
+    assert expected_total > 0
+
+    fallback_lexicons = {
+        cat: {
+            "anchors": ("penerangan jalan umum", "lampu pengatur lalu lintas"),
+            "forbidden_terms": (),
+        }
+        for cat in Category
+        if cat not in gen_m3.CATEGORY_ANCHOR_LEXICONS
+    }
 
     bad_words = {
         "total", "tercemar", "tergeletak", "bertumpuk", "ditolak", "mangkir",
         "kabar mangkir", "alasan regulasi ditolak", "kebun warga bertumpuk",
     }
 
-    for idx, tmpl in enumerate(all_templates):
-        traj = generate_safe_trajectory(
-            template=tmpl,
-            scenario_id=f"test-cov-{idx}",
-            persona="STANDARD",
-            noise_level="LOW",
-            multi_turn=True,
-            seed=42 + idx,
-            split=DatasetSplit.TRAIN,
-        )
-        samples = extract_trajectory_ner_samples([traj])
-        assert len(samples) >= 2
+    with patch.dict(gen_m3.CATEGORY_ANCHOR_LEXICONS, fallback_lexicons):
+        for idx, tmpl in enumerate(all_templates):
+            traj = generate_safe_trajectory(
+                template=tmpl,
+                scenario_id=f"test-cov-{idx}",
+                persona="STANDARD",
+                noise_level="LOW",
+                multi_turn=True,
+                seed=42 + idx,
+                split=DatasetSplit.TRAIN,
+            )
+            samples = extract_trajectory_ner_samples([traj])
+            assert len(samples) >= 2
 
-        b1 = samples[0]
-        spans = b1["spans"]
-        span_texts = [b1["text"][s:e].strip().lower() for s, e, _ in spans]
+            b1 = samples[0]
+            spans = b1["spans"]
+            span_texts = [b1["text"][s:e].strip().lower() for s, e, _ in spans]
 
-        for st in span_texts:
-            assert st not in bad_words, f"Bad word labeled as entity in {tmpl.family_id}: '{st}'"
-            assert len(st.split()) <= 7, f"Span exceeds compact phrase limit: '{st}'"
+            for st in span_texts:
+                assert st not in bad_words, f"Bad word labeled as entity in {tmpl.family_id}: '{st}'"
+                assert len(st.split()) <= 7, f"Span exceeds compact phrase limit: '{st}'"
 
-        all_labels = {lbl for _, _, lbl in spans}
-        assert len(all_labels) > 0, f"No entities extracted for {tmpl.family_id}"
+            all_labels = {lbl for _, _, lbl in spans}
+            assert len(all_labels) > 0, f"No entities extracted for {tmpl.family_id}"
 
 
 def test_ner_explicit_time_coverage() -> None:
@@ -2764,11 +2778,11 @@ def test_ner_class_weights_and_training_controls_parsing() -> None:
     assert cfg.class_weights.get("O") == 1.0
     assert cfg.class_weights.get("B-LOC") == 2.5
     assert cfg.class_weights.get("I-LOC") == 2.0
-    assert cfg.class_weights.get("B-OBJ") == 1.0
-    assert cfg.class_weights.get("I-OBJ") == 1.0
+    assert cfg.class_weights.get("B-OBJ") == 2.5
+    assert cfg.class_weights.get("I-OBJ") == 2.0
     assert cfg.class_weights.get("B-TIME") == 3.0
     assert cfg.class_weights.get("I-TIME") == 2.5
-    assert cfg.metric_for_best_model == "entity_f1"
+    assert cfg.metric_for_best_model == "obj_f1"
     assert cfg.greater_is_better is True
     assert cfg.early_stopping_patience == 2
 

@@ -671,24 +671,40 @@ def test_configs_strict_schema_validation() -> None:
         M3TrainingConfig.model_validate(ner_raw)
 
 
-def test_ner_bio_obj_neutral_weights_heldout_precision_regression() -> None:
+def test_ner_bio_obj_weights_and_checkpoint_metric_compatibility() -> None:
     ner_cfg = M3TrainingConfig.from_file("configs/m3/ner.json")
     expected_weights = {
         "O": 1.0,
         "B-LOC": 2.5,
         "I-LOC": 2.0,
-        "B-OBJ": 1.0,
-        "I-OBJ": 1.0,
+        "B-OBJ": 2.5,
+        "I-OBJ": 2.0,
         "B-TIME": 3.0,
         "I-TIME": 2.5,
     }
     assert ner_cfg.hyperparameters.task_weights == expected_weights
     assert ner_cfg.hyperparameters.extra_params["class_weights"] == expected_weights
-    assert ner_cfg.hyperparameters.extra_params["class_weights"]["B-OBJ"] == 1.0
-    assert ner_cfg.hyperparameters.extra_params["class_weights"]["I-OBJ"] == 1.0
+    assert ner_cfg.hyperparameters.extra_params["class_weights"]["B-OBJ"] == 2.5
+    assert ner_cfg.hyperparameters.extra_params["class_weights"]["I-OBJ"] == 2.0
+    assert ner_cfg.hyperparameters.extra_params["class_weights"]["B-OBJ"] > ner_cfg.hyperparameters.extra_params["class_weights"]["O"]
+    assert ner_cfg.hyperparameters.extra_params["class_weights"]["I-OBJ"] > ner_cfg.hyperparameters.extra_params["class_weights"]["O"]
     assert ner_cfg.hyperparameters.extra_params["class_weights"]["B-LOC"] == 2.5
     assert ner_cfg.hyperparameters.extra_params["class_weights"]["I-LOC"] == 2.0
     assert ner_cfg.hyperparameters.extra_params["class_weights"]["B-TIME"] == 3.0
     assert ner_cfg.hyperparameters.extra_params["class_weights"]["I-TIME"] == 2.5
-    assert ner_cfg.hyperparameters.extra_params["metric_for_best_model"] == "entity_f1"
+    assert ner_cfg.hyperparameters.extra_params["metric_for_best_model"] == "obj_f1"
     assert ner_cfg.hyperparameters.extra_params["greater_is_better"] is True
+
+    from scripts.train_ner import parse_config_file, resolve_tag_weight
+
+    parsed = parse_config_file(Path("configs/m3/ner.json"))
+    assert parsed.class_weights is not None
+    assert parsed.class_weights["B-OBJ"] == 2.5
+    assert parsed.class_weights["I-OBJ"] == 2.0
+    assert parsed.metric_for_best_model == "obj_f1"
+    assert resolve_tag_weight(parsed.class_weights, "B-OBJ") == 2.5
+    assert resolve_tag_weight(parsed.class_weights, "I-OBJ") == 2.0
+
+
+def test_ner_bio_obj_neutral_weights_heldout_precision_regression() -> None:
+    test_ner_bio_obj_weights_and_checkpoint_metric_compatibility()

@@ -11,6 +11,12 @@ valid_categories := {
     "CLEAN_WATER",
     "CIVIL_ADMIN",
     "HEALTH_SERVICE",
+    "PUBLIC_ORDER",
+    "TRANSPORTATION",
+    "FIRE_RESCUE",
+    "SOCIAL_AFFAIRS",
+    "EDUCATION",
+    "PARKS_HOUSING",
 }
 
 valid_category if {

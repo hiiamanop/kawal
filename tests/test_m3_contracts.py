@@ -101,7 +101,7 @@ def _make_valid_evidence() -> tuple[EvidenceItem, ...]:
 
 
 class TestM3Contracts(unittest.TestCase):
-    def test_category_enum_six_p0_categories(self) -> None:
+    def test_category_enum_twelve_municipal_service_categories(self) -> None:
         expected = {
             "ROAD",
             "DRAINAGE_FLOOD",
@@ -109,16 +109,18 @@ class TestM3Contracts(unittest.TestCase):
             "CLEAN_WATER",
             "CIVIL_ADMIN",
             "HEALTH_SERVICE",
+            "PUBLIC_ORDER",
+            "TRANSPORTATION",
+            "FIRE_RESCUE",
+            "SOCIAL_AFFAIRS",
+            "EDUCATION",
+            "PARKS_HOUSING",
         }
         actual = {c.value for c in Category}
         self.assertEqual(actual, expected)
-        self.assertEqual(len(Category), 6)
-        self.assertEqual(Category.ROAD, "ROAD")
-        self.assertEqual(Category.DRAINAGE_FLOOD, "DRAINAGE_FLOOD")
-        self.assertEqual(Category.WASTE, "WASTE")
-        self.assertEqual(Category.CLEAN_WATER, "CLEAN_WATER")
-        self.assertEqual(Category.CIVIL_ADMIN, "CIVIL_ADMIN")
-        self.assertEqual(Category.HEALTH_SERVICE, "HEALTH_SERVICE")
+        self.assertEqual(len(Category), 12)
+        for category in Category:
+            self.assertEqual(category.value, category.name)
 
     def test_risk_level_enum(self) -> None:
         expected = {"LOW", "MEDIUM", "HIGH", "URGENT"}

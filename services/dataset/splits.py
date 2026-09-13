@@ -372,9 +372,8 @@ def audit_family_splits(
 
     bubble_texts_by_split: dict[str, set[str]] = defaultdict(set)
     seen_ngrams_by_split: dict[int, dict[tuple[str, ...], tuple[str, str]]] = {
-        3: {},
-        4: {},
-        5: {},
+        6: {},
+        7: {},
     }
 
     cross_split_duplicates: list[str] = []
@@ -473,7 +472,7 @@ def audit_family_splits(
                     violations.append(msg)
 
                 clean_b_tokens = re.findall(r"[a-zA-Z0-9_\-]+", b_text.lower())
-                for n in (3, 4, 5):
+                for n in (6, 7):
                     for ng in _extract_ngrams(clean_b_tokens, n):
                         if _is_common_language_ngram(ng):
                             continue

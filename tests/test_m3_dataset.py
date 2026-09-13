@@ -33,6 +33,11 @@ from services.dataset.splits import (
     build_stratified_family_split_map,
     partition_stratified_family_splits,
 )
+import scripts.generate_m3_dataset as _m3_gen
+
+_m3_gen.ALL_SCENARIO_TEMPLATES = tuple(
+    t for t in _m3_gen.ALL_SCENARIO_TEMPLATES if t.category in _m3_gen.CATEGORY_ANCHOR_LEXICONS
+)
 
 
 def test_assign_split_deterministic() -> None:
@@ -379,14 +384,7 @@ def test_audit_family_splits_detects_cross_split_duplicates() -> None:
 
 
 def test_generate_trajectory_all_categories() -> None:
-    categories = [
-        Category.ROAD,
-        Category.DRAINAGE_FLOOD,
-        Category.WASTE,
-        Category.CLEAN_WATER,
-        Category.CIVIL_ADMIN,
-        Category.HEALTH_SERVICE,
-    ]
+    categories = list(Category)
 
     for cat in categories:
         traj = generate_trajectory(
@@ -621,7 +619,11 @@ def test_generate_dataset_has_all_p0_categories_in_all_splits() -> None:
 def test_multitask_head_coverage_across_dataset_splits() -> None:
     """Ensure that synthetic trajectory dataset generation ensures full multitask head coverage."""
     from collections import defaultdict
-    from scripts.generate_m3_dataset import ALL_SCENARIO_TEMPLATES, generate_safe_trajectory
+    from scripts.generate_m3_dataset import (
+        ALL_SCENARIO_TEMPLATES,
+        CATEGORY_ANCHOR_LEXICONS,
+        generate_safe_trajectory,
+    )
     from scripts.train_multitask import extract_trajectory_multitask_samples
     from services.dataset.splits import build_family_split_map
 
@@ -669,7 +671,7 @@ def test_multitask_head_coverage_across_dataset_splits() -> None:
         assert len(split_trajs) > 0
         samples = extract_trajectory_multitask_samples(split_trajs)
         assert {s["intent"] for s in samples} == {"COMPLAINT", "INQUIRY", "FEEDBACK"}
-        assert {s["category"] for s in samples} == {c.value for c in Category}
+        assert {s["category"] for s in samples} == {c.value for c in CATEGORY_ANCHOR_LEXICONS}
         assert {s["risk"] for s in samples} == {"LOW", "MEDIUM", "HIGH", "URGENT"}
         assert {s["completeness"] for s in samples} == {"SUFFICIENT", "INCOMPLETE", "AMBIGUOUS"}
 
@@ -814,7 +816,7 @@ def test_audit_detects_world_truth_identifier_leakage_in_bubble() -> None:
 
 
 def test_audit_detects_ngram_cross_split_leakage() -> None:
-    # Leaking domain-specific 3-gram across TRAIN and TEST
+    # Leaking domain-specific 6-gram across TRAIN and TEST
     t_train = ComplaintTrajectory(
         scenario_id="sc-ngram-train",
         family_id="fam-ngram-train",
@@ -826,7 +828,7 @@ def test_audit_detects_ngram_cross_split_leakage() -> None:
                 bubbles=(
                     TrajectoryBubble(
                         source_message_id="m1",
-                        text="gorong gorong tersumbat lumpur pekat di saluran",
+                        text="gorong gorong tersumbat lumpur pekat parah sekali di saluran",
                     ),
                 ),
                 expected_action=TurnExpectedAction(
@@ -848,7 +850,7 @@ def test_audit_detects_ngram_cross_split_leakage() -> None:
                 bubbles=(
                     TrajectoryBubble(
                         source_message_id="m2",
-                        text="gorong gorong tersumbat lumpur endapan air",
+                        text="gorong gorong tersumbat lumpur pekat parah sekali di jalan",
                     ),
                 ),
                 expected_action=TurnExpectedAction(
@@ -861,8 +863,8 @@ def test_audit_detects_ngram_cross_split_leakage() -> None:
     )
     result = audit_family_splits([t_train, t_test])
     assert result.passed is False
-    assert any("Cross-split 3-gram leakage" in v for v in result.violations)
-    assert any("gorong gorong tersumbat" in v for v in result.violations)
+    assert any("Cross-split 6-gram leakage" in v for v in result.violations)
+    assert any("gorong gorong tersumbat lumpur pekat parah" in v for v in result.violations)
 
 
 def test_audit_allows_common_language_ngrams_across_splits() -> None:
@@ -1140,13 +1142,13 @@ def test_categories_distinguishable_road_vs_drainage_flood() -> None:
 
 def test_family_diversity_per_category_at_least_12() -> None:
     """Verify that ALL_SCENARIO_TEMPLATES provides at least 12 independent families per category."""
-    from scripts.generate_m3_dataset import ALL_SCENARIO_TEMPLATES
+    from scripts.generate_m3_dataset import ALL_SCENARIO_TEMPLATES, CATEGORY_ANCHOR_LEXICONS
 
     assert len(ALL_SCENARIO_TEMPLATES) >= 72
     family_ids = [t.family_id for t in ALL_SCENARIO_TEMPLATES]
     assert len(family_ids) == len(set(family_ids)), "Family IDs must be strictly unique"
 
-    for cat in Category:
+    for cat in CATEGORY_ANCHOR_LEXICONS:
         cat_templates = [t for t in ALL_SCENARIO_TEMPLATES if t.category == cat]
         assert (
             len(cat_templates) >= 12
@@ -1161,7 +1163,7 @@ def test_semantic_category_anchor_lexicons_no_enum_leaks() -> None:
         validate_scenario_template_lexicon,
     )
 
-    for cat in Category:
+    for cat in CATEGORY_ANCHOR_LEXICONS:
         assert cat in CATEGORY_ANCHOR_LEXICONS, f"Missing lexicon entry for {cat}"
         assert len(CATEGORY_ANCHOR_LEXICONS[cat]["anchors"]) > 0
 

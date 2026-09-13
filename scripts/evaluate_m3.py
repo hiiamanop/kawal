@@ -843,17 +843,54 @@ def compute_classification_metrics(
     }
 
 
+_LEGACY_16_OFFSETS: dict[str, tuple[int, int]] = {
+    "intent": (0, 3),
+    "category": (3, 9),
+    "risk": (9, 13),
+    "completeness": (13, 16),
+}
+
+
+def compute_head_class_offsets(
+    head_configs: dict[str, Sequence[str]] | None = None,
+) -> tuple[dict[str, tuple[int, int]], int]:
+    """Compute (start, end) index offsets for concatenated multi-head logits.
+
+    Offsets are dynamically derived from head class counts in HEAD_CONFIGS
+    (or custom head_configs if provided).
+    Returns:
+        tuple of (class_offsets mapping head name to (start, end), total_classes)
+    """
+    configs = HEAD_CONFIGS if head_configs is None else head_configs
+    offsets: dict[str, tuple[int, int]] = {}
+    curr = 0
+    for h in EXPECTED_HEADS:
+        if h in configs:
+            num_classes = len(configs[h])
+            offsets[h] = (curr, curr + num_classes)
+            curr += num_classes
+    for h, classes in configs.items():
+        if h not in offsets:
+            num_classes = len(classes)
+            offsets[h] = (curr, curr + num_classes)
+            curr += num_classes
+    return offsets, curr
+
+
 def _extract_head_logits(
     outputs: Sequence[Any] | dict[str, Any],
     output_names: Sequence[str],
     head: str,
     head_index: int,
+    head_configs: dict[str, Sequence[str]] | None = None,
 ) -> Any:
     """Map model output to specific classification head by name, structure, or positional index."""
     try:
         import numpy as np
     except ImportError:
         np = None  # type: ignore[assignment]
+
+    configs = HEAD_CONFIGS if head_configs is None else head_configs
 
     # Case 1: Dict output
     if isinstance(outputs, dict):
@@ -882,28 +919,29 @@ def _extract_head_logits(
         out0 = outputs[0]
         # 4a: 3D tensor/list of shape (batch, 4, max_classes)
         if np is not None and isinstance(out0, np.ndarray) and out0.ndim == 3 and out0.shape[1] >= 4:
-            head_classes = len(HEAD_CONFIGS.get(head, []))
+            head_classes = len(configs.get(head, []))
             return out0[:, head_index, :head_classes] if head_classes > 0 else out0[:, head_index]
         if isinstance(out0, list) and out0 and isinstance(out0[0], list) and len(out0[0]) >= 4 and isinstance(out0[0][0], list):
-            head_classes = len(HEAD_CONFIGS.get(head, []))
+            head_classes = len(configs.get(head, []))
             return [sample[head_index][:head_classes] for sample in out0]
 
-        # 4b: 2D concatenated logits tensor/list of shape (batch, 16)
-        class_offsets = {
-            "intent": (0, 3),
-            "category": (3, 9),
-            "risk": (9, 13),
-            "completeness": (13, 16),
-        }
+        # 4b: 2D concatenated logits tensor/list of shape (batch, total_classes)
+        class_offsets, total_classes = compute_head_class_offsets(configs)
         if np is not None and isinstance(out0, np.ndarray) and out0.ndim == 2:
-            if out0.shape[1] == 16 and head in class_offsets:
+            if out0.shape[1] == total_classes and head in class_offsets:
                 start, end = class_offsets[head]
+                return out0[:, start:end]
+            if total_classes != 16 and out0.shape[1] == 16 and head in _LEGACY_16_OFFSETS:
+                start, end = _LEGACY_16_OFFSETS[head]
                 return out0[:, start:end]
             if head_index == 0:
                 return out0
         if isinstance(out0, list) and out0 and isinstance(out0[0], list):
-            if len(out0[0]) == 16 and head in class_offsets:
+            if len(out0[0]) == total_classes and head in class_offsets:
                 start, end = class_offsets[head]
+                return [row[start:end] for row in out0]
+            if total_classes != 16 and len(out0[0]) == 16 and head in _LEGACY_16_OFFSETS:
+                start, end = _LEGACY_16_OFFSETS[head]
                 return [row[start:end] for row in out0]
             if head_index == 0:
                 return out0
@@ -922,6 +960,7 @@ def evaluate_multitask_model(
     max_seq_length: int = 448,
     temperatures: dict[str, float] | TemperatureCalibrator | None = None,
     calibrator: TemperatureCalibrator | None = None,
+    head_configs: dict[str, Sequence[str]] | None = None,
 ) -> dict[str, Any]:
     """Execute multitask model inference to compute per-head accuracy, macro F1, and calibrated ECE."""
     if not samples:
@@ -945,6 +984,7 @@ def evaluate_multitask_model(
         else:
             calibrator = TemperatureCalibrator(temperature=1.0)
 
+    active_head_configs = HEAD_CONFIGS if head_configs is None else head_configs
     all_preds: dict[str, list[int]] = {h: [] for h in EXPECTED_HEADS}
     all_targets: dict[str, list[int]] = {h: [] for h in EXPECTED_HEADS}
     all_logits: dict[str, list[list[float]]] = {h: [] for h in EXPECTED_HEADS}
@@ -966,7 +1006,7 @@ def evaluate_multitask_model(
         for b in batch:
             for head in EXPECTED_HEADS:
                 val = b.get(head)
-                classes = HEAD_CONFIGS[head]
+                classes = active_head_configs[head]
                 t_idx = classes.index(val) if val in classes else 0
                 all_targets[head].append(t_idx)
 
@@ -998,7 +1038,7 @@ def evaluate_multitask_model(
                 if head_temp <= 0.0:
                     head_temp = 1.0
 
-                head_out = _extract_head_logits(outputs, output_names, head, h_idx)
+                head_out = _extract_head_logits(outputs, output_names, head, h_idx, head_configs=active_head_configs)
 
                 # Ensure 2D (batch_size, num_classes)
                 if np is not None and isinstance(head_out, np.ndarray):
@@ -1007,7 +1047,7 @@ def evaluate_multitask_model(
                     elif head_out.ndim == 3 and head_out.shape[1] == 1:
                         head_out = np.squeeze(head_out, axis=1)
 
-                    expected_k = len(HEAD_CONFIGS[head])
+                    expected_k = len(active_head_configs[head])
                     if head_out.shape[1] > expected_k:
                         head_out = head_out[:, :expected_k]
 
@@ -1026,7 +1066,7 @@ def evaluate_multitask_model(
                 else:
                     if head_out and not isinstance(head_out[0], (list, tuple)):
                         head_out = [head_out]
-                    expected_k = len(HEAD_CONFIGS[head])
+                    expected_k = len(active_head_configs[head])
                     for row in head_out:
                         row_floats = [float(z) for z in row][:expected_k]
                         all_logits[head].append(row_floats)
@@ -1047,7 +1087,7 @@ def evaluate_multitask_model(
                     head_temp = calibrator.get_temperature(head)
                     if head_temp <= 0.0:
                         head_temp = 1.0
-                    classes = HEAD_CONFIGS[head]
+                    classes = active_head_configs[head]
                     k = len(classes)
 
                     logits_cand = None
@@ -1089,7 +1129,7 @@ def evaluate_multitask_model(
         m = compute_classification_metrics(
             predictions=all_preds[head],
             targets=all_targets[head],
-            class_names=HEAD_CONFIGS[head],
+            class_names=active_head_configs[head],
         )
 
         h_ece = 0.0

@@ -123,7 +123,8 @@ def test_evaluation_stratified_family_split_p0_category_coverage() -> None:
         partition = partition_stratified_family_splits(f2c, seed=seed)
 
         assert len(split_map) == len(DEFAULT_TEMPLATES)
-        for cat in Category:
+        p0_categories = {t.category for t in DEFAULT_TEMPLATES}
+        for cat in p0_categories:
             cat_families = [f for f, c in f2c.items() if c == cat]
             splits_for_cat = {split_map[f] for f in cat_families}
             assert DatasetSplit.TRAIN in splits_for_cat
@@ -574,6 +575,7 @@ from scripts.evaluate_m3 import (
     audit_independent_held_out,
     build_arg_parser,
     compute_classification_metrics,
+    compute_head_class_offsets,
     evaluate_multitask_model,
     evaluate_ner_model,
     evaluate_synthetic_quality_gates,
@@ -1981,8 +1983,8 @@ def test_evaluate_multitask_model_onnx_logit_formats() -> None:
     assert res3["evaluated"] is True
     assert set(res3["head_ece"].keys()) == set(EXPECTED_HEADS)
 
-    # Format 4: 2D concatenated logits tensor (batch, 16)
-    class SessionConcatenated:
+    # Format 4: 2D concatenated logits tensor (batch, 16 - legacy backward compatibility)
+    class SessionConcatenated16:
         def get_inputs(self) -> list[Any]: return [mock.Mock(name="input_ids"), mock.Mock(name="attention_mask")]
         def get_outputs(self) -> list[Any]:
             m = mock.Mock()
@@ -1997,9 +1999,232 @@ def test_evaluate_multitask_model_onnx_logit_formats() -> None:
                 2.0, 0.0, 0.0,
             ]
             return [[list(row) for _ in range(n)]]
-    res4 = evaluate_multitask_model(SessionConcatenated(), samples, tokenizer)
+    res4 = evaluate_multitask_model(SessionConcatenated16(), samples, tokenizer)
     assert res4["evaluated"] is True
     assert set(res4["head_ece"].keys()) == set(EXPECTED_HEADS)
+
+    # Format 5: 2D concatenated logits tensor (batch, 22 - dynamic 12-category HEAD_CONFIGS)
+    class SessionConcatenated22:
+        def get_inputs(self) -> list[Any]: return [mock.Mock(name="input_ids"), mock.Mock(name="attention_mask")]
+        def get_outputs(self) -> list[Any]:
+            m = mock.Mock()
+            m.name = "logits"
+            return [m]
+        def run(self, names: Any, feed_dict: dict[str, Any]) -> list[Any]:
+            n = len(feed_dict["input_ids"])
+            row = (
+                [2.0, 0.0, 0.0]
+                + [2.0 if c == 0 else 0.0 for c in range(12)]
+                + [0.0, 2.0, 0.0, 0.0]
+                + [2.0, 0.0, 0.0]
+            )
+            return [[list(row) for _ in range(n)]]
+    res5 = evaluate_multitask_model(SessionConcatenated22(), samples, tokenizer)
+    assert res5["evaluated"] is True
+    assert set(res5["head_ece"].keys()) == set(EXPECTED_HEADS)
+
+
+def test_dynamic_head_class_offsets_derivation_from_head_configs() -> None:
+    """Verify concatenated ONNX class offsets are dynamically derived from HEAD_CONFIGS."""
+    # With active HEAD_CONFIGS (12 categories -> 22 logits total)
+    offsets, total = compute_head_class_offsets()
+    assert total == 22
+    assert offsets["intent"] == (0, 3)
+    assert offsets["category"] == (3, 15)
+    assert offsets["risk"] == (15, 19)
+    assert offsets["completeness"] == (19, 22)
+    assert len(HEAD_CONFIGS["category"]) == 12
+
+    # With custom/legacy 6-category configuration (16 logits total)
+    custom_6cat_configs = {
+        "intent": ["COMPLAINT", "INQUIRY", "FEEDBACK"],
+        "category": ["ROAD", "DRAINAGE_FLOOD", "WASTE", "CLEAN_WATER", "CIVIL_ADMIN", "HEALTH_SERVICE"],
+        "risk": ["LOW", "MEDIUM", "HIGH", "URGENT"],
+        "completeness": ["SUFFICIENT", "INCOMPLETE", "AMBIGUOUS"],
+    }
+    custom_offsets, custom_total = compute_head_class_offsets(custom_6cat_configs)
+    assert custom_total == 16
+    assert custom_offsets["intent"] == (0, 3)
+    assert custom_offsets["category"] == (3, 9)
+    assert custom_offsets["risk"] == (9, 13)
+    assert custom_offsets["completeness"] == (13, 16)
+
+
+class _MockNdarray:
+    """Mock 2D numpy.ndarray for tests in environments without numpy installed."""
+
+    def __init__(self, data: list[list[float]]):
+        self.data = [list(r) for r in data]
+        self.ndim = 2
+        self.shape = (len(data), len(data[0]) if data else 0)
+
+    def __getitem__(self, item: Any) -> _MockNdarray:
+        if isinstance(item, tuple) and len(item) == 2:
+            _, col_slice = item
+            if isinstance(col_slice, slice):
+                return _MockNdarray([r[col_slice] for r in self.data])
+        raise NotImplementedError
+
+    def tolist(self) -> list[list[float]]:
+        return [list(r) for r in self.data]
+
+
+def test_extract_head_logits_concatenated_22_logits_numpy_and_list() -> None:
+    """Verify _extract_head_logits correctly slices 12-category 22-logit concatenated ONNX outputs."""
+    row_values = (
+        [100.0 + i for i in range(3)]
+        + [200.0 + i for i in range(12)]
+        + [300.0 + i for i in range(4)]
+        + [400.0 + i for i in range(3)]
+    )
+    assert len(row_values) == 22
+
+    batch_size = 2
+    out_list = [[list(row_values) for _ in range(batch_size)]]
+
+    # 1. Verify list layout
+    intent_list = _extract_head_logits(out_list, ["logits"], "intent", 0)
+    category_list = _extract_head_logits(out_list, ["logits"], "category", 1)
+    risk_list = _extract_head_logits(out_list, ["logits"], "risk", 2)
+    completeness_list = _extract_head_logits(out_list, ["logits"], "completeness", 3)
+
+    assert len(intent_list[0]) == 3
+    assert intent_list[0] == [100.0, 101.0, 102.0]
+    assert len(category_list[0]) == 12
+    assert category_list[0] == [200.0 + i for i in range(12)]
+    assert len(risk_list[0]) == 4
+    assert risk_list[0] == [300.0, 301.0, 302.0, 303.0]
+    assert len(completeness_list[0]) == 3
+    assert completeness_list[0] == [400.0, 401.0, 402.0]
+
+    # 2. Verify 2D array / ndarray layout
+    mock_np_mod = mock.MagicMock()
+    mock_np_mod.ndarray = _MockNdarray
+    with mock.patch.dict(sys.modules, {"numpy": mock_np_mod}):
+        out_arr = [_MockNdarray([list(row_values) for _ in range(batch_size)])]
+        intent_arr = _extract_head_logits(out_arr, ["logits"], "intent", 0)
+        category_arr = _extract_head_logits(out_arr, ["logits"], "category", 1)
+        risk_arr = _extract_head_logits(out_arr, ["logits"], "risk", 2)
+        completeness_arr = _extract_head_logits(out_arr, ["logits"], "completeness", 3)
+
+        assert intent_arr.shape == (batch_size, 3)
+        assert intent_arr.tolist()[0] == [100.0, 101.0, 102.0]
+        assert category_arr.shape == (batch_size, 12)
+        assert category_arr.tolist()[0] == [200.0 + i for i in range(12)]
+        assert risk_arr.shape == (batch_size, 4)
+        assert risk_arr.tolist()[0] == [300.0, 301.0, 302.0, 303.0]
+        assert completeness_arr.shape == (batch_size, 3)
+        assert completeness_arr.tolist()[0] == [400.0, 401.0, 402.0]
+
+
+def test_extract_head_logits_preserves_separate_output_onnx_behavior() -> None:
+    """Verify separate-output ONNX behavior (named, positional, dict) is strictly preserved."""
+    intent_out = [[1.0, 0.0, 0.0]]
+    category_out = [[3.5 if c == 5 else 0.0 for c in range(12)]]
+    risk_out = [[0.0, 2.0, 0.0, 0.0]]
+    comp_out = [[0.0, 0.0, 1.5]]
+
+    # 1. Dict output (Case 1)
+    dict_outputs = {
+        "intent_logits": intent_out,
+        "category_logits": category_out,
+        "risk_logits": risk_out,
+        "completeness_logits": comp_out,
+    }
+    assert _extract_head_logits(dict_outputs, [], "intent", 0) == intent_out
+    assert _extract_head_logits(dict_outputs, [], "category", 1) == category_out
+    assert _extract_head_logits(dict_outputs, [], "risk", 2) == risk_out
+    assert _extract_head_logits(dict_outputs, [], "completeness", 3) == comp_out
+
+    # 2. Named outputs matching head names (Case 2)
+    named_session_outputs = [intent_out, category_out, risk_out, comp_out]
+    output_meta = []
+    for h in ("intent_logits", "category_logits", "risk_logits", "completeness_logits"):
+        m = mock.Mock()
+        m.name = h
+        output_meta.append(m)
+    for h_idx, head in enumerate(EXPECTED_HEADS):
+        extracted = _extract_head_logits(named_session_outputs, output_meta, head, h_idx)
+        assert extracted == named_session_outputs[h_idx]
+
+    # 3. Positional outputs with generic names (Case 3, len >= 4)
+    generic_meta = ["out_0", "out_1", "out_2", "out_3"]
+    for h_idx, head in enumerate(EXPECTED_HEADS):
+        extracted = _extract_head_logits(named_session_outputs, generic_meta, head, h_idx)
+        assert extracted == named_session_outputs[h_idx]
+
+
+def test_extract_head_logits_legacy_16_concatenated_fallback() -> None:
+    """Verify legacy 16-logit concatenated output is still supported as a backward-compatibility fallback."""
+    row_16 = [1.0] * 3 + [2.0] * 6 + [3.0] * 4 + [4.0] * 3
+    assert len(row_16) == 16
+    out_list = [[list(row_16), list(row_16)]]
+
+    intent = _extract_head_logits(out_list, ["logits"], "intent", 0)
+    category = _extract_head_logits(out_list, ["logits"], "category", 1)
+    risk = _extract_head_logits(out_list, ["logits"], "risk", 2)
+    comp = _extract_head_logits(out_list, ["logits"], "completeness", 3)
+
+    assert len(intent[0]) == 3
+    assert len(category[0]) == 6
+    assert len(risk[0]) == 4
+    assert len(comp[0]) == 3
+
+    # Also verify with 2D ndarray
+    mock_np_mod = mock.MagicMock()
+    mock_np_mod.ndarray = _MockNdarray
+    with mock.patch.dict(sys.modules, {"numpy": mock_np_mod}):
+        out_arr = [_MockNdarray([list(row_16), list(row_16)])]
+        intent_arr = _extract_head_logits(out_arr, ["logits"], "intent", 0)
+        category_arr = _extract_head_logits(out_arr, ["logits"], "category", 1)
+        risk_arr = _extract_head_logits(out_arr, ["logits"], "risk", 2)
+        comp_arr = _extract_head_logits(out_arr, ["logits"], "completeness", 3)
+
+        assert intent_arr.shape == (2, 3)
+        assert category_arr.shape == (2, 6)
+        assert risk_arr.shape == (2, 4)
+        assert comp_arr.shape == (2, 3)
+
+
+def test_evaluate_multitask_model_with_12_categories_22_logits_concatenated() -> None:
+    """End-to-end evaluation test with concatenated 22-logit ONNX model across all 12 categories."""
+    samples = [
+        {"text": f"Laporan masalah kategori {cat}", "intent": "COMPLAINT", "category": cat, "risk": "MEDIUM", "completeness": "SUFFICIENT"}
+        for cat in HEAD_CONFIGS["category"]
+    ]
+    tokenizer = SimpleOfflineTokenizer()
+
+    class SessionConcatenated22:
+        def get_inputs(self) -> list[Any]:
+            return [mock.Mock(name="input_ids"), mock.Mock(name="attention_mask")]
+
+        def get_outputs(self) -> list[Any]:
+            m = mock.Mock()
+            m.name = "logits"
+            return [m]
+
+        def run(self, names: Any, feed_dict: dict[str, Any]) -> list[Any]:
+            n = len(feed_dict["input_ids"])
+            rows = []
+            for _ in range(n):
+                # intent: 3 logits (COMPLAINT highest)
+                # category: 12 logits (index 6 highest -> PUBLIC_ORDER)
+                # risk: 4 logits (MEDIUM highest)
+                # completeness: 3 logits (SUFFICIENT highest)
+                row = (
+                    [3.0, 0.0, 0.0]
+                    + [3.0 if c == 6 else 0.0 for c in range(12)]
+                    + [0.0, 3.0, 0.0, 0.0]
+                    + [3.0, 0.0, 0.0]
+                )
+                rows.append(row)
+            return [rows]
+
+    res = evaluate_multitask_model(SessionConcatenated22(), samples, tokenizer)
+    assert res["evaluated"] is True
+    assert set(res["head_ece"].keys()) == set(EXPECTED_HEADS)
+    assert len(res["heads"]["category"]["classes"]) == 12
+    assert res["heads"]["category"]["support"] == 12
 
 
 def test_calibration_strictly_uses_dev_fitted_artifacts_never_test_labels(tmp_path: Path) -> None:

@@ -20,10 +20,16 @@ class TestM3CategoryPolicy(unittest.TestCase):
             Category.CLEAN_WATER,
             Category.CIVIL_ADMIN,
             Category.HEALTH_SERVICE,
+            Category.PUBLIC_ORDER,
+            Category.TRANSPORTATION,
+            Category.FIRE_RESCUE,
+            Category.SOCIAL_AFFAIRS,
+            Category.EDUCATION,
+            Category.PARKS_HOUSING,
         )
 
-    def test_authority_directory_contains_all_six_categories_for_all_jurisdictions(self) -> None:
-        self.assertEqual(len(Category), 6)
+    def test_authority_directory_contains_all_twelve_categories_for_all_jurisdictions(self) -> None:
+        self.assertEqual(len(Category), 12)
         for jur_id in self.jurisdictions:
             for cat in self.categories:
                 key = (jur_id, cat)
