@@ -29,11 +29,28 @@ services:
       - kawal
 
   ticket-simulator:
+    image: ${DOCKERHUB_USERNAME:-hiiamanop}/kawal-ticket-simulator:latest
     build:
       context: .
       dockerfile: services/simulator/Dockerfile
     ports:
       - "127.0.0.1:${TICKET_SIMULATOR_PORT:-8000}:8000"
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    networks:
+      - kawal
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_LABEL_ENABLE=true
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=${WATCHTOWER_POLL_INTERVAL:-300}
+      - WATCHTOWER_INCLUDE_RESTARTING=true
     networks:
       - kawal
 
