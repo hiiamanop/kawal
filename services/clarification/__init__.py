@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from services.clarification.dispatcher import (
+    ClarificationDispatcher,
+    format_clarification_message,
+)
 from services.clarification.engine import (
     EXPIRY_HOURS,
     MAX_QUESTIONS_PER_ROUND,
@@ -16,6 +20,8 @@ from services.clarification.engine import (
 )
 
 __all__ = [
+    "ClarificationDispatcher",
+    "format_clarification_message",
     "EXPIRY_HOURS",
     "MAX_QUESTIONS_PER_ROUND",
     "MAX_ROUNDS",

@@ -1,9 +1,19 @@
 from collections.abc import Mapping
-from datetime import datetime
+from datetime import datetime, timezone
 import hashlib
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
+from uuid import uuid4
 
-from contracts.models import RawMessage
+from contracts.models import (
+    DeliveryStatus,
+    OutboundMessageCommand,
+    OutboundSendReceipt,
+    RawMessage,
+)
+from services.intake.send_ledger import (
+    IdempotencyConflictError,
+    InMemorySendLedger,
+)
 
 if TYPE_CHECKING:
     from services.intake.service import IntakeService
@@ -53,11 +63,40 @@ def build_normalized_message_id(
 
 class OpenWAConnector:
     def __init__(
-        self, intake_service: Any, connector_id: str, account_id: str
+        self,
+        intake_service: Any = None,
+        connector_id: str = "openwa",
+        account_id: str = "research",
+        send_ledger: Any | None = None,
+        transport: Callable[..., Mapping[str, Any]] | None = None,
     ) -> None:
         self._intake_service = intake_service
         self._connector_id = connector_id
         self._account_id = account_id
+        self._send_ledger = send_ledger or InMemorySendLedger()
+        self._transport = transport or self._default_mock_transport
+        self._sent_messages: list[dict[str, Any]] = []
+
+    def _default_mock_transport(
+        self,
+        to: str,
+        text: str,
+        quoted_msg_id: str | None = None,
+    ) -> Mapping[str, Any]:
+        msg_id = f"false_{to}_{uuid4().hex[:12]}"
+        record = {
+            "id": msg_id,
+            "to": to,
+            "text": text,
+            "quoted_msg_id": quoted_msg_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        self._sent_messages.append(record)
+        return {"id": msg_id, "status": "SENT"}
+
+    @property
+    def sent_messages(self) -> list[dict[str, Any]]:
+        return list(self._sent_messages)
 
     @property
     def connector_id(self) -> str:
@@ -66,6 +105,63 @@ class OpenWAConnector:
     @property
     def account_id(self) -> str:
         return self._account_id
+
+    def send_text(
+        self,
+        command: OutboundMessageCommand,
+        connection: Any = None,
+    ) -> OutboundSendReceipt:
+        """Send a text message via OpenWA with strict send ledger idempotency."""
+        send_id, is_new = self._send_ledger.record_pending_send(connection, command)
+
+        if not is_new:
+            existing = self._send_ledger.lookup_by_idempotency_key(connection, command.idempotency_key)
+            if existing:
+                status_str = existing.get("status", DeliveryStatus.SENT.value)
+                source_msg_id = existing.get("source_message_id")
+                sent_at = existing.get("updated_at") or datetime.now(timezone.utc)
+                if isinstance(sent_at, str):
+                    sent_at = datetime.fromisoformat(sent_at.replace("Z", "+00:00"))
+                return OutboundSendReceipt(
+                    send_id=send_id,
+                    idempotency_key=command.idempotency_key,
+                    source_message_id=source_msg_id,
+                    status=DeliveryStatus(status_str),
+                    sent_at=sent_at,
+                    payload_hash=command.payload_hash,
+                )
+
+        now = datetime.now(timezone.utc)
+        try:
+            resp = self._transport(
+                to=command.recipient_phone,
+                text=command.text,
+                quoted_msg_id=command.quoted_source_message_id,
+            )
+            source_msg_id = str(resp.get("id") or f"false_{command.recipient_phone}_{uuid4().hex[:12]}")
+            self._send_ledger.mark_sent(connection, send_id, source_msg_id)
+            return OutboundSendReceipt(
+                send_id=send_id,
+                idempotency_key=command.idempotency_key,
+                source_message_id=source_msg_id,
+                status=DeliveryStatus.SENT,
+                sent_at=now,
+                payload_hash=command.payload_hash,
+            )
+        except TimeoutError as exc:
+            # PRD §42: Unknown outcome reconciliation - mark unknown, do not blind resend!
+            self._send_ledger.mark_unknown_outcome(connection, send_id, str(exc))
+            return OutboundSendReceipt(
+                send_id=send_id,
+                idempotency_key=command.idempotency_key,
+                source_message_id=None,
+                status=DeliveryStatus.DELIVERY_UNKNOWN,
+                sent_at=now,
+                payload_hash=command.payload_hash,
+            )
+        except Exception as exc:
+            self._send_ledger.mark_failed(connection, send_id, str(exc))
+            raise
 
     def is_self_sent(self, payload: Mapping[str, Any]) -> bool:
         for key in (
