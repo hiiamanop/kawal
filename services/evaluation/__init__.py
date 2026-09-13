@@ -21,12 +21,24 @@ from services.evaluation.statistics import (
     compute_single_system_cluster_bootstrap,
     compute_system_metrics,
 )
+from services.evaluation.stress import (
+    LatencyProfile,
+    LoadProfile,
+    StressResult,
+    STANDARD_LOAD_PROFILES,
+    run_full_stress_suite,
+    run_stress_profile,
+)
 from services.evaluation.systems import execute_system
 
 __all__ = [
     "BootstrapCI",
     "EvalSample",
+    "LatencyProfile",
+    "LoadProfile",
     "PairedDiffResult",
+    "StressResult",
+    "STANDARD_LOAD_PROFILES",
     "SystemExecutionResult",
     "SystemID",
     "SystemMetrics",
@@ -38,6 +50,8 @@ __all__ = [
     "compute_system_metrics",
     "execute_system",
     "generate_standard_thesis_eval_samples",
+    "run_full_stress_suite",
     "run_robustness_invariant_checks",
+    "run_stress_profile",
     "run_thesis_evaluation",
 ]

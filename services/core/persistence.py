@@ -240,3 +240,46 @@ class M1Store:
                 """,
                 (UUID(receipt.ticket_id), now, receipt.idempotency_key.split(":")[1]),
             )
+
+    def claim_next_any_outbox_event(
+        self, connection: Connection
+    ) -> tuple[UUID, str, str, dict[str, object], int] | None:
+        """Claim next unpublished outbox event of any type."""
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                WITH candidate AS (
+                    SELECT event_id
+                    FROM outbox
+                    WHERE published_at IS NULL
+                      AND (lease_expires_at IS NULL OR lease_expires_at <= clock_timestamp())
+                    ORDER BY created_at
+                    FOR UPDATE SKIP LOCKED
+                    LIMIT 1
+                )
+                UPDATE outbox
+                SET attempts = attempts + 1,
+                    lease_expires_at = clock_timestamp() + %s::interval
+                FROM candidate
+                WHERE outbox.event_id = candidate.event_id
+                RETURNING outbox.event_id, outbox.event_type, outbox.partition_key, outbox.payload, outbox.revision
+                """,
+                (f"{LEASE_DURATION.total_seconds()} seconds",),
+            )
+            row = cursor.fetchone()
+            return None if row is None else (row[0], row[1], row[2], row[3], row[4])
+
+    def mark_event_published(
+        self, connection: Connection, event_id: UUID
+    ) -> None:
+        """Mark an outbox event as published."""
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE outbox
+                SET published_at = clock_timestamp(),
+                    lease_expires_at = NULL
+                WHERE event_id = %s
+                """,
+                (event_id,),
+            )
