@@ -912,3 +912,38 @@ def test_adapter_agent_result_v1_custom_overrides() -> None:
     assert agent_result.uncertainty == custom_unc
     assert agent_result.versions == custom_ver
     assert agent_result.telemetry == custom_tel
+
+
+def test_onnx_live_inference_backend() -> None:
+    multitask_path = Path("artifacts/city12-v7-onnx/multitask/model.onnx")
+    if not multitask_path.is_file():
+        pytest.skip("ONNX artifacts not present")
+
+    runtime = LocalMLRuntime.live_from_artifacts()
+    assert runtime.is_available() is True
+
+    text = "Lapor jalan berlubang di Jl. Merdeka No. 10, RT 01 RW 02, Kelurahan Babakan Ciamis, Kecamatan Sumur Bandung, Kota Bandung."
+    result = runtime.predict(text)
+
+    assert result.status == RuntimeStatus.AVAILABLE
+    assert result.available is True
+    assert result.latency_ms > 0.0
+    assert result.prediction is not None
+    assert result.prediction.category == "ROAD"
+    assert result.prediction.intent == "COMPLAINT"
+    assert result.prediction.completeness == "SUFFICIENT"
+    assert len(result.entities) > 0
+    assert any(e.label == "LOC" for e in result.entities)
+
+
+def test_onnx_live_from_artifacts_fallback_when_dir_empty(tmp_path: Path) -> None:
+    empty_dir = tmp_path / "no_models"
+    empty_dir.mkdir()
+
+    # Fallback allowed
+    runtime = LocalMLRuntime.live_from_artifacts(base_dir=empty_dir, allow_fallback=True)
+    assert runtime.is_available() is False
+
+    # Fallback forbidden
+    with pytest.raises(FileNotFoundError):
+        LocalMLRuntime.live_from_artifacts(base_dir=empty_dir, allow_fallback=False)

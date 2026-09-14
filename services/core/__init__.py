@@ -34,12 +34,14 @@ from services.core.policy import (
     AUTHORITY_DIRECTORY,
     evaluate_ticket_creation,
 )
+from services.core.worker import CaseReadyWorker
 
 __all__ = [
     "AUTHORITY_DIRECTORY",
     "CATEGORY_TITLES",
     "BudgetState",
     "CaseProcessingPipeline",
+    "CaseReadyWorker",
     "ConflictInput",
     "ConflictRecord",
     "ConflictSeverity",

@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+import hashlib
 from uuid import UUID, uuid4, uuid5
 
 from psycopg import Connection
@@ -225,6 +226,7 @@ class ConversationAssembler:
                 ),
             )
             messages = cursor.fetchall()
+            case_ids_updated: set[str] = set()
             for message_id, source_message_id, quoted_source_message_id, case_key, _received_at in messages:
                 case_id = self._case_id(
                     cursor, claim.tenant_id, claim.connector_id, claim.account_id, claim.conversation_id,
@@ -244,6 +246,77 @@ class ConversationAssembler:
                     """,
                     (message_id, case_id),
                 )
+                case_ids_updated.add(case_id)
+
+            for case_id in sorted(case_ids_updated):
+                cursor.execute(
+                    """
+                    SELECT m.message_id, m.tenant_id, m.conversation_id, m.source_message_id,
+                           m.text, m.received_at
+                    FROM raw_messages m
+                    JOIN message_case_links l ON l.message_id = m.message_id
+                    WHERE l.case_id = %s
+                    ORDER BY m.received_at ASC, m.message_id ASC
+                    """,
+                    (case_id,),
+                )
+                case_msgs = cursor.fetchall()
+                msgs_list = [
+                    {
+                        "message_id": row[0],
+                        "tenant_id": row[1],
+                        "conversation_id": row[2],
+                        "source_message_id": row[3],
+                        "text": row[4],
+                        "received_at": row[5].isoformat() if hasattr(row[5], "isoformat") else str(row[5]),
+                    }
+                    for row in case_msgs
+                ]
+                combined_text = " ".join(m["text"] for m in msgs_list)
+                evidence_hash = hashlib.sha256(combined_text.encode("utf-8")).hexdigest()
+
+                cursor.execute(
+                    "SELECT COALESCE(MAX(revision), 0) + 1 FROM case_snapshots WHERE case_id = %s",
+                    (case_id,),
+                )
+                new_revision = cursor.fetchone()[0]
+
+                cursor.execute(
+                    """
+                    UPDATE cases
+                    SET revision = %s, processing_state = 'READY', updated_at = clock_timestamp()
+                    WHERE case_id = %s
+                    """,
+                    (new_revision, case_id),
+                )
+
+                cursor.execute(
+                    """
+                    INSERT INTO case_snapshots (
+                        case_id, revision, tenant_id, conversation_id, state,
+                        evidence_hash, messages_payload, created_at
+                    ) VALUES (%s, %s, %s, %s, 'READY', %s, %s, clock_timestamp())
+                    ON CONFLICT (case_id, revision) DO NOTHING
+                    """,
+                    (case_id, new_revision, claim.tenant_id, claim.conversation_id, evidence_hash, Jsonb(msgs_list)),
+                )
+
+                cursor.execute(
+                    """
+                    INSERT INTO outbox (
+                        tenant_id, aggregate_type, aggregate_id, revision,
+                        event_type, partition_key, payload
+                    ) VALUES (%s, 'case', %s, %s, 'case.ready.v1', %s, %s)
+                    """,
+                    (
+                        claim.tenant_id,
+                        case_id,
+                        new_revision,
+                        f"{claim.tenant_id}:{case_id}",
+                        Jsonb({"case_id": case_id, "revision": new_revision, "tenant_id": claim.tenant_id}),
+                    ),
+                )
+
             if messages:
                 max_received_at = max(m[4] for m in messages)
                 last_message = messages[-1]

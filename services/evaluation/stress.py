@@ -4,7 +4,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from threading import Lock
-from typing import Any, Sequence
+from typing import Any, Literal, Sequence
 from uuid import uuid4
 
 import numpy as np
@@ -46,6 +46,7 @@ class LatencyProfile(BaseModel):
 class StressResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
+    runtime_mode: Literal["simulation", "live_local"] = "simulation"
     profile_name: str
     total_cases: int
     total_messages: int
@@ -189,6 +190,7 @@ def run_stress_profile(
     duplicate_tickets = len(ticket_ids) - unique_tickets
 
     return StressResult(
+        runtime_mode="simulation",
         profile_name=profile.name,
         total_cases=profile.target_cases,
         total_messages=total_msgs,

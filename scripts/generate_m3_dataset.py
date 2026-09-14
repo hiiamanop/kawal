@@ -185,6 +185,72 @@ CATEGORY_ANCHOR_LEXICONS: dict[Category, dict[str, tuple[str, ...]]] = {
         ),
         "forbidden_terms": (),
     },
+    Category.PUBLIC_ORDER: {
+        "anchors": (
+            "pungutan liar",
+            "kebisingan tempat hiburan",
+            "balap liar malam hari",
+            "parkir liar trotoar",
+            "gangguan ketertiban umum",
+            "pedagang kaki lima trotoar",
+        ),
+        "forbidden_terms": (),
+    },
+    Category.TRANSPORTATION: {
+        "anchors": (
+            "angkot ngetem sembarangan",
+            "rambu lalu lintas tertutup",
+            "halte bus rusak",
+            "armada angkutan umum",
+            "jalur sepeda diserobot",
+            "penyeberangan jalan zebra cross",
+        ),
+        "forbidden_terms": (),
+    },
+    Category.FIRE_RESCUE: {
+        "anchors": (
+            "kebakaran rumah warga",
+            "korsleting tiang listrik",
+            "sarang tawon membahayakan",
+            "evakuasi pohon tumbang",
+            "kebocoran tabung gas",
+            "instalasi kabel listrik percik api",
+        ),
+        "forbidden_terms": (),
+    },
+    Category.SOCIAL_AFFAIRS: {
+        "anchors": (
+            "bantuan sosial belum cair",
+            "pemerlu pelayanan kesejahteraan",
+            "lansia terlantar butuh penanganan",
+            "data bansos tidak tepat sasaran",
+            "anak terlantar putus sekolah",
+            "distribusi beras bansos",
+        ),
+        "forbidden_terms": (),
+    },
+    Category.EDUCATION: {
+        "anchors": (
+            "gedung ruang kelas rusak",
+            "pungutan liar biaya sekolah",
+            "kekurangan tenaga guru",
+            "fasilitas laboratorium sekolah",
+            "buku pelajaran sekolah",
+            "atap plafon kelas ambrol",
+        ),
+        "forbidden_terms": (),
+    },
+    Category.PARKS_HOUSING: {
+        "anchors": (
+            "lampu taman kota padam",
+            "fasilitas wahana bermain rusak",
+            "bangunan liar bantaran",
+            "kumuh kawasan permukiman",
+            "pohon peneduh taman rapuh",
+            "bangku taman rusak patah",
+        ),
+        "forbidden_terms": (),
+    },
 }
 
 
@@ -1018,7 +1084,8 @@ def compose_category_anchor_text(
         split_key, CATEGORY_SPLIT_ANCHOR_CUES["train"]
     ).get(template.category, ())
     cue = pool[seed % len(pool)] if pool else ""
-    anchors = CATEGORY_ANCHOR_LEXICONS[template.category]["anchors"]
+    lex = CATEGORY_ANCHOR_LEXICONS.get(template.category)
+    anchors = lex["anchors"] if lex and "anchors" in lex else (template.issue,)
     matched = sorted(
         [a for a in anchors if a.lower() in template.issue.lower()],
         key=len,

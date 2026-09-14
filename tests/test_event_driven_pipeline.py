@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import time
 from uuid import UUID, uuid4
+import psycopg
 import pytest
 
 from infra.db import TransactionRunner
@@ -10,6 +12,8 @@ from services.core.persistence import M1Store
 from services.outbox.broker import (
     BrokerMessage,
     InMemoryEventBroker,
+    RedpandaBrokerUnavailableError,
+    RedpandaEventBroker,
 )
 from services.outbox.consumer import AtomicInboxConsumer
 from services.outbox.relay import (
@@ -60,6 +64,36 @@ def test_in_memory_event_broker_publish_poll_commit() -> None:
     # Group 2 has independent offset and sees all 3 messages from start
     polled_g2 = broker.poll("intake.messages.v1", group_id="group-indexer", max_records=10)
     assert len(polled_g2) == 3
+
+
+def test_redpanda_adapter_fails_explicitly_when_dependency_missing_or_broker_down() -> None:
+    broker = RedpandaEventBroker(bootstrap_servers="127.0.0.1:1", request_timeout_ms=100)
+    with pytest.raises(RedpandaBrokerUnavailableError):
+        broker.ensure_topics(["kawal.unavailable.test"])
+
+
+@pytest.mark.integration
+def test_redpanda_live_publish_consume_smoke() -> None:
+    broker = RedpandaEventBroker(bootstrap_servers="127.0.0.1:19092")
+    topic = "kawal.redpanda.integration.v1"
+    group_id = f"kawal-integration-{uuid4()}"
+    try:
+        broker.ensure_topics([topic])
+        published = broker.publish(topic, "case-live", {"status": "READY"})
+        received: list[BrokerMessage] = []
+        for _ in range(5):
+            received = broker.poll(topic, group_id, max_records=10)
+            if any(message.event_id == published.event_id for message in received):
+                break
+            time.sleep(0.5)
+        assert any(message.event_id == published.event_id for message in received)
+        for message in received:
+            broker.commit_offset(topic, group_id, message.offset)
+        assert broker.poll(topic, group_id, max_records=10) == []
+    except RedpandaBrokerUnavailableError:
+        pytest.skip("Redpanda live broker is not running at 127.0.0.1:19092")
+    finally:
+        broker.close()
 
 
 def test_topic_routing_map_matches_prd_section_32() -> None:
@@ -186,6 +220,29 @@ def test_outbox_relay_daemon_and_atomic_inbox_consumer() -> None:
     # Second relay call finds no more unpublished events
     assert daemon.relay_next() is None
 
+    # Far-future unpublished lease from a legacy/corrupted relay can be released,
+    # while a published event must remain untouched.
+    cursor_connection = psycopg.connect(DATABASE_URL)
+    with cursor_connection:
+        with cursor_connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO outbox (
+                    tenant_id, aggregate_type, aggregate_id, revision,
+                    event_type, partition_key, payload, lease_expires_at
+                ) VALUES (
+                    'tenant-bdg', 'case', 'case-stuck-1', 1,
+                    'case.ready.v1', 'tenant-bdg:case-stuck-1',
+                    '{\"status\": \"READY\"}'::jsonb, '9999-12-31T23:59:59Z'
+                ) RETURNING event_id
+                """
+            )
+            stuck_id = cursor.fetchone()[0]
+    cursor_connection.close()
+
+    released = runner.run(lambda conn: store.reconcile_stuck_outbox_leases(conn))
+    assert stuck_id in released
+
     # Now test AtomicInboxConsumer
     consumer = AtomicInboxConsumer(
         consumer_name="orchestrator-consumer",
@@ -209,3 +266,61 @@ def test_outbox_relay_daemon_and_atomic_inbox_consumer() -> None:
     # Invariant: Duplicate event skipped via inbox table deduplication!
     assert duplicate_processed is False
     assert handler_calls == 1  # Handler was NOT called a second time!
+
+
+@pytest.mark.integration
+def test_assembly_to_case_ready_outbox_integration() -> None:
+    if DATABASE_URL is None:
+        pytest.skip("set KAWAL_TEST_DATABASE_URL to run PostgreSQL integration tests")
+
+    from datetime import datetime, timezone, timedelta
+    from contracts.models import RawMessage
+    from services.intake.service import IntakeService
+    from services.intake.assembly import ConversationAssembler
+    from services.intake.worker import IntakeAssemblyWorker
+
+    runner = TransactionRunner(DATABASE_URL)
+    assembler = ConversationAssembler()
+    intake = IntakeService(runner, assembler)
+
+    tenant_id = f"tenant-test-{uuid4().hex[:6]}"
+    conv_id = f"{uuid4().hex[:8]}@c.us"
+
+    with psycopg.connect(DATABASE_URL) as conn:
+        with conn.cursor() as cur:
+            cur.execute("INSERT INTO tenants (tenant_id, name) VALUES (%s, %s)", (tenant_id, "Test Tenant"))
+
+    now = datetime.now(timezone.utc)
+    msg = RawMessage(
+        message_id=f"test-msg-{uuid4().hex[:8]}",
+        tenant_id=tenant_id,
+        conversation_id=conv_id,
+        source_message_id=f"src-{uuid4().hex[:8]}",
+        text="Lapor jalan rusak di Jl. Merdeka",
+        received_at=now,
+    )
+    assert intake.accept(msg, connector_id="openwa", account_id="bot") is True
+
+    # Assemble using IntakeAssemblyWorker
+    worker = IntakeAssemblyWorker(transaction_runner=runner, assembler=assembler)
+    assembled = worker.process_due_timers(now=now + timedelta(seconds=10))
+    assert conv_id in assembled
+
+    # Verify that case_snapshots and outbox event case.ready.v1 exist
+    with psycopg.connect(DATABASE_URL) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT case_id, processing_state FROM cases WHERE tenant_id = %s", (tenant_id,))
+            case_row = cur.fetchone()
+            assert case_row is not None
+            assert case_row[1] == "READY"
+            case_id = case_row[0]
+
+            cur.execute("SELECT state, evidence_hash FROM case_snapshots WHERE case_id = %s", (case_id,))
+            snap_row = cur.fetchone()
+            assert snap_row is not None
+            assert snap_row[0] == "READY"
+
+            cur.execute("SELECT event_type FROM outbox WHERE tenant_id = %s AND aggregate_id = %s", (tenant_id, case_id))
+            outbox_row = cur.fetchone()
+            assert outbox_row is not None
+            assert outbox_row[0] == "case.ready.v1"

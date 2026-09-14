@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from hashlib import sha256
 import json
 import math
+from pathlib import Path
 import time
 from typing import Any, Callable, Iterable, Literal, Sequence
 from uuid import uuid4
@@ -34,7 +35,7 @@ from services.intelligence.chunking import (
     tokenize_with_offsets,
 )
 from services.intelligence.completeness import resolve_location_completeness
-from services.intelligence.ner import EntitySpan
+from services.intelligence.ner import EntitySpan, parse_bio_tags
 from services.ml.manifest import (
     ArtifactManifest,
     ArtifactManifestItem,
@@ -353,6 +354,186 @@ def _map_sensitivity(val: Any) -> Sensitivity:
     return Sensitivity.NORMAL
 
 
+class OnnxInferenceBackend:
+    """CPU-first ONNX Runtime inference backend for Multitask + NER models."""
+
+    def __init__(
+        self,
+        multitask_path: str | Path,
+        ner_path: str | Path | None = None,
+        tokenizer_path: str | Path | None = None,
+        temperatures_path: str | Path | None = None,
+        tagset_path: str | Path | None = None,
+        intra_op_num_threads: int = 2,
+        inter_op_num_threads: int = 1,
+    ) -> None:
+        import onnxruntime as ort
+        from transformers import AutoTokenizer
+
+        self.multitask_path = Path(multitask_path).resolve()
+        self.ner_path = Path(ner_path).resolve() if ner_path is not None else None
+
+        sess_options = ort.SessionOptions()
+        sess_options.intra_op_num_threads = max(1, int(intra_op_num_threads))
+        sess_options.inter_op_num_threads = max(1, int(inter_op_num_threads))
+        sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+        sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+
+        self._multitask_session = ort.InferenceSession(
+            str(self.multitask_path), sess_options, providers=["CPUExecutionProvider"]
+        )
+
+        self._ner_session = None
+        if self.ner_path is not None and self.ner_path.is_file():
+            self._ner_session = ort.InferenceSession(
+                str(self.ner_path), sess_options, providers=["CPUExecutionProvider"]
+            )
+
+        tok_dir = Path(tokenizer_path).resolve() if tokenizer_path else self.multitask_path.parent
+        if not (tok_dir / "tokenizer_config.json").is_file():
+            candidates = [
+                Path("artifacts/city12-v7-multitask"),
+                Path("artifacts/city12-multitask"),
+                Path("artifacts/city12-v4-ner"),
+            ]
+            for cand in candidates:
+                if (cand / "tokenizer_config.json").is_file():
+                    tok_dir = cand
+                    break
+        self._tokenizer = AutoTokenizer.from_pretrained(str(tok_dir), local_files_only=True)
+
+        self._temperatures: dict[str, float] = {
+            "intent": 1.0,
+            "category": 1.0,
+            "risk": 1.0,
+            "completeness": 1.0,
+        }
+        temp_file = Path(temperatures_path).resolve() if temperatures_path else None
+        if temp_file is None or not temp_file.is_file():
+            for cand in (
+                Path("artifacts/city12-v7-multitask/temperatures.json"),
+                Path("artifacts/city12-multitask/temperatures.json"),
+            ):
+                if cand.is_file():
+                    temp_file = cand
+                    break
+        if temp_file is not None and temp_file.is_file():
+            try:
+                with open(temp_file, "r", encoding="utf-8") as f:
+                    self._temperatures.update(json.load(f))
+            except Exception:
+                pass
+
+        self._tagset = [
+            "O",
+            "B-LOC",
+            "I-LOC",
+            "B-OBJ",
+            "I-OBJ",
+            "B-TIME",
+            "I-TIME",
+        ]
+        tag_file = Path(tagset_path).resolve() if tagset_path else None
+        if tag_file is None or not tag_file.is_file():
+            for cand in (
+                Path("artifacts/city12-v4-ner/tagset.json"),
+                Path("artifacts/city12-ner/tagset.json"),
+            ):
+                if cand.is_file():
+                    tag_file = cand
+                    break
+        if tag_file is not None and tag_file.is_file():
+            try:
+                with open(tag_file, "r", encoding="utf-8") as f:
+                    self._tagset = json.load(f)
+            except Exception:
+                pass
+
+        self._head_names = ["intent", "category", "risk", "completeness"]
+        self._head_configs = {
+            "intent": ["COMPLAINT", "INQUIRY", "FEEDBACK"],
+            "category": [c.value for c in Category],
+            "risk": ["LOW", "MEDIUM", "HIGH", "URGENT"],
+            "completeness": ["SUFFICIENT", "INCOMPLETE", "AMBIGUOUS"],
+        }
+
+    def predict(
+        self, text: str, context: dict[str, Any] | None = None
+    ) -> tuple[ClassificationPrediction, tuple[SpanNER, ...]]:
+        import numpy as np
+
+        inputs = self._tokenizer(
+            text,
+            max_length=448,
+            padding=True,
+            truncation=True,
+            return_offsets_mapping=True,
+            return_tensors="np",
+        )
+
+        feed_dict = {
+            "input_ids": inputs["input_ids"],
+            "attention_mask": inputs["attention_mask"],
+        }
+        m_outputs = self._multitask_session.run(None, feed_dict)
+
+        head_preds: dict[str, str] = {}
+        head_probs: dict[str, float] = {}
+
+        for h_idx, head in enumerate(self._head_names):
+            t = self._temperatures.get(head, 1.0)
+            if t <= 0.0:
+                t = 1.0
+            logits = m_outputs[h_idx][0] / t
+            exp_z = np.exp(logits - np.max(logits))
+            probs = exp_z / np.sum(exp_z)
+            pred_idx = int(np.argmax(probs))
+            classes = self._head_configs[head]
+            pred_label = classes[pred_idx] if pred_idx < len(classes) else classes[0]
+            head_preds[head] = pred_label
+            head_probs[head] = float(probs[pred_idx])
+
+        confidence = float(head_probs.get("category", 1.0))
+
+        prediction = ClassificationPrediction(
+            intent=head_preds.get("intent", "COMPLAINT"),
+            category=head_preds.get("category", "ROAD"),
+            risk=head_preds.get("risk", "MEDIUM"),
+            completeness=head_preds.get("completeness", "SUFFICIENT"),
+            confidence=round(confidence, 4),
+            probabilities={k: round(v, 4) for k, v in head_probs.items()},
+        )
+
+        entities: list[SpanNER] = []
+        if self._ner_session is not None:
+            n_outputs = self._ner_session.run(None, feed_dict)
+            n_logits = n_outputs[0][0]
+            n_preds = np.argmax(n_logits, axis=-1)
+            tags = [self._tagset[p] if p < len(self._tagset) else "O" for p in n_preds]
+            tokens = self._tokenizer.convert_ids_to_tokens(inputs["input_ids"][0])
+            offsets = [tuple(o) for o in inputs["offset_mapping"][0]]
+
+            valid_tokens = []
+            valid_tags = []
+            valid_offsets = []
+            for tok_str, tag, off in zip(tokens, tags, offsets):
+                if off == (0, 0) and tok_str in ("[CLS]", "[SEP]", "[PAD]"):
+                    continue
+                valid_tokens.append(tok_str)
+                valid_tags.append(tag)
+                valid_offsets.append(off)
+
+            extracted_spans = parse_bio_tags(
+                tokens=valid_tokens,
+                tags=valid_tags,
+                text=text,
+                token_offsets=valid_offsets,
+            )
+            entities = [SpanNER.from_entity_span(s) for s in extracted_spans]
+
+        return prediction, tuple(entities)
+
+
 class LocalMLRuntime:
     def __init__(
         self,
@@ -379,6 +560,54 @@ class LocalMLRuntime:
 
         if self.manifest is not None and self.artifacts_dir is not None:
             self.warmup()
+
+    @classmethod
+    def live_from_artifacts(
+        cls,
+        base_dir: str | Path = "artifacts",
+        model_name: str = "city12-indobert-multitask",
+        model_version: str = "v7.0.0",
+        allow_fallback: bool = True,
+    ) -> LocalMLRuntime:
+        root = Path(base_dir).resolve()
+        multitask_candidates = [
+            root / "city12-v7-onnx" / "multitask" / "model.onnx",
+            root / "city12-onnx" / "multitask" / "model.onnx",
+            root / "city12-v4-onnx" / "multitask" / "model.onnx",
+        ]
+        ner_candidates = [
+            root / "city12-v4-onnx" / "ner" / "model.onnx",
+            root / "city12-onnx" / "ner" / "model.onnx",
+        ]
+        tok_candidates = [
+            root / "city12-v7-multitask",
+            root / "city12-multitask",
+        ]
+
+        multitask_path = next((p for p in multitask_candidates if p.is_file()), None)
+        ner_path = next((p for p in ner_candidates if p.is_file()), None)
+        tok_path = next((p for p in tok_candidates if p.is_dir()), None)
+
+        if multitask_path is None:
+            if not allow_fallback:
+                raise FileNotFoundError(f"No ONNX multitask model found under {root}")
+            return cls(model_name=model_name, model_version=model_version)
+
+        try:
+            backend = OnnxInferenceBackend(
+                multitask_path=multitask_path,
+                ner_path=ner_path,
+                tokenizer_path=tok_path,
+            )
+            return cls(
+                inference_backend=backend,
+                model_name=model_name,
+                model_version=model_version,
+            )
+        except Exception as exc:
+            if not allow_fallback:
+                raise
+            return cls(model_name=model_name, model_version=model_version)
 
     def warmup(self, force: bool = False) -> dict[str, ValidationResult]:
         if self._artifacts_validation_cache is not None and not force:

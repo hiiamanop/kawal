@@ -35,6 +35,7 @@ def main() -> int:
 
     print("=" * 80)
     print("KAWAL LOAD, CONCURRENCY & STRESS BENCHMARK (PRD §35, §46, NFR-04)")
+    print("MODE: simulation-only internal pipeline; excludes live PostgreSQL, Redpanda, OpenWA, and ONNX inference.")
     print("Evaluating tiered load profiles: 25%, 50%, 75%, 100%, 125%, burst 2x")
     print("=" * 80)
 

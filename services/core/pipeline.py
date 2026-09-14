@@ -12,6 +12,7 @@ from contracts.models import (
     CaseSnapshot,
     Category,
     DecisionMode,
+    OutboundMessageCommand,
     OutboundSendReceipt,
     ProcessingState,
     RawMessage,
@@ -43,7 +44,6 @@ from services.ml.runtime import (
     SpanNER,
 )
 from services.reliability.client import ReliableTicketClient
-from services.simulator.store import TicketSimulator
 
 
 class PipelineResult(BaseModel):
@@ -61,6 +61,8 @@ class PipelineResult(BaseModel):
     ticket_receipt: TicketReceipt | None = None
     clarification_session: ClarificationSession | None = None
     outbound_receipt: OutboundSendReceipt | None = None
+    ticket_command: TicketCommand | None = None
+    outbound_command: OutboundMessageCommand | None = None
     reason_codes: tuple[str, ...] = ()
     audit_trace: dict[str, Any] = Field(default_factory=dict)
 
@@ -88,18 +90,20 @@ class CaseProcessingPipeline:
         ticket_client: ReliableTicketClient | None = None,
         clarification_dispatcher: ClarificationDispatcher | None = None,
         default_jurisdiction_id: str = "JUR-FICT-01",
+        defer_execution: bool = False,
     ) -> None:
         self._ml_runtime = ml_runtime or LocalMLRuntime()
-        self._ticket_client = ticket_client or ReliableTicketClient(simulator=TicketSimulator())
+        self._ticket_client = ticket_client
         self._clarification_dispatcher = clarification_dispatcher or ClarificationDispatcher()
         self._default_jurisdiction_id = default_jurisdiction_id
+        self._defer_execution = defer_execution
 
     @property
     def ml_runtime(self) -> LocalMLRuntime:
         return self._ml_runtime
 
     @property
-    def ticket_client(self) -> ReliableTicketClient:
+    def ticket_client(self) -> ReliableTicketClient | None:
         return self._ticket_client
 
     @property
@@ -236,10 +240,12 @@ class CaseProcessingPipeline:
         )
         plan: DecisionPlan = decide(decision_input)
 
-        # 5. Side-Effect Execution via Gateways
+        # 5. Build commands and optionally execute inline if not deferred
         ticket_receipt: TicketReceipt | None = None
-        clarification_session: ClarificationSession | None = None
+        ticket_command: TicketCommand | None = None
+        outbound_command: OutboundMessageCommand | None = None
         outbound_receipt: OutboundSendReceipt | None = None
+        clarification_session: ClarificationSession | None = None
 
         if plan.mode == DecisionMode.EXECUTE:
             analysis = AnalysisResult(
@@ -251,9 +257,12 @@ class CaseProcessingPipeline:
                 missing_fields=(),
                 has_mandatory_evidence=True,
             )
-            cmd = build_ticket_command(snapshot, analysis)
-            if cmd is not None:
-                ticket_receipt = self._ticket_client.create_ticket(cmd.request, cmd.idempotency_key)
+            ticket_command = build_ticket_command(snapshot, analysis)
+            if ticket_command is not None:
+                if not self._defer_execution and self._ticket_client is not None:
+                    ticket_receipt = self._ticket_client.create_ticket(
+                        ticket_command.request, ticket_command.idempotency_key
+                    )
                 proc_state = ProcessingState.TICKETED
             else:
                 proc_state = ProcessingState.WAITING_RESULTS
@@ -267,12 +276,18 @@ class CaseProcessingPipeline:
                 category=category,
                 missing_fields=missing_fields,
             )
-            last_msg = snapshot.messages[-1]
-            session, outbound_receipt = self._clarification_dispatcher.dispatch_clarification_request(
-                session=session,
-                quoted_source_message_id=last_msg.source_message_id,
-            )
             clarification_session = session
+            last_msg_src = snapshot.messages[-1].source_message_id if snapshot.messages else None
+            outbound_command = self._clarification_dispatcher.build_clarification_command(
+                session=session,
+                quoted_source_message_id=last_msg_src,
+            )
+            if not self._defer_execution and self._clarification_dispatcher is not None:
+                session, outbound_receipt = self._clarification_dispatcher.dispatch_clarification_request(
+                    session=session,
+                    quoted_source_message_id=last_msg_src,
+                )
+                clarification_session = session
             proc_state = ProcessingState.WAITING_CLARIFICATION
 
         elif plan.mode == DecisionMode.REJECT_IGNORE:
@@ -292,8 +307,10 @@ class CaseProcessingPipeline:
             risk=risk,
             completeness=completeness,
             ticket_receipt=ticket_receipt,
+            ticket_command=ticket_command,
             clarification_session=clarification_session,
             outbound_receipt=outbound_receipt,
+            outbound_command=outbound_command,
             reason_codes=plan.reason_codes,
             audit_trace={
                 "plan": plan.model_dump(mode="json"),

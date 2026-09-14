@@ -88,6 +88,12 @@ def test_postgresql_send_ledger_integration() -> None:
             for migration in MIGRATIONS:
                 cursor.execute(migration.read_text(encoding="utf-8"))
             cursor.execute("INSERT INTO tenants (tenant_id, name) VALUES ('tenant-bdg', 'Bandung') ON CONFLICT DO NOTHING")
+            cursor.execute(
+                """
+                INSERT INTO cases (case_id, tenant_id, conversation_id, processing_state)
+                VALUES ('case-1', 'tenant-bdg', 'conv-1', 'WAITING_CLARIFICATION')
+                """
+            )
 
     runner = TransactionRunner(DATABASE_URL)
     store = SendLedgerStore()

@@ -283,3 +283,29 @@ class M1Store:
                 """,
                 (event_id,),
             )
+
+    def reconcile_stuck_outbox_leases(
+        self,
+        connection: Connection,
+        max_lease_duration: timedelta = LEASE_DURATION * 10,
+    ) -> list[UUID]:
+        """Release unpublished leases beyond a bounded duration for safe retry.
+
+        A normal expired lease is already eligible for claim. This is exclusively an
+        operator reconciliation for invalid/far-future lease values left by legacy
+        code or a corrupted clock. Published events are never modified.
+        """
+        if max_lease_duration <= timedelta(0):
+            raise ValueError("max_lease_duration must be positive")
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE outbox
+                SET lease_expires_at = NULL
+                WHERE published_at IS NULL
+                  AND lease_expires_at > clock_timestamp() + %s::interval
+                RETURNING event_id
+                """,
+                (f"{max_lease_duration.total_seconds()} seconds",),
+            )
+            return [row[0] for row in cursor.fetchall()]

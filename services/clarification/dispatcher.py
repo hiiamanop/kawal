@@ -42,20 +42,19 @@ class ClarificationDispatcher:
     def connector(self) -> OpenWAConnector:
         return self._openwa_connector
 
-    def dispatch_clarification_request(
+    def build_clarification_command(
         self,
         session: ClarificationSession,
         quoted_source_message_id: str | None = None,
-        connection: object = None,
-    ) -> tuple[ClarificationSession, OutboundSendReceipt]:
-        """Format and send clarification questions for the current round via WhatsApp with idempotency."""
+    ) -> OutboundMessageCommand:
+        """Construct the outbound message command without sending it."""
         text = format_clarification_message(session)
         idempotency_key = (
             f"{session.tenant_id}:{session.conversation_id}:clarification:round_{session.current_round}"
         )
         payload_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
 
-        command = OutboundMessageCommand(
+        return OutboundMessageCommand(
             tenant_id=session.tenant_id,
             conversation_id=session.conversation_id,
             case_id=session.case_id,
@@ -67,6 +66,17 @@ class ClarificationDispatcher:
             payload_hash=payload_hash,
         )
 
+    def dispatch_clarification_request(
+        self,
+        session: ClarificationSession,
+        quoted_source_message_id: str | None = None,
+        connection: object = None,
+    ) -> tuple[ClarificationSession, OutboundSendReceipt]:
+        """Format and send clarification questions for the current round via WhatsApp with idempotency."""
+        command = self.build_clarification_command(
+            session=session,
+            quoted_source_message_id=quoted_source_message_id,
+        )
         receipt = self._openwa_connector.send_text(command, connection=connection)
         return session, receipt
 

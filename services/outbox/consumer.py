@@ -76,8 +76,9 @@ class AtomicInboxConsumer:
         topic: str,
         handler: Callable[[Connection, BrokerMessage], Any],
         max_records: int = 10,
+        on_error: Callable[[BrokerMessage, Exception], bool] | None = None,
     ) -> int:
-        """Poll and process a batch of events from the broker topic."""
+        """Poll and process a batch; errors are re-raised unless explicitly handled."""
         messages = self._broker.poll(
             topic=topic,
             group_id=self._consumer_name,
@@ -85,6 +86,10 @@ class AtomicInboxConsumer:
         )
         processed_count = 0
         for msg in messages:
-            if self.process_message(msg, handler):
-                processed_count += 1
+            try:
+                if self.process_message(msg, handler):
+                    processed_count += 1
+            except Exception as exc:
+                if on_error is None or not on_error(msg, exc):
+                    raise
         return processed_count
