@@ -28,17 +28,21 @@ from services.clarification.engine import (
 )
 from services.core.decision import (
     BudgetState,
+    ConflictInput,
+    ConflictType,
     DecisionInput,
     DecisionPlan,
     EscalationCandidate,
     TrustContext,
     TrustObservation,
     decide,
+    diagnose_conflict,
     estimate_contextual_trust,
 )
 from services.core.escalation import EscalationCommand, build_anonymized_escalation_command
 from services.core.orchestrator import build_ticket_command
 from services.core.policy import AUTHORITY_DIRECTORY
+from services.intelligence.causality import analyze_causality
 from services.intelligence.completeness import resolve_location_completeness
 from services.ml.runtime import (
     ClassificationPrediction,
@@ -121,6 +125,7 @@ class CaseProcessingPipeline:
         case_id: str | None = None,
         revision: int = 1,
         jurisdiction_id: str | None = None,
+        previous_category: Category | None = None,
     ) -> PipelineResult:
         """Helper to process a list of raw messages or text strings directly."""
         now = datetime.now(timezone.utc)
@@ -156,12 +161,17 @@ class CaseProcessingPipeline:
             created_at=now,
         )
 
-        return self.process_snapshot(snapshot, jurisdiction_id=jurisdiction_id)
+        return self.process_snapshot(
+            snapshot,
+            jurisdiction_id=jurisdiction_id,
+            previous_category=previous_category,
+        )
 
     def process_snapshot(
         self,
         snapshot: CaseSnapshot,
         jurisdiction_id: str | None = None,
+        previous_category: Category | None = None,
     ) -> PipelineResult:
         """Run complete end-to-end KAWAL decision and execution cycle on a case snapshot."""
         jur_id = jurisdiction_id or self._default_jurisdiction_id
@@ -207,6 +217,39 @@ class CaseProcessingPipeline:
             else:
                 category = Category.ROAD
 
+        # Causal & Cross-Domain Disentanglement
+        causal_res = analyze_causality(text, ml_runtime=self._ml_runtime)
+        if causal_res.hazard_escalation_category is not None:
+            category = causal_res.hazard_escalation_category
+            risk = RiskLevel.HIGH
+        elif causal_res.has_causal_relation and causal_res.root_cause_category is not None:
+            category = causal_res.root_cause_category
+
+        # Multi-Turn Category Anchoring & Conflict Diagnosis (Solusi 1 & 3)
+        conflicts: list[Any] = []
+        if previous_category is not None and previous_category != category:
+            conflict = diagnose_conflict(
+                ConflictInput(
+                    type=ConflictType.CLASSIFICATION,
+                    field="category",
+                    left_value=previous_category.value,
+                    right_value=category.value,
+                    left_trust=0.9,
+                    right_trust=float(pred.confidence if pred else 0.5),
+                    consequence_weight=1.0,
+                    evidence_refs=(f"rev_{snapshot.revision-1}", f"rev_{snapshot.revision}"),
+                    route_changes=True,
+                )
+            )
+            if conflict is not None:
+                conflicts.append(conflict)
+
+            # Solusi 1: When clarifying details without explicit category correction, anchor to prior category
+            cancel_cues = ("bukan", "salah lapor", "ralat aduan", "keliru")
+            explicit_correction = any(cue in text.lower() for cue in cancel_cues)
+            if not explicit_correction and snapshot.revision > 1:
+                category = previous_category
+
         # 2. Authority Routing Verification
         expected_unit = AUTHORITY_DIRECTORY.get((jur_id, category))
         authority_valid = expected_unit is not None
@@ -220,9 +263,30 @@ class CaseProcessingPipeline:
             evidence_quality=0.95,
         )
 
-        # 4. Pure 4-Mode Decision Evaluation
-        is_complaint = (intent == "COMPLAINT" or "lapor" in text.lower() or "aduan" in text.lower())
-        if "opini" in text.lower() or "sekadar salam" in text.lower():
+        # 4. Pure 4-Mode Decision Evaluation (Hazard-aware and robust against false rejections)
+        HAZARD_DISTRESS_CUES = (
+            "bahaya", "tolong", "bantu", "darurat", "urgent",
+            "rusak", "roboh", "tumbang", "ambles", "ambruk", "jebol", "hancur", "pecah", "bocor",
+            "meletup", "percikan api", "kebakaran", "hangus", "asap",
+            "banjir", "tergenang", "meluap", "mampet", "tersumbat",
+            "sampah", "bau", "busuk", "limbah",
+            "jatoh", "jatuh", "kepleset", "korban", "celaka", "tabrakan", "macet parah",
+            "pungli", "pemerasan", "tawuran",
+        )
+        text_lower = text.lower()
+        has_hazard_signal = any(cue in text_lower for cue in HAZARD_DISTRESS_CUES)
+        is_high_risk = (risk in (RiskLevel.HIGH, RiskLevel.URGENT))
+        is_emergency_cat = (category in (Category.FIRE_RESCUE, Category.ROAD, Category.DRAINAGE_FLOOD, Category.CLEAN_WATER))
+        has_complaint_explicit = ("lapor" in text_lower or "aduan" in text_lower or "keluhan" in text_lower)
+
+        is_complaint = (
+            intent == "COMPLAINT"
+            or has_complaint_explicit
+            or (has_hazard_signal and (is_high_risk or is_emergency_cat or "tolong" in text_lower or "min" in text_lower))
+        )
+
+        pure_opinion_cues = ("sekadar opini", "hanya pendapat", "sekadar saran", "sekadar salam", "cuma nanya opini")
+        if any(cue in text_lower for cue in pure_opinion_cues) and not has_hazard_signal:
             is_complaint = False
 
         required_complete = (completeness == "SUFFICIENT")
@@ -250,7 +314,7 @@ class CaseProcessingPipeline:
             authority_valid=authority_valid,
             policy_allowed=authority_valid,
             is_complaint=is_complaint,
-            conflicts=(),
+            conflicts=tuple(conflicts),
             escalation_candidates=escalation_candidates,
             budget=BudgetState(remaining_usd=1.0, remaining_latency_ms=5000.0, remaining_egress_bytes=1000000),
             clarification_available=True,

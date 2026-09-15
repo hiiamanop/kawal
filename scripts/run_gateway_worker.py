@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from infra.db import TransactionRunner
 from services.core.gateway_worker import ToolGatewayWorker
-from services.core.model_gateway import ModelGateway, OllamaLocalAdapter
+from services.core.model_gateway import ModelGateway, OllamaLocalAdapter, OmniRouteAdapter
 from services.core.opa import OpaPolicyClient
 from services.intake.openwa import OpenWAConnector
 from services.outbox.broker import RedpandaEventBroker
@@ -33,6 +33,11 @@ def main() -> int:
         "--group-id",
         default="kawal-gateway-worker-v1",
         help="Consumer group ID for Redpanda",
+    )
+    parser.add_argument(
+        "--bootstrap-servers",
+        default=os.getenv("KAWAL_REDPANDA_BOOTSTRAP", os.getenv("REDPANDA_BOOTSTRAP_SERVERS", "127.0.0.1:19092")),
+        help="Redpanda bootstrap servers",
     )
     parser.add_argument(
         "--batch-size",
@@ -62,6 +67,16 @@ def main() -> int:
         help="Use the in-process policy evaluator instead of OPA",
     )
     parser.add_argument(
+        "--omniroute-model",
+        default=os.getenv("KAWAL_OMNIROUTE_MODEL"),
+        help="Optional OmniRoute model (e.g. gpt-4o-mini) for gated escalation commands",
+    )
+    parser.add_argument(
+        "--omniroute-url",
+        default=os.getenv("KAWAL_OMNIROUTE_URL", "http://localhost:20128/v1"),
+        help="OmniRoute base URL",
+    )
+    parser.add_argument(
         "--ollama-model",
         default=os.getenv("KAWAL_OLLAMA_MODEL"),
         help="Optional local Ollama model for gated escalation commands",
@@ -78,7 +93,7 @@ def main() -> int:
         logger.error("KAWAL_DATABASE_URL environment variable is required")
         return 1
 
-    bootstrap = os.environ.get("REDPANDA_BOOTSTRAP_SERVERS", "127.0.0.1:19092")
+    bootstrap = args.bootstrap_servers
     runner = TransactionRunner(dsn)
     broker = RedpandaEventBroker(bootstrap_servers=bootstrap)
     consumer = AtomicInboxConsumer(
@@ -91,7 +106,9 @@ def main() -> int:
     messaging_connector = OpenWAConnector()
 
     model_gateway = None
-    if args.ollama_model:
+    if args.omniroute_model:
+        model_gateway = ModelGateway(OmniRouteAdapter(args.omniroute_model, base_url=args.omniroute_url))
+    elif args.ollama_model:
         model_gateway = ModelGateway(OllamaLocalAdapter(args.ollama_model, base_url=args.ollama_url))
 
     worker = ToolGatewayWorker(

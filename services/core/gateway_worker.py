@@ -17,6 +17,10 @@ from services.outbox.consumer import AtomicInboxConsumer
 from services.reliability.client import ReliableTicketClient
 
 
+class UnprocessableCommandError(ValueError):
+    pass
+
+
 class ToolGatewayWorker:
     """Consumes validated command topics; no model or planner can call providers directly."""
 
@@ -39,6 +43,7 @@ class ToolGatewayWorker:
             topic="commands.ticket.v1",
             handler=self._handle_ticket_command,
             max_records=max_records,
+            on_error=self._handle_unprocessable_command,
         )
 
     def consume_message_once(self, max_records: int = 10) -> int:
@@ -46,6 +51,7 @@ class ToolGatewayWorker:
             topic="commands.message.v1",
             handler=self._handle_message_command,
             max_records=max_records,
+            on_error=self._handle_unprocessable_command,
         )
 
     def consume_escalation_once(self, max_records: int = 10) -> int:
@@ -53,7 +59,16 @@ class ToolGatewayWorker:
             topic="commands.escalation.v1",
             handler=self._handle_escalation_command,
             max_records=max_records,
+            on_error=self._handle_unprocessable_command,
         )
+
+    @staticmethod
+    def _handle_unprocessable_command(event: BrokerMessage, error: Exception) -> bool:
+        # If the case/tenant was deleted from DB, consuming the stale command is terminal.
+        import psycopg
+        if isinstance(error, psycopg.errors.ForeignKeyViolation):
+            return True
+        return isinstance(error, UnprocessableCommandError)
 
     def _handle_ticket_command(self, connection: Connection, event: BrokerMessage) -> None:
         payload = event.payload

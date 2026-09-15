@@ -161,11 +161,14 @@ class RedpandaEventBroker:
         cache_key = (topic, group_id)
         if cache_key not in self._consumers:
             try:
+                # Scope consumer group to topic to avoid cross-topic subscription conflicts
+                # when a single worker polls multiple topics.
+                scoped_group = group_id if group_id.endswith(f"-{topic}") else f"{group_id}-{topic}"
                 self._consumers[cache_key] = self._KafkaConsumer(
                     topic,
                     bootstrap_servers=self._bootstrap_servers,
-                    group_id=group_id,
-                    client_id=f"{self._client_id}-{group_id}",
+                    group_id=scoped_group,
+                    client_id=f"{self._client_id}-{scoped_group}",
                     enable_auto_commit=False,
                     auto_offset_reset="earliest",
                     value_deserializer=lambda value: json.loads(value.decode("utf-8")),

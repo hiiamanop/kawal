@@ -475,35 +475,6 @@ class OnnxInferenceBackend:
             "input_ids": inputs["input_ids"],
             "attention_mask": inputs["attention_mask"],
         }
-        m_outputs = self._multitask_session.run(None, feed_dict)
-
-        head_preds: dict[str, str] = {}
-        head_probs: dict[str, float] = {}
-
-        for h_idx, head in enumerate(self._head_names):
-            t = self._temperatures.get(head, 1.0)
-            if t <= 0.0:
-                t = 1.0
-            logits = m_outputs[h_idx][0] / t
-            exp_z = np.exp(logits - np.max(logits))
-            probs = exp_z / np.sum(exp_z)
-            pred_idx = int(np.argmax(probs))
-            classes = self._head_configs[head]
-            pred_label = classes[pred_idx] if pred_idx < len(classes) else classes[0]
-            head_preds[head] = pred_label
-            head_probs[head] = float(probs[pred_idx])
-
-        confidence = float(head_probs.get("category", 1.0))
-
-        prediction = ClassificationPrediction(
-            intent=head_preds.get("intent", "COMPLAINT"),
-            category=head_preds.get("category", "ROAD"),
-            risk=head_preds.get("risk", "MEDIUM"),
-            completeness=head_preds.get("completeness", "SUFFICIENT"),
-            confidence=round(confidence, 4),
-            probabilities={k: round(v, 4) for k, v in head_probs.items()},
-        )
-
         entities: list[SpanNER] = []
         if self._ner_session is not None:
             n_outputs = self._ner_session.run(None, feed_dict)
@@ -530,6 +501,68 @@ class OnnxInferenceBackend:
                 token_offsets=valid_offsets,
             )
             entities = [SpanNER.from_entity_span(s) for s in extracted_spans]
+
+        # Landmark Disentanglement: neutralize location landmark spans for category classification
+        cat_feed_dict = feed_dict
+        loc_spans = sorted(
+            [e for e in entities if e.label in ("LOC", "LOCATION", "LANDMARK")],
+            key=lambda x: x.start_char,
+            reverse=True,
+        )
+        if loc_spans:
+            masked = text
+            for s in loc_spans:
+                if 0 <= s.start_char < s.end_char <= len(masked):
+                    masked = masked[:s.start_char] + " " + masked[s.end_char:]
+            clean_masked = " ".join(masked.split())
+            if len(clean_masked) >= 10:
+                cat_inputs = self._tokenizer(
+                    clean_masked,
+                    max_length=448,
+                    padding=True,
+                    truncation=True,
+                    return_tensors="np",
+                )
+                cat_feed_dict = {
+                    "input_ids": cat_inputs["input_ids"],
+                    "attention_mask": cat_inputs["attention_mask"],
+                }
+
+        m_outputs = self._multitask_session.run(None, feed_dict)
+        cat_outputs = (
+            self._multitask_session.run(None, cat_feed_dict)
+            if cat_feed_dict is not feed_dict
+            else m_outputs
+        )
+
+        head_preds: dict[str, str] = {}
+        head_probs: dict[str, float] = {}
+
+        for h_idx, head in enumerate(self._head_names):
+            t = self._temperatures.get(head, 1.0)
+            if t <= 0.0:
+                t = 1.0
+            # Use disentangled logits specifically for category classification
+            head_out = cat_outputs[h_idx][0] if head == "category" else m_outputs[h_idx][0]
+            logits = head_out / t
+            exp_z = np.exp(logits - np.max(logits))
+            probs = exp_z / np.sum(exp_z)
+            pred_idx = int(np.argmax(probs))
+            classes = self._head_configs[head]
+            pred_label = classes[pred_idx] if pred_idx < len(classes) else classes[0]
+            head_preds[head] = pred_label
+            head_probs[head] = float(probs[pred_idx])
+
+        confidence = float(head_probs.get("category", 1.0))
+
+        prediction = ClassificationPrediction(
+            intent=head_preds.get("intent", "COMPLAINT"),
+            category=head_preds.get("category", "ROAD"),
+            risk=head_preds.get("risk", "MEDIUM"),
+            completeness=head_preds.get("completeness", "SUFFICIENT"),
+            confidence=round(confidence, 4),
+            probabilities={k: round(v, 4) for k, v in head_probs.items()},
+        )
 
         return prediction, tuple(entities)
 

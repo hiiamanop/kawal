@@ -18,6 +18,10 @@ class MissingCaseSnapshotError(ValueError):
     pass
 
 
+class InvalidCaseEventError(ValueError):
+    pass
+
+
 class CaseReadyWorker:
     """Live worker for cases.ready.v1 events with inbox dedup and revision guard."""
 
@@ -39,15 +43,17 @@ class CaseReadyWorker:
 
     @staticmethod
     def _handle_unprocessable_event(event: BrokerMessage, error: Exception) -> bool:
-        # A structurally valid broker event for a deleted/nonexistent snapshot cannot
-        # become processable through transport retry; consume it without mutating a case.
-        return isinstance(error, MissingCaseSnapshotError)
+        # A structurally invalid broker event or event for a deleted/nonexistent snapshot
+        # cannot become processable through transport retry; consume it safely.
+        return isinstance(error, (MissingCaseSnapshotError, InvalidCaseEventError))
 
     def _handle_case_ready(self, connection: Connection, event: BrokerMessage) -> None:
         payload = event.payload
         case_id = str(payload.get("case_id") or payload.get("aggregate_id") or "")
+        if not case_id and ":" in event.partition_key:
+            case_id = event.partition_key.split(":", 1)[1]
         if not case_id:
-            raise ValueError("cases.ready.v1 requires case_id")
+            raise InvalidCaseEventError("cases.ready.v1 requires case_id")
 
         snapshot = self._load_current_snapshot(connection, case_id)
         if snapshot is None:
@@ -65,13 +71,25 @@ class CaseReadyWorker:
             return
 
         self._mark_analyzing(connection, snapshot.case_id, snapshot.revision)
-        result = self._pipeline.process_snapshot(snapshot)
+        previous_category = self._load_previous_category(connection, snapshot.case_id)
+        result = self._pipeline.process_snapshot(snapshot, previous_category=previous_category)
         metrics.increment(
             "kawal_case_decisions_total",
             labels={"mode": result.decision_mode.value, "state": result.processing_state.value},
         )
         metrics.observe("kawal_ml_inference_latency_ms", result.audit_trace.get("ml_latency_ms", 0.0))
         self._persist_result(connection, snapshot, event, result)
+
+    @staticmethod
+    def _load_previous_category(connection: Connection, case_id: str) -> Category | None:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT category FROM cases WHERE case_id = %s", (case_id,))
+            row = cursor.fetchone()
+            if row and row[0]:
+                for cat in Category:
+                    if cat.value == str(row[0]).strip().upper():
+                        return cat
+        return None
 
     @staticmethod
     def _load_current_snapshot(connection: Connection, case_id: str) -> CaseSnapshot | None:
