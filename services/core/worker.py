@@ -10,6 +10,7 @@ from psycopg.types.json import Jsonb
 from contracts.models import CaseSnapshot, ProcessingState, RawMessage
 from services.core.pipeline import CaseProcessingPipeline, PipelineResult
 from services.outbox.broker import BrokerMessage, EventBroker
+from services.observability import metrics
 from services.outbox.consumer import AtomicInboxConsumer
 
 
@@ -65,6 +66,11 @@ class CaseReadyWorker:
 
         self._mark_analyzing(connection, snapshot.case_id, snapshot.revision)
         result = self._pipeline.process_snapshot(snapshot)
+        metrics.increment(
+            "kawal_case_decisions_total",
+            labels={"mode": result.decision_mode.value, "state": result.processing_state.value},
+        )
+        metrics.observe("kawal_ml_inference_latency_ms", result.audit_trace.get("ml_latency_ms", 0.0))
         self._persist_result(connection, snapshot, event, result)
 
     @staticmethod
@@ -157,6 +163,24 @@ class CaseReadyWorker:
                     ),
                 )
 
+            if result.escalation_command is not None:
+                cmd_escalation = result.escalation_command
+                cursor.execute(
+                    """
+                    INSERT INTO outbox (
+                        tenant_id, aggregate_type, aggregate_id, revision,
+                        event_type, partition_key, payload
+                    ) VALUES (%s, 'case', %s, %s, 'model.escalation.requested.v1', %s, %s)
+                    """,
+                    (
+                        snapshot.tenant_id,
+                        snapshot.case_id,
+                        snapshot.revision,
+                        f"{snapshot.tenant_id}:{snapshot.case_id}",
+                        Jsonb(cmd_escalation.model_dump(mode="json")),
+                    ),
+                )
+
             # Deferred clarification message outbox insertion
             if result.outbound_command is not None:
                 cmd_out = result.outbound_command
@@ -189,6 +213,7 @@ class CaseReadyWorker:
                 "completeness": result.completeness,
                 "has_ticket_command": result.ticket_command is not None,
                 "has_outbound_command": result.outbound_command is not None,
+                "has_escalation_command": result.escalation_command is not None,
                 "audit_trace": result.audit_trace,
             },
         )

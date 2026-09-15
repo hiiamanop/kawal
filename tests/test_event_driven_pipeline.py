@@ -101,6 +101,7 @@ def test_topic_routing_map_matches_prd_section_32() -> None:
     assert EVENT_TYPE_TO_TOPIC["case.ready.v1"] == "cases.ready.v1"
     assert EVENT_TYPE_TO_TOPIC["ticket.create.requested"] == "commands.ticket.v1"
     assert EVENT_TYPE_TO_TOPIC["whatsapp.send.requested.v1"] == "commands.message.v1"
+    assert EVENT_TYPE_TO_TOPIC["model.escalation.requested.v1"] == "commands.escalation.v1"
     assert EVENT_TYPE_TO_TOPIC["ticket.status.updated.v1"] == "tickets.status.v1"
     assert EVENT_TYPE_TO_TOPIC["failure.quarantined.v1"] == "failures.dlq.v1"
 

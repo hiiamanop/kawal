@@ -62,7 +62,7 @@ services:
     volumes:
       - ./policies:/policies:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8181/health"]
+      test: ["CMD", "opa", "eval", "--format=json", "data.kawal.policy.allow"]
       interval: 5s
       timeout: 5s
       retries: 5

@@ -12,6 +12,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from infra.db import TransactionRunner
 from services.core.gateway_worker import ToolGatewayWorker
+from services.core.model_gateway import ModelGateway, OllamaLocalAdapter
+from services.core.opa import OpaPolicyClient
 from services.intake.openwa import OpenWAConnector
 from services.outbox.broker import RedpandaEventBroker
 from services.outbox.consumer import AtomicInboxConsumer
@@ -49,6 +51,26 @@ def main() -> int:
         action="store_true",
         help="Run a single poll cycle across commands and exit",
     )
+    parser.add_argument(
+        "--opa-url",
+        default=os.getenv("KAWAL_OPA_URL", "http://127.0.0.1:8181"),
+        help="OPA Data API base URL used as the ticket hard gate",
+    )
+    parser.add_argument(
+        "--no-opa",
+        action="store_true",
+        help="Use the in-process policy evaluator instead of OPA",
+    )
+    parser.add_argument(
+        "--ollama-model",
+        default=os.getenv("KAWAL_OLLAMA_MODEL"),
+        help="Optional local Ollama model for gated escalation commands",
+    )
+    parser.add_argument(
+        "--ollama-url",
+        default=os.getenv("KAWAL_OLLAMA_URL", "http://127.0.0.1:11434"),
+        help="Local Ollama API base URL",
+    )
     args = parser.parse_args()
 
     dsn = os.environ.get("KAWAL_DATABASE_URL")
@@ -68,16 +90,23 @@ def main() -> int:
     ticket_client = ReliableTicketClient(simulator=TicketSimulator())
     messaging_connector = OpenWAConnector()
 
+    model_gateway = None
+    if args.ollama_model:
+        model_gateway = ModelGateway(OllamaLocalAdapter(args.ollama_model, base_url=args.ollama_url))
+
     worker = ToolGatewayWorker(
         consumer=consumer,
         ticket_client=ticket_client,
         messaging_connector=messaging_connector,
+        policy_client=None if args.no_opa else OpaPolicyClient(base_url=args.opa_url),
+        model_gateway=model_gateway,
     )
 
     if args.once:
         t_count = worker.consume_ticket_once(max_records=args.batch_size)
         m_count = worker.consume_message_once(max_records=args.batch_size)
-        print(f"Processed {t_count} ticket command(s), {m_count} message command(s).")
+        e_count = worker.consume_escalation_once(max_records=args.batch_size)
+        print(f"Processed {t_count} ticket, {m_count} message, {e_count} escalation command(s).")
         return 0
 
     logger.info("Starting ToolGatewayWorker loop on %s with group %s...", bootstrap, args.group_id)
@@ -85,10 +114,11 @@ def main() -> int:
         while True:
             t_count = worker.consume_ticket_once(max_records=args.batch_size)
             m_count = worker.consume_message_once(max_records=args.batch_size)
-            if t_count == 0 and m_count == 0:
+            e_count = worker.consume_escalation_once(max_records=args.batch_size)
+            if t_count == 0 and m_count == 0 and e_count == 0:
                 time.sleep(args.poll_interval)
             else:
-                logger.info("Processed %d ticket and %d message command(s)", t_count, m_count)
+                logger.info("Processed %d ticket, %d message, and %d escalation command(s)", t_count, m_count, e_count)
     except KeyboardInterrupt:
         logger.info("Stopping ToolGatewayWorker on interrupt.")
         return 0

@@ -30,11 +30,13 @@ from services.core.decision import (
     BudgetState,
     DecisionInput,
     DecisionPlan,
+    EscalationCandidate,
     TrustContext,
     TrustObservation,
     decide,
     estimate_contextual_trust,
 )
+from services.core.escalation import EscalationCommand, build_anonymized_escalation_command
 from services.core.orchestrator import build_ticket_command
 from services.core.policy import AUTHORITY_DIRECTORY
 from services.intelligence.completeness import resolve_location_completeness
@@ -63,6 +65,7 @@ class PipelineResult(BaseModel):
     outbound_receipt: OutboundSendReceipt | None = None
     ticket_command: TicketCommand | None = None
     outbound_command: OutboundMessageCommand | None = None
+    escalation_command: EscalationCommand | None = None
     reason_codes: tuple[str, ...] = ()
     audit_trace: dict[str, Any] = Field(default_factory=dict)
 
@@ -225,6 +228,20 @@ class CaseProcessingPipeline:
         required_complete = (completeness == "SUFFICIENT")
         evidence_covered = (len(ml_res.entities) > 0 or len(text.strip()) > 20)
 
+        escalation_candidates = ()
+        if self._defer_execution and is_complaint and authority_valid and (not required_complete or not evidence_covered):
+            escalation_candidates = (
+                EscalationCandidate(
+                    task_id="local-clarification-check",
+                    expected_utility_gain=5.0,
+                    cost_usd=0.0,
+                    latency_ms=300.0,
+                    egress_bytes=0,
+                    queue_delay_ms=0.0,
+                    policy_allowed=True,
+                ),
+            )
+
         decision_input = DecisionInput(
             case_id=snapshot.case_id,
             revision=snapshot.revision,
@@ -234,7 +251,7 @@ class CaseProcessingPipeline:
             policy_allowed=authority_valid,
             is_complaint=is_complaint,
             conflicts=(),
-            escalation_candidates=(),
+            escalation_candidates=escalation_candidates,
             budget=BudgetState(remaining_usd=1.0, remaining_latency_ms=5000.0, remaining_egress_bytes=1000000),
             clarification_available=True,
         )
@@ -244,6 +261,7 @@ class CaseProcessingPipeline:
         ticket_receipt: TicketReceipt | None = None
         ticket_command: TicketCommand | None = None
         outbound_command: OutboundMessageCommand | None = None
+        escalation_command: EscalationCommand | None = None
         outbound_receipt: OutboundSendReceipt | None = None
         clarification_session: ClarificationSession | None = None
 
@@ -266,6 +284,18 @@ class CaseProcessingPipeline:
                 proc_state = ProcessingState.TICKETED
             else:
                 proc_state = ProcessingState.WAITING_RESULTS
+
+        elif plan.mode == DecisionMode.RE_EVALUATE and plan.selected_task_id is not None:
+            escalation_command = build_anonymized_escalation_command(
+                tenant_id=snapshot.tenant_id,
+                case_id=snapshot.case_id,
+                revision=snapshot.revision,
+                task_id=plan.selected_task_id,
+                category=category.value,
+                risk=risk.value,
+                completeness=completeness,
+            )
+            proc_state = ProcessingState.WAITING_RESULTS
 
         elif plan.mode == DecisionMode.REQUEST_CLARIFICATION:
             missing_fields = ("location",) if completeness in ("INCOMPLETE", "AMBIGUOUS") else ("issue",)
@@ -311,10 +341,12 @@ class CaseProcessingPipeline:
             clarification_session=clarification_session,
             outbound_receipt=outbound_receipt,
             outbound_command=outbound_command,
+            escalation_command=escalation_command,
             reason_codes=plan.reason_codes,
             audit_trace={
                 "plan": plan.model_dump(mode="json"),
                 "trust": trust.model_dump(mode="json"),
                 "ml_status": ml_res.status,
+                "ml_latency_ms": ml_res.latency_ms,
             },
         )

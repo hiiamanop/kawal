@@ -14,6 +14,7 @@ EVENT_TYPE_TO_TOPIC: dict[str, str] = {
     "case.ready.v1": "cases.ready.v1",
     "ticket.create.requested": "commands.ticket.v1",
     "whatsapp.send.requested.v1": "commands.message.v1",
+    "model.escalation.requested.v1": "commands.escalation.v1",
     "ticket.status.updated.v1": "tickets.status.v1",
     "failure.quarantined.v1": "failures.dlq.v1",
 }

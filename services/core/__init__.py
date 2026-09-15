@@ -22,6 +22,9 @@ from services.core.decision import (
     evaluate_egress,
     expected_value_of_information,
 )
+from services.core.escalation import EscalationCommand, build_anonymized_escalation_command
+from services.core.model_gateway import EscalationResult, ModelGateway, OllamaLocalAdapter
+from services.core.opa import OpaPolicyClient
 from services.core.orchestrator import (
     CATEGORY_TITLES,
     build_ticket_command,
@@ -51,12 +54,18 @@ __all__ = [
     "EgressDecision",
     "EgressRequest",
     "EscalationCandidate",
+    "EscalationCommand",
+    "EscalationResult",
+    "ModelGateway",
+    "OllamaLocalAdapter",
+    "OpaPolicyClient",
     "PipelineResult",
     "ResolutionCapability",
     "TaskResultCache",
     "TrustContext",
     "TrustObservation",
     "TrustResult",
+    "build_anonymized_escalation_command",
     "build_ticket_command",
     "decide",
     "diagnose_conflict",

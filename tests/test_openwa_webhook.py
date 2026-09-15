@@ -23,11 +23,20 @@ def _client() -> tuple[TestClient, IntakeSpy]:
     return TestClient(create_intake_app(connector, webhook_secret="test-secret", tenant_id="tenant-live")), spy
 
 
+def test_health_and_metrics_endpoints_are_available() -> None:
+    client, _ = _client()
+    assert client.get("/healthz").json() == {"status": "healthy"}
+    metrics_response = client.get("/metrics")
+    assert metrics_response.status_code == 200
+    assert "text/plain" in metrics_response.headers["content-type"]
+
+
 def test_openwa_webhook_rejects_missing_or_invalid_secret() -> None:
     client, _ = _client()
     payload = {"event": "message.received", "data": {}}
     assert client.post("/v1/webhooks/openwa", json=payload).status_code == 401
     assert client.post("/v1/webhooks/openwa", json=payload, headers={"X-KAWAL-Webhook-Secret": "wrong"}).status_code == 401
+    assert 'kawal_webhook_requests_total{outcome="unauthorized"}' in client.get("/metrics").text
 
 
 def test_openwa_webhook_accepts_incoming_direct_message() -> None:
