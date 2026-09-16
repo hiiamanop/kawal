@@ -21,6 +21,7 @@ from contracts.models import (
     Sensitivity,
     TicketCommand,
     TicketReceipt,
+    TicketStatus,
 )
 from services.clarification.dispatcher import ClarificationDispatcher
 from services.clarification.engine import (
@@ -45,6 +46,7 @@ from services.core.orchestrator import build_ticket_command
 from services.core.policy import AUTHORITY_DIRECTORY
 from services.intelligence.causality import analyze_causality
 from services.intelligence.completeness import resolve_location_completeness
+from services.intelligence.semantic_cache import CacheLookupResult, SemanticCacheEngine
 from services.ml.runtime import (
     ClassificationPrediction,
     LocalMLRuntime,
@@ -97,14 +99,20 @@ class CaseProcessingPipeline:
         ml_runtime: LocalMLRuntime | None = None,
         ticket_client: ReliableTicketClient | None = None,
         clarification_dispatcher: ClarificationDispatcher | None = None,
+        semantic_cache: SemanticCacheEngine | None = None,
         default_jurisdiction_id: str = "JUR-FICT-01",
         defer_execution: bool = False,
     ) -> None:
         self._ml_runtime = ml_runtime or LocalMLRuntime()
         self._ticket_client = ticket_client
         self._clarification_dispatcher = clarification_dispatcher or ClarificationDispatcher()
+        self._semantic_cache = semantic_cache or SemanticCacheEngine()
         self._default_jurisdiction_id = default_jurisdiction_id
         self._defer_execution = defer_execution
+
+    @property
+    def semantic_cache(self) -> SemanticCacheEngine:
+        return self._semantic_cache
 
     @property
     def ml_runtime(self) -> LocalMLRuntime:
@@ -205,7 +213,7 @@ class CaseProcessingPipeline:
                 category = Category.HEALTH_SERVICE
             elif "satpol" in lower or "tertib" in lower or "pkl" in lower:
                 category = Category.PUBLIC_ORDER
-            elif "dishub" in lower or "rambu" in lower or "angkot" in lower or "lampu merah" in lower:
+            elif "dishub" in lower or "rambu" in lower or "angkot" in lower or "macet" in lower:
                 category = Category.TRANSPORTATION
             elif "kebakaran" in lower or "damkar" in lower or "api" in lower:
                 category = Category.FIRE_RESCUE
@@ -218,13 +226,93 @@ class CaseProcessingPipeline:
             else:
                 category = Category.ROAD
 
-        # Causal & Cross-Domain Disentanglement
-        causal_res = analyze_causality(text, ml_runtime=self._ml_runtime)
-        if causal_res.hazard_escalation_category is not None:
-            category = causal_res.hazard_escalation_category
-            risk = RiskLevel.HIGH
-        elif causal_res.has_causal_relation and causal_res.root_cause_category is not None:
-            category = causal_res.root_cause_category
+        # 1b. Semantic Cache & Incident Deduplication Check
+        loc_hints = [e.text for e in ml_res.entities if getattr(e, "label", "") == "LOC"]
+        if not loc_hints:
+            import re
+            loc_pat = re.compile(r"\b(?:jl\.?|jalan|daerah|kelurahan|kecamatan)\s+([a-zA-Z0-9\-]+(?:\s+[a-zA-Z0-9\-]+){0,3})", re.IGNORECASE)
+            loc_hints = [m.strip() for m in loc_pat.findall(text) if len(m.strip()) > 3]
+
+        cache_lookup = self._semantic_cache.lookup(
+            tenant_id=snapshot.tenant_id,
+            text=text,
+            location_hints=loc_hints,
+        )
+
+        if (
+            cache_lookup.hit
+            and cache_lookup.is_duplicate_incident
+            and cache_lookup.matched_entry is not None
+            and cache_lookup.matched_entry.ticket_id is not None
+            and cache_lookup.matched_entry.case_id != snapshot.case_id
+        ):
+            # Short-circuit duplicate incident directly to parent ticket
+            dup_cat = cache_lookup.matched_entry.category
+            dup_risk = cache_lookup.matched_entry.risk
+            expected_unit = AUTHORITY_DIRECTORY.get((jur_id, dup_cat)) or "UNIT-UNASSIGNED"
+            last_msg_src = snapshot.messages[-1].source_message_id if snapshot.messages else None
+            reply_text = (
+                f"Terima kasih atas laporan Anda. Laporan mengenai {dup_cat.value} di lokasi tersebut "
+                f"sudah kami catat dan digabungkan dengan tiket penanganan aktif #{cache_lookup.matched_entry.ticket_id}. "
+                f"Petugas dari {expected_unit} sedang menangani insiden ini."
+            )
+            payload_hash = hashlib.sha256(reply_text.encode("utf-8")).hexdigest()
+            outbound_command = OutboundMessageCommand(
+                tenant_id=snapshot.tenant_id,
+                conversation_id=snapshot.conversation_id,
+                case_id=snapshot.case_id,
+                recipient_phone=snapshot.conversation_id,
+                text=reply_text,
+                quoted_source_message_id=last_msg_src,
+                idempotency_key=f"{snapshot.tenant_id}:{snapshot.conversation_id}:dup-ticket:{snapshot.revision}",
+                purpose=OutboundPurpose.RECEIPT,
+                payload_hash=payload_hash,
+            )
+            return PipelineResult(
+                case_id=snapshot.case_id,
+                tenant_id=snapshot.tenant_id,
+                conversation_id=snapshot.conversation_id,
+                revision=snapshot.revision,
+                decision_mode=DecisionMode.EXECUTE,
+                processing_state=ProcessingState.TICKETED,
+                category=dup_cat,
+                risk=dup_risk,
+                completeness="SUFFICIENT",
+                ticket_receipt=TicketReceipt(
+                    ticket_id=cache_lookup.matched_entry.ticket_id,
+                    external_id=f"dup-{snapshot.case_id}",
+                    status=TicketStatus.SUBMITTED,
+                    idempotency_key=f"{snapshot.tenant_id}:{snapshot.conversation_id}:dup-ticket:{snapshot.revision}",
+                    payload_hash=payload_hash,
+                    created_at=datetime.now(timezone.utc),
+                ),
+                outbound_command=outbound_command,
+                reason_codes=("DUPLICATE_INCIDENT_LINKED",),
+                audit_trace={
+                    "cache": {
+                        "hit": True,
+                        "match_type": cache_lookup.match_type,
+                        "similarity": cache_lookup.similarity,
+                        "linked_ticket": cache_lookup.matched_entry.ticket_id,
+                    }
+                },
+            )
+
+        if cache_lookup.hit and cache_lookup.suggested_action == "REUSE_ANALYSIS" and cache_lookup.matched_entry is not None:
+            if cache_lookup.matched_entry.root_cause_category is not None:
+                category = cache_lookup.matched_entry.root_cause_category
+            elif cache_lookup.matched_entry.category is not None:
+                category = cache_lookup.matched_entry.category
+            risk = cache_lookup.matched_entry.risk
+            causal_res = None
+        else:
+            # Causal & Cross-Domain Disentanglement
+            causal_res = analyze_causality(text, ml_runtime=self._ml_runtime)
+            if causal_res.hazard_escalation_category is not None:
+                category = causal_res.hazard_escalation_category
+                risk = RiskLevel.HIGH
+            elif causal_res.has_causal_relation and causal_res.root_cause_category is not None:
+                category = causal_res.root_cause_category
 
         # Multi-Turn Category Anchoring & Conflict Diagnosis (Solusi 1 & 3)
         conflicts: list[Any] = []
@@ -351,6 +439,23 @@ class CaseProcessingPipeline:
                     idempotency_key=f"{snapshot.tenant_id}:{snapshot.conversation_id}:ticket-receipt:{snapshot.revision}",
                     purpose=OutboundPurpose.RECEIPT,
                     payload_hash=payload_hash,
+                )
+
+                # Register case into knowledge bank for future semantic cache & deduplication
+                root_cause_cat = causal_res.root_cause_category if (causal_res and causal_res.has_causal_relation) else category
+                root_summary = causal_res.explanation if causal_res else None
+                ticket_id_val = ticket_receipt.ticket_id if ticket_receipt is not None else f"TKT-{snapshot.case_id}"
+                self._semantic_cache.record_case(
+                    tenant_id=snapshot.tenant_id,
+                    case_id=snapshot.case_id,
+                    text=text,
+                    category=category,
+                    risk=risk,
+                    completeness=completeness,
+                    location_entities=loc_hints,
+                    root_cause_category=root_cause_cat,
+                    root_cause_summary=root_summary,
+                    ticket_id=ticket_id_val,
                 )
             else:
                 proc_state = ProcessingState.WAITING_RESULTS

@@ -15,6 +15,11 @@ from services.clarification.dispatcher import ClarificationDispatcher
 from services.core.pipeline import CaseProcessingPipeline
 from services.core.worker import CaseReadyWorker
 from services.intake.openwa import OpenWAConnector
+from services.intelligence.semantic_cache import (
+    InMemoryCacheStore,
+    PostgresCacheStore,
+    SemanticCacheEngine,
+)
 from services.ml import LocalMLRuntime
 from services.outbox.broker import RedpandaEventBroker
 from services.outbox.consumer import AtomicInboxConsumer
@@ -47,8 +52,33 @@ def main() -> int:
         else LocalMLRuntime.live_from_artifacts(allow_fallback=True)
     )
 
+    cache_store = None
+    try:
+        import psycopg
+
+        def get_conn():
+            return psycopg.connect(args.database_url)
+
+        with get_conn() as probe_conn:
+            with probe_conn.cursor() as cur:
+                cur.execute("SELECT 1 FROM information_schema.tables WHERE table_name = 'case_knowledge_bank'")
+                if not cur.fetchone():
+                    migration_file = REPO_ROOT / "infra" / "migrations" / "010_m6_semantic_cache_and_knowledge_bank.sql"
+                    if migration_file.is_file():
+                        cur.execute(migration_file.read_text(encoding="utf-8"))
+                        probe_conn.commit()
+                        print("Auto-applied 010_m6_semantic_cache_and_knowledge_bank.sql migration.")
+        cache_store = PostgresCacheStore(get_conn)
+        print("Semantic cache configured with PostgresCacheStore.")
+    except Exception as exc:
+        print(f"PostgresCacheStore unavailable ({exc}); using InMemoryCacheStore fallback.")
+        cache_store = InMemoryCacheStore()
+
+    semantic_cache = SemanticCacheEngine(store=cache_store)
+
     pipeline = CaseProcessingPipeline(
         ml_runtime=ml_runtime,
+        semantic_cache=semantic_cache,
         defer_execution=True,
     )
     worker = CaseReadyWorker(consumer, pipeline)
