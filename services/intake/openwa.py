@@ -316,6 +316,8 @@ class OpenWAConnector:
         tenant_id = self._required(payload, "tenant_id")
         conversation_id = self._required(payload, "conversation_id", "chat_id", "chatId", "from", "senderPhone")
         text = payload.get("text") or payload.get("body")
+        if not text and (payload.get("latitude") is not None or payload.get("location")):
+            text = "[Pin Lokasi]"
         if not text and (payload.get("hasMedia") or payload.get("media")):
             text = "[Lampiran Gambar Tanpa Keterangan]"
         if not text or not isinstance(text, str):

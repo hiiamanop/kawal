@@ -97,6 +97,28 @@ def create_intake_app(
                     import logging
                     logging.getLogger("uvicorn.error").warning("VisionAnalyzer processing failed: %s", exc)
 
+        # Geographic pin enhancement (Share Location)
+        raw_data = payload.get("data") if isinstance(payload.get("data"), Mapping) else payload
+        location_data = message_payload.get("location") or (raw_data.get("location") if isinstance(raw_data, Mapping) else None)
+        lat = message_payload.get("latitude") or (isinstance(location_data, Mapping) and location_data.get("latitude")) or (isinstance(raw_data, Mapping) and raw_data.get("latitude"))
+        lon = message_payload.get("longitude") or (isinstance(location_data, Mapping) and location_data.get("longitude")) or (isinstance(raw_data, Mapping) and raw_data.get("longitude"))
+
+        if lat is not None and lon is not None:
+            try:
+                from services.intelligence.geocoding import ReverseGeocoder
+                geocoder = ReverseGeocoder()
+                hint = (isinstance(location_data, Mapping) and (location_data.get("address") or location_data.get("description"))) or ""
+                geo_res = geocoder.reverse_geocode(float(lat), float(lon), address_hint=str(hint))
+                if geo_res.formatted_address:
+                    cur_t = str(message_payload.get("text") or "").strip()
+                    if not cur_t or cur_t in ("[Pin Lokasi]", "[Lampiran Gambar Tanpa Keterangan]"):
+                        message_payload["text"] = f"[Pin Lokasi]: {geo_res.formatted_address}"
+                    else:
+                        message_payload["text"] = f"{cur_t}\n[Pin Lokasi]: {geo_res.formatted_address}"
+            except Exception as exc:
+                import logging
+                logging.getLogger("uvicorn.error").warning("Reverse-geocoding failed: %s", exc)
+
         try:
             accepted = connector.callback(message_payload)
         except ValueError as exc:

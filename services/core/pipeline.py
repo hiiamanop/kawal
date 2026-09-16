@@ -186,6 +186,16 @@ class CaseProcessingPipeline:
         jur_id = jurisdiction_id or self._default_jurisdiction_id
         text = " ".join(m.text for m in snapshot.messages)
 
+        # 0. Check for Citizen Status Inquiry Intent ("Cek Status")
+        t_lower = text.lower()
+        status_cues = (
+            "cek status", "cek tiket", "status tiket", "status laporan", "status aduan",
+            "gimana perkembangan", "bagaimana perkembangan", "progres laporan", "cek progres",
+            "laporan kemarin gimana", "tindak lanjut laporan saya"
+        )
+        if any(cue in t_lower for cue in status_cues) and len(text.strip()) < 80:
+            return self._handle_status_inquiry(snapshot, text)
+
         # 1. Local ML Runtime Inference (IndoBERT + NER + Hybrid Completeness)
         ml_res = self._ml_runtime.predict(text, context={"jurisdiction_id": jur_id})
         pred = ml_res.prediction
@@ -249,12 +259,15 @@ class CaseProcessingPipeline:
             # Short-circuit duplicate incident directly to parent ticket
             dup_cat = cache_lookup.matched_entry.category
             dup_risk = cache_lookup.matched_entry.risk
+            parent_ticket_id = cache_lookup.matched_entry.ticket_id
             expected_unit = AUTHORITY_DIRECTORY.get((jur_id, dup_cat)) or "UNIT-UNASSIGNED"
             last_msg_src = snapshot.messages[-1].source_message_id if snapshot.messages else None
+            tracking_url = f"http://localhost:8088/track/{parent_ticket_id}"
             reply_text = (
                 f"Terima kasih atas laporan Anda. Laporan mengenai {dup_cat.value} di lokasi tersebut "
-                f"sudah kami catat dan digabungkan dengan tiket penanganan aktif #{cache_lookup.matched_entry.ticket_id}. "
-                f"Petugas dari {expected_unit} sedang menangani insiden ini."
+                f"sudah kami catat dan digabungkan dengan tiket penanganan aktif #{parent_ticket_id}.\n"
+                f"Petugas dari {expected_unit} sedang menangani insiden ini.\n\n"
+                f"Pantau perkembangan laporan secara langsung melalui tautan:\n{tracking_url}"
             )
             payload_hash = hashlib.sha256(reply_text.encode("utf-8")).hexdigest()
             outbound_command = OutboundMessageCommand(
@@ -423,10 +436,13 @@ class CaseProcessingPipeline:
                         ticket_command.request, ticket_command.idempotency_key
                     )
                 proc_state = ProcessingState.TICKETED
+                ticket_id_val = ticket_receipt.ticket_id if ticket_receipt is not None else f"TKT-{snapshot.case_id}"
                 last_msg_src = snapshot.messages[-1].source_message_id if snapshot.messages else None
+                tracking_url = f"http://localhost:8088/track/{ticket_id_val}"
                 reply_text = (
-                    f"Terima kasih atas laporan Anda. Laporan telah kami terima dan diteruskan "
-                    f"ke {authority_unit_id} untuk segera ditindaklanjuti."
+                    f"Terima kasih atas laporan Anda. Laporan mengenai {category.value} telah kami terima "
+                    f"dan diteruskan ke {authority_unit_id} dengan ID Tiket #{ticket_id_val}.\n\n"
+                    f"Pantau perkembangan penanganan laporan Anda secara langsung melalui tautan:\n{tracking_url}"
                 )
                 payload_hash = hashlib.sha256(reply_text.encode("utf-8")).hexdigest()
                 outbound_command = OutboundMessageCommand(
@@ -444,7 +460,6 @@ class CaseProcessingPipeline:
                 # Register case into knowledge bank for future semantic cache & deduplication
                 root_cause_cat = causal_res.root_cause_category if (causal_res and causal_res.has_causal_relation) else category
                 root_summary = causal_res.explanation if causal_res else None
-                ticket_id_val = ticket_receipt.ticket_id if ticket_receipt is not None else f"TKT-{snapshot.case_id}"
                 self._semantic_cache.record_case(
                     tenant_id=snapshot.tenant_id,
                     case_id=snapshot.case_id,
@@ -524,4 +539,67 @@ class CaseProcessingPipeline:
                 "ml_status": ml_res.status,
                 "ml_latency_ms": ml_res.latency_ms,
             },
+        )
+
+    def _handle_status_inquiry(self, snapshot: CaseSnapshot, text: str) -> PipelineResult:
+        import re
+        match_tkt = re.search(r"\b(?:tkt|tiket|ticket)?[-#\s]*([0-9a-fA-F\-]{8,36})\b", text, re.IGNORECASE)
+        explicit_tkt = match_tkt.group(1) if match_tkt else None
+
+        ticket_info = None
+        if self._semantic_cache is not None:
+            entries = getattr(self._semantic_cache._store, "_entries", {})
+            for entry in entries.values():
+                if explicit_tkt and explicit_tkt in (entry.ticket_id or ""):
+                    ticket_info = entry
+                    break
+                if entry.tenant_id == snapshot.tenant_id and entry.ticket_id:
+                    ticket_info = entry
+
+        last_msg_src = snapshot.messages[-1].source_message_id if snapshot.messages else None
+
+        if ticket_info and ticket_info.ticket_id:
+            t_id = ticket_info.ticket_id
+            cat = ticket_info.category.value
+            tracking_url = f"http://localhost:8088/track/{t_id}"
+            reply_text = (
+                f"Halo, berikut adalah status laporan aduan Anda:\n\n"
+                f"Nomor Tiket: #{t_id}\n"
+                f"Kategori: {cat}\n"
+                f"Status: Menunggu Tindak Lanjut / Sedang Ditangani\n\n"
+                f"Pantau perkembangan dan bukti penanganan langsung di:\n{tracking_url}"
+            )
+        else:
+            reply_text = (
+                "Halo, terima kasih telah menghubungi layanan aduan KAWAL.\n"
+                "Kami belum menemukan tiket aktif yang terhubung dengan percakapan ini. "
+                "Jika Anda ingin menyampaikan laporan baru, silakan kirimkan rincian masalah dan lokasi kejadian."
+            )
+
+        payload_hash = hashlib.sha256(reply_text.encode("utf-8")).hexdigest()
+        outbound_command = OutboundMessageCommand(
+            tenant_id=snapshot.tenant_id,
+            conversation_id=snapshot.conversation_id,
+            case_id=snapshot.case_id,
+            recipient_phone=snapshot.conversation_id,
+            text=reply_text,
+            quoted_source_message_id=last_msg_src,
+            idempotency_key=f"{snapshot.tenant_id}:{snapshot.conversation_id}:status-inq:{snapshot.revision}",
+            purpose=OutboundPurpose.STATUS_UPDATE,
+            payload_hash=payload_hash,
+        )
+
+        return PipelineResult(
+            case_id=snapshot.case_id,
+            tenant_id=snapshot.tenant_id,
+            conversation_id=snapshot.conversation_id,
+            revision=snapshot.revision,
+            decision_mode=DecisionMode.EXECUTE,
+            processing_state=ProcessingState.READY,
+            category=Category.CIVIL_ADMIN,
+            risk=RiskLevel.LOW,
+            completeness="SUFFICIENT",
+            outbound_command=outbound_command,
+            reason_codes=("STATUS_INQUIRY_ANSWERED",),
+            audit_trace={"status_inquiry": True, "ticket_found": ticket_info is not None},
         )
