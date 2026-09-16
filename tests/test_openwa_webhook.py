@@ -85,3 +85,53 @@ def test_openwa_webhook_ignores_self_sent_receipt_and_non_message_event() -> Non
     assert self_sent.status_code == 202
     assert self_sent.json() == {"status": "IGNORED"}
     assert not spy.calls
+
+
+def test_openwa_webhook_enriches_photo_with_vision_analyzer() -> None:
+    from unittest.mock import MagicMock
+    from services.intelligence.vision import VisionAnalysisResult
+
+    spy = IntakeSpy()
+    connector = OpenWAConnector(intake_service=spy, connector_id="openwa", account_id="628000@c.us")
+    mock_vision = MagicMock()
+    mock_vision.analyze_image.return_value = VisionAnalysisResult(
+        visual_description="Jalan berlubang besar tergenang air",
+        evidence_quality="HIGH",
+        confidence=0.92,
+    )
+
+    app = create_intake_app(
+        connector=connector,
+        webhook_secret="test-secret",
+        tenant_id="tenant-live",
+        vision_analyzer=mock_vision,
+    )
+    client = TestClient(app)
+
+    # Citizen sends photo with NO caption
+    response = client.post(
+        "/v1/webhooks/openwa",
+        headers={"X-KAWAL-Webhook-Secret": "test-secret"},
+        json={
+            "event": "message.received",
+            "data": {
+                "id": "false_628123@c.us_PHOTO_1",
+                "chatId": "628123@c.us",
+                "body": None,
+                "hasMedia": True,
+                "media": {
+                    "mimetype": "image/jpeg",
+                    "data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+                },
+                "timestamp": "2026-09-14T14:00:00Z",
+                "fromMe": False,
+            },
+        },
+    )
+
+    assert response.status_code == 202
+    assert response.json() == {"status": "ACCEPTED"}
+    assert len(spy.calls) == 1
+    message = spy.calls[0][0]
+    # Enriched text contains visual description
+    assert "[Foto Terlampir]: Jalan berlubang besar tergenang air" in message.text

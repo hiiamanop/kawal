@@ -315,7 +315,11 @@ class OpenWAConnector:
         source_message_id = self._required(payload, "source_message_id", "id")
         tenant_id = self._required(payload, "tenant_id")
         conversation_id = self._required(payload, "conversation_id", "chat_id", "chatId", "from", "senderPhone")
-        text = self._required(payload, "text", "body")
+        text = payload.get("text") or payload.get("body")
+        if not text and (payload.get("hasMedia") or payload.get("media")):
+            text = "[Lampiran Gambar Tanpa Keterangan]"
+        if not text or not isinstance(text, str):
+            text = self._required(payload, "text", "body")
         received_at = payload.get("received_at", payload.get("timestamp"))
         if isinstance(received_at, (int, float)):
             ts = float(received_at)

@@ -29,6 +29,7 @@ def create_intake_app(
     connector: OpenWAConnector,
     webhook_secret: str,
     tenant_id: str,
+    vision_analyzer: Any | None = None,
 ) -> FastAPI:
     if not webhook_secret:
         raise ValueError("webhook_secret is required")
@@ -67,6 +68,35 @@ def create_intake_app(
         if message_payload is None:
             metrics.increment("kawal_webhook_requests_total", labels={"outcome": "ignored"})
             return {"status": "IGNORED"}
+
+        # Visual enhancement for photo attachments
+        media = message_payload.get("media")
+        has_media = bool(message_payload.get("hasMedia") or media)
+        current_text = str(message_payload.get("text") or "").strip()
+
+        if has_media and vision_analyzer is not None:
+            media_b64 = None
+            mime_type = "image/jpeg"
+            if isinstance(media, Mapping):
+                media_b64 = media.get("data")
+                mime_type = media.get("mimetype") or "image/jpeg"
+
+            if media_b64 and ("image" in mime_type):
+                try:
+                    v_res = vision_analyzer.analyze_image(
+                        image_data=media_b64,
+                        citizen_text=current_text,
+                        mime_type=mime_type,
+                    )
+                    if v_res.visual_description:
+                        if not current_text or current_text == "[Lampiran Gambar Tanpa Keterangan]":
+                            message_payload["text"] = f"[Foto Terlampir]: {v_res.visual_description}"
+                        else:
+                            message_payload["text"] = f"{current_text} (Foto: {v_res.visual_description})"
+                except Exception as exc:
+                    import logging
+                    logging.getLogger("uvicorn.error").warning("VisionAnalyzer processing failed: %s", exc)
+
         try:
             accepted = connector.callback(message_payload)
         except ValueError as exc:
@@ -82,8 +112,16 @@ def create_intake_app(
 
 
 def create_live_intake_app(connector: OpenWAConnector) -> FastAPI:
+    vision_analyzer = None
+    try:
+        from services.intelligence.vision import VisionAnalyzer
+        vision_analyzer = VisionAnalyzer(model_id="antigravity/gemini-3-flash")
+    except Exception:
+        vision_analyzer = None
+
     return create_intake_app(
         connector=connector,
         webhook_secret=os.environ["KAWAL_OPENWA_WEBHOOK_SECRET"],
         tenant_id=os.environ["KAWAL_OPENWA_TENANT_ID"],
+        vision_analyzer=vision_analyzer,
     )
