@@ -7,7 +7,7 @@ from typing import Any
 from psycopg import Connection
 from psycopg.types.json import Jsonb
 
-from contracts.models import CaseSnapshot, ProcessingState, RawMessage
+from contracts.models import CaseSnapshot, Category, ProcessingState, RawMessage
 from services.core.pipeline import CaseProcessingPipeline, PipelineResult
 from services.outbox.broker import BrokerMessage, EventBroker
 from services.observability import metrics

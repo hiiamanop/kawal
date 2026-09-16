@@ -19,9 +19,9 @@ def _message_payload_from_event(payload: Mapping[str, Any], tenant_id: str) -> d
     normalized = dict(source)
     normalized["tenant_id"] = tenant_id
     normalized.setdefault("source_message_id", source.get("id"))
-    normalized.setdefault("conversation_id", source.get("chatId") or source.get("chat_id") or source.get("from"))
+    normalized.setdefault("conversation_id", source.get("chatId") or source.get("chat_id") or source.get("from") or source.get("senderPhone"))
     normalized.setdefault("text", source.get("body") or source.get("text"))
-    normalized.setdefault("received_at", source.get("timestamp") or source.get("createdAt"))
+    normalized.setdefault("received_at", source.get("timestamp") or source.get("createdAt") or payload.get("timestamp"))
     return normalized
 
 
@@ -70,6 +70,8 @@ def create_intake_app(
         try:
             accepted = connector.callback(message_payload)
         except ValueError as exc:
+            import logging
+            logging.getLogger("uvicorn.error").exception("Failed to normalize OpenWA payload: %s", payload)
             metrics.increment("kawal_webhook_requests_total", labels={"outcome": "invalid"})
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
         outcome = "accepted" if accepted else "ignored"

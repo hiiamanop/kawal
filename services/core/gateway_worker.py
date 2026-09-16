@@ -187,6 +187,16 @@ class ToolGatewayWorker:
         receipt = self._messaging_connector.send_text(command, connection=connection)
         metrics.increment("kawal_message_commands_total", labels={"status": receipt.status.value})
         with connection.cursor() as cursor:
+            # Delete any duplicate outbox item produced by record_pending_send to prevent loop
+            cursor.execute(
+                """
+                DELETE FROM outbox
+                WHERE aggregate_type = 'whatsapp_send'
+                  AND aggregate_id = %s
+                  AND published_at IS NULL
+                """,
+                (receipt.send_id,),
+            )
             cursor.execute(
                 """
                 INSERT INTO audit_traces (tenant_id, case_id, event_type, payload)

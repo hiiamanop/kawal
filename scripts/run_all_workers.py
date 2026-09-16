@@ -12,6 +12,12 @@ import threading
 import time
 from typing import Mapping
 
+try:
+    import dotenv
+    dotenv.load_dotenv()
+except ImportError:
+    pass
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] [supervisor] %(message)s",
@@ -81,6 +87,8 @@ def build_worker_commands(
             redpanda_bootstrap,
             "--poll-interval",
             "0.5",
+            "--omniroute-model",
+            "openrouter/google/gemini-2.5-flash",
         ],
     }
 

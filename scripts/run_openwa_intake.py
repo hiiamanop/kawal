@@ -18,7 +18,19 @@ from services.intake.send_ledger import SendLedgerStore
 from services.intake.service import IntakeService
 
 
+def load_env_file() -> None:
+    env_path = REPO_ROOT / ".env"
+    if env_path.is_file():
+        with open(env_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, val = line.split("=", 1)
+                    os.environ.setdefault(key.strip(), val.strip())
+
+
 def main() -> int:
+    load_env_file()
     database_url = os.environ.get("KAWAL_DATABASE_URL")
     if not database_url:
         print("KAWAL_DATABASE_URL is required", file=sys.stderr)

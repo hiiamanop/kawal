@@ -8,13 +8,20 @@ from pathlib import Path
 import sys
 import time
 
+try:
+    import dotenv
+    dotenv.load_dotenv()
+except ImportError:
+    pass
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from infra.db import TransactionRunner
 from services.core.gateway_worker import ToolGatewayWorker
 from services.core.model_gateway import ModelGateway, OllamaLocalAdapter, OmniRouteAdapter
 from services.core.opa import OpaPolicyClient
-from services.intake.openwa import OpenWAConnector
+from services.intake.openwa import OpenWAConnector, OpenWAHttpTransport
+from services.intake.send_ledger import SendLedgerStore
 from services.outbox.broker import RedpandaEventBroker
 from services.outbox.consumer import AtomicInboxConsumer
 from services.reliability.client import ReliableTicketClient
@@ -103,7 +110,16 @@ def main() -> int:
     )
 
     ticket_client = ReliableTicketClient(simulator=TicketSimulator())
-    messaging_connector = OpenWAConnector()
+    if os.getenv("KAWAL_OPENWA_BASE_URL") and os.getenv("KAWAL_OPENWA_API_KEY") and os.getenv("KAWAL_OPENWA_SESSION_ID"):
+        logger.info("Initializing live OpenWAConnector with HTTP transport...")
+        messaging_connector = OpenWAConnector(
+            account_id=os.getenv("KAWAL_OPENWA_ACCOUNT_ID", "research"),
+            send_ledger=SendLedgerStore(),
+            transport=OpenWAHttpTransport.from_environment().send_text,
+        )
+    else:
+        logger.info("Initializing mock OpenWAConnector...")
+        messaging_connector = OpenWAConnector()
 
     model_gateway = None
     if args.omniroute_model:

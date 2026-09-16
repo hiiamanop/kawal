@@ -13,6 +13,7 @@ from contracts.models import (
     Category,
     DecisionMode,
     OutboundMessageCommand,
+    OutboundPurpose,
     OutboundSendReceipt,
     ProcessingState,
     RawMessage,
@@ -293,18 +294,6 @@ class CaseProcessingPipeline:
         evidence_covered = (len(ml_res.entities) > 0 or len(text.strip()) > 20)
 
         escalation_candidates = ()
-        if self._defer_execution and is_complaint and authority_valid and (not required_complete or not evidence_covered):
-            escalation_candidates = (
-                EscalationCandidate(
-                    task_id="local-clarification-check",
-                    expected_utility_gain=5.0,
-                    cost_usd=0.0,
-                    latency_ms=300.0,
-                    egress_bytes=0,
-                    queue_delay_ms=0.0,
-                    policy_allowed=True,
-                ),
-            )
 
         decision_input = DecisionInput(
             case_id=snapshot.case_id,
@@ -346,6 +335,23 @@ class CaseProcessingPipeline:
                         ticket_command.request, ticket_command.idempotency_key
                     )
                 proc_state = ProcessingState.TICKETED
+                last_msg_src = snapshot.messages[-1].source_message_id if snapshot.messages else None
+                reply_text = (
+                    f"Terima kasih atas laporan Anda. Laporan telah kami terima dan diteruskan "
+                    f"ke {authority_unit_id} untuk segera ditindaklanjuti."
+                )
+                payload_hash = hashlib.sha256(reply_text.encode("utf-8")).hexdigest()
+                outbound_command = OutboundMessageCommand(
+                    tenant_id=snapshot.tenant_id,
+                    conversation_id=snapshot.conversation_id,
+                    case_id=snapshot.case_id,
+                    recipient_phone=snapshot.conversation_id,
+                    text=reply_text,
+                    quoted_source_message_id=last_msg_src,
+                    idempotency_key=f"{snapshot.tenant_id}:{snapshot.conversation_id}:ticket-receipt:{snapshot.revision}",
+                    purpose=OutboundPurpose.RECEIPT,
+                    payload_hash=payload_hash,
+                )
             else:
                 proc_state = ProcessingState.WAITING_RESULTS
 

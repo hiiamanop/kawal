@@ -314,13 +314,27 @@ class OpenWAConnector:
             raise ValueError("OpenWA adapter ignores group chat events per PRD §17")
         source_message_id = self._required(payload, "source_message_id", "id")
         tenant_id = self._required(payload, "tenant_id")
-        conversation_id = self._required(payload, "conversation_id", "chat_id", "chatId", "from")
+        conversation_id = self._required(payload, "conversation_id", "chat_id", "chatId", "from", "senderPhone")
         text = self._required(payload, "text", "body")
         received_at = payload.get("received_at", payload.get("timestamp"))
-        if isinstance(received_at, str):
-            received_at = datetime.fromisoformat(received_at.replace("Z", "+00:00"))
+        if isinstance(received_at, (int, float)):
+            ts = float(received_at)
+            if ts > 1e11:
+                ts /= 1000.0
+            received_at = datetime.fromtimestamp(ts, tz=timezone.utc)
+        elif isinstance(received_at, str):
+            try:
+                received_at = datetime.fromisoformat(received_at.replace("Z", "+00:00"))
+            except ValueError:
+                try:
+                    ts = float(received_at)
+                    if ts > 1e11:
+                        ts /= 1000.0
+                    received_at = datetime.fromtimestamp(ts, tz=timezone.utc)
+                except ValueError:
+                    received_at = datetime.now(timezone.utc)
         if not isinstance(received_at, datetime):
-            raise ValueError("OpenWA payload requires received_at")
+            received_at = datetime.now(timezone.utc)
         return RawMessage(
             message_id=build_normalized_message_id(tenant_id, self._connector_id, self._account_id, source_message_id),
             tenant_id=tenant_id,
@@ -350,6 +364,11 @@ class OpenWAConnector:
             value = payload.get(key)
             if isinstance(value, str) and value:
                 return value
+            if isinstance(value, Mapping):
+                for subkey in ("_serialized", "id"):
+                    subval = value.get(subkey)
+                    if isinstance(subval, str) and subval:
+                        return subval
         raise ValueError(f"OpenWA payload requires one of: {', '.join(keys)}")
 
     @staticmethod
