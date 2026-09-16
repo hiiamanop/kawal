@@ -6,6 +6,7 @@ from psycopg import Connection
 from psycopg.types.json import Jsonb
 
 from contracts.models import OutboundMessageCommand, PolicyInput, TicketCreateRequest
+from services.core.batcher import BatchItem, DynamicBatcher
 from services.core.escalation import EscalationCommand
 from services.core.model_gateway import ModelGateway
 from services.core.opa import OpaPolicyClient
@@ -31,12 +32,14 @@ class ToolGatewayWorker:
         messaging_connector: OpenWAConnector,
         policy_client: OpaPolicyClient | None = None,
         model_gateway: ModelGateway | None = None,
+        batcher: DynamicBatcher | None = None,
     ) -> None:
         self._consumer = consumer
         self._ticket_client = ticket_client
         self._messaging_connector = messaging_connector
         self._policy_client = policy_client
         self._model_gateway = model_gateway
+        self._batcher = batcher or (DynamicBatcher(model_gateway) if model_gateway is not None else None)
 
     def consume_ticket_once(self, max_records: int = 10) -> int:
         return self._consumer.consume_batch(
@@ -131,7 +134,20 @@ class ToolGatewayWorker:
         if self._model_gateway is None:
             result_payload = {"status": "UNAVAILABLE", "reason": "MODEL_GATEWAY_NOT_CONFIGURED"}
         else:
-            gate, result = self._model_gateway.escalate(command.prompt, command.egress_request)
+            if self._batcher is not None:
+                item = BatchItem(
+                    item_id=event.event_id,
+                    prompt=command.prompt,
+                    egress_request=command.egress_request,
+                )
+                res_map = self._batcher.execute_batch([item])
+                gate, result = res_map.get(
+                    event.event_id,
+                    self._model_gateway.escalate(command.prompt, command.egress_request),
+                )
+            else:
+                gate, result = self._model_gateway.escalate(command.prompt, command.egress_request)
+
             result_payload = {
                 "status": result.status,
                 "reason": result.reason,
@@ -139,6 +155,7 @@ class ToolGatewayWorker:
                 "model_id": result.model_id,
                 "policy_allowed": gate.allowed,
                 "rule_ids": list(gate.rule_ids),
+                "content": result.content,
             }
         metrics.increment("kawal_escalation_commands_total", labels={"status": result_payload["status"]})
         with connection.cursor() as cursor:
