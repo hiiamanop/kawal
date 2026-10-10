@@ -61,7 +61,7 @@ class CaseReadyWorker:
 
         # Stale events are retained in inbox/audit, but cannot overwrite a newer case revision.
         expected_revision = int(event.headers.get("revision", snapshot.revision))
-        if expected_revision != snapshot.revision:
+        if expected_revision < snapshot.revision:
             self._write_audit(
                 connection,
                 snapshot,
@@ -83,9 +83,17 @@ class CaseReadyWorker:
     @staticmethod
     def _load_previous_category(connection: Connection, case_id: str) -> Category | None:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT category FROM cases WHERE case_id = %s", (case_id,))
+            cursor.execute(
+                """
+                SELECT category, processing_state
+                FROM cases
+                WHERE case_id = %s
+                """,
+                (case_id,),
+            )
             row = cursor.fetchone()
-            if row and row[0]:
+            # Only anchor prior category if the case was actively waiting for clarification
+            if row and row[0] and row[1] == "WAITING_CLARIFICATION":
                 for cat in Category:
                     if cat.value == str(row[0]).strip().upper():
                         return cat

@@ -88,7 +88,7 @@ def build_worker_commands(
             "--poll-interval",
             "0.5",
             "--omniroute-model",
-            "openrouter/google/gemini-2.5-flash",
+            "antigravity/gemini-3-flash",
         ],
     }
 
@@ -116,34 +116,39 @@ class WorkerSupervisor:
     def start(self) -> None:
         logger.info("Starting %d background worker services...", len(self._commands))
         for name, cmd in self._commands.items():
-            logger.info("Launching service [%s] -> %s", name, " ".join(cmd[:3]))
-            proc = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                env=self._env,
-                text=True,
-                bufsize=1,
-            )
-            self._processes[name] = proc
+            self._start_service(name, cmd)
 
-            th = threading.Thread(
-                target=stream_pipe,
-                args=(proc.stdout, name),
-                daemon=True,
-                name=f"stream-{name}",
-            )
-            th.start()
-            self._threads.append(th)
+    def _start_service(self, name: str, cmd: list[str]) -> None:
+        logger.info("Launching service [%s] -> %s", name, " ".join(cmd[:3]))
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            env=self._env,
+            text=True,
+            bufsize=1,
+        )
+        self._processes[name] = proc
+
+        th = threading.Thread(
+            target=stream_pipe,
+            args=(proc.stdout, name),
+            daemon=True,
+            name=f"stream-{name}",
+        )
+        th.start()
+        self._threads.append(th)
 
     def wait(self, poll_interval: float = 0.5) -> int:
         while not self._stopping:
             for name, proc in list(self._processes.items()):
                 ret = proc.poll()
                 if ret is not None:
-                    logger.warning("Service [%s] exited unexpectedly with code %d", name, ret)
-                    self.stop()
-                    return ret
+                    if self._stopping:
+                        return 0
+                    logger.warning("Service [%s] exited with code %d. Auto-restarting...", name, ret)
+                    time.sleep(1.0)
+                    self._start_service(name, self._commands[name])
             time.sleep(poll_interval)
         return 0
 

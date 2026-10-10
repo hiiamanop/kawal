@@ -409,8 +409,10 @@ class ConversationAssembler:
             """
             SELECT link.case_id FROM message_case_links AS link
             JOIN raw_messages AS message ON message.message_id = link.message_id
+            LEFT JOIN cases AS c ON c.case_id = link.case_id
             WHERE message.tenant_id = %s AND message.connector_id = %s AND message.account_id = %s
               AND message.conversation_id = %s AND message.received_at >= %s
+              AND (c.processing_state IS NULL OR c.processing_state NOT IN ('TICKETED', 'REJECTED', 'CLOSED'))
             ORDER BY message.received_at DESC, message.message_id DESC LIMIT 1
             """,
             (tenant_id, connector_id, account_id, conversation_id, now - ASSOCIATION_HORIZON),

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hmac
 import os
 from typing import Any, Mapping
@@ -16,6 +17,14 @@ def _message_payload_from_event(payload: Mapping[str, Any], tenant_id: str) -> d
         return None
     raw = payload.get("data")
     source = raw if isinstance(raw, Mapping) else payload
+
+    # Ignore empty sync / protocol packets without body, media, or location
+    body_or_text = source.get("body") or source.get("text")
+    has_media = bool(source.get("hasMedia") or source.get("media"))
+    has_location = bool(source.get("latitude") is not None or source.get("location"))
+    if not body_or_text and not has_media and not has_location:
+        return None
+
     normalized = dict(source)
     normalized["tenant_id"] = tenant_id
     normalized.setdefault("source_message_id", source.get("id"))
@@ -83,7 +92,8 @@ def create_intake_app(
 
             if media_b64 and ("image" in mime_type):
                 try:
-                    v_res = vision_analyzer.analyze_image(
+                    v_res = await asyncio.to_thread(
+                        vision_analyzer.analyze_image,
                         image_data=media_b64,
                         citizen_text=current_text,
                         mime_type=mime_type,
@@ -108,7 +118,12 @@ def create_intake_app(
                 from services.intelligence.geocoding import ReverseGeocoder
                 geocoder = ReverseGeocoder()
                 hint = (isinstance(location_data, Mapping) and (location_data.get("address") or location_data.get("description"))) or ""
-                geo_res = geocoder.reverse_geocode(float(lat), float(lon), address_hint=str(hint))
+                geo_res = await asyncio.to_thread(
+                    geocoder.reverse_geocode,
+                    float(lat),
+                    float(lon),
+                    address_hint=str(hint),
+                )
                 if geo_res.formatted_address:
                     cur_t = str(message_payload.get("text") or "").strip()
                     if not cur_t or cur_t in ("[Pin Lokasi]", "[Lampiran Gambar Tanpa Keterangan]"):
@@ -120,7 +135,7 @@ def create_intake_app(
                 logging.getLogger("uvicorn.error").warning("Reverse-geocoding failed: %s", exc)
 
         try:
-            accepted = connector.callback(message_payload)
+            accepted = await asyncio.to_thread(connector.callback, message_payload)
         except ValueError as exc:
             import logging
             logging.getLogger("uvicorn.error").exception("Failed to normalize OpenWA payload: %s", payload)

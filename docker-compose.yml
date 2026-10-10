@@ -70,9 +70,30 @@ services:
     networks:
       - kawal
 
+  postgres:
+    image: postgres:16-alpine
+    container_name: kawal-postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    ports:
+      - "127.0.0.1:54322:5432"
+    volumes:
+      - kawal_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+    networks:
+      - kawal
+
 networks:
   kawal:
     driver: bridge
 
 volumes:
   redpanda_data:
+  kawal_pgdata:

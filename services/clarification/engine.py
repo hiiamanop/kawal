@@ -66,10 +66,10 @@ CATEGORY_LOCATION_QUESTIONS: dict[Category, str] = {
     Category.HEALTH_SERVICE: "Fasilitas kesehatan atau puskesmas mana yang Anda maksud?",
     Category.PUBLIC_ORDER: "Gangguan ketertiban umum terjadi di ruas jalan atau lokasi mana?",
     Category.TRANSPORTATION: "Fasilitas transportasi atau rambu di jalan/persimpangan mana yang bermasalah?",
-    Category.FIRE_RESCUE: "Lokasi kebakaran atau kebutuhan evakuasi tepatnya di alamat atau patokan mana?",
+    Category.FIRE_RESCUE: "Lokasi kejadian darurat (kebakaran / pohon tumbang / evakuasi) tepatnya di alamat, nomor, atau patokan mana?",
     Category.SOCIAL_AFFAIRS: "Warga yang membutuhkan bantuan sosial terpantau di jalan atau lokasi mana?",
     Category.EDUCATION: "Sekolah atau fasilitas pendidikan mana yang dimaksud?",
-    Category.PARKS_HOUSING: "Taman umum atau kawasan perumahan mana yang mengalami kendala fasilitas?",
+    Category.PARKS_HOUSING: "Pohon tumbang atau fasilitas taman di jalan mana dan dekat patokan apa yang mengalami kendala?",
 }
 
 GENERIC_FIELD_QUESTIONS: dict[str, str] = {

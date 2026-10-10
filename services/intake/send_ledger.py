@@ -23,6 +23,7 @@ class SendLedgerStore:
         self,
         connection: Connection,
         command: OutboundMessageCommand,
+        skip_outbox: bool = False,
     ) -> tuple[str, bool]:
         """Record an outbound message command atomically in the send ledger and outbox.
 
@@ -75,24 +76,25 @@ class SendLedgerStore:
             )
             send_id = str(cursor.fetchone()[0])
 
-            # Atomic outbox registration
-            cursor.execute(
-                """
-                INSERT INTO outbox (
-                    tenant_id, aggregate_type, aggregate_id, revision,
-                    event_type, partition_key, payload
-                ) VALUES (
-                    %s, 'whatsapp_send', %s, 1,
-                    'whatsapp.send.requested.v1', %s, %s
+            # Atomic outbox registration (if not skipped)
+            if not skip_outbox:
+                cursor.execute(
+                    """
+                    INSERT INTO outbox (
+                        tenant_id, aggregate_type, aggregate_id, revision,
+                        event_type, partition_key, payload
+                    ) VALUES (
+                        %s, 'whatsapp_send', %s, 1,
+                        'whatsapp.send.requested.v1', %s, %s
+                    )
+                    """,
+                    (
+                        command.tenant_id,
+                        send_id,
+                        command.conversation_id,
+                        Jsonb(command.model_dump(mode="json")),
+                    ),
                 )
-                """,
-                (
-                    command.tenant_id,
-                    send_id,
-                    command.conversation_id,
-                    Jsonb(command.model_dump(mode="json")),
-                ),
-            )
 
             return send_id, True
 

@@ -27,12 +27,23 @@ _AMBIGUITY_PHRASES = (
     "titiknya masih ambigu membingungkan",
     "posisi lapangannya belum teridentifikasi",
 )
-_ADDRESS_SIGNALS = (
+_FORMAL_ADDRESS_SIGNALS = (
     re.compile(r"\b(?:jl\.?|jalan)\s+[\w.\-]+", re.IGNORECASE),
     re.compile(r"\brt\s*\d+\s*rw\s*\d+\b", re.IGNORECASE),
     re.compile(r"\bkelurahan\s+[\w.\-]+", re.IGNORECASE),
     re.compile(r"\bkecamatan\s+[\w.\-]+", re.IGNORECASE),
     re.compile(r"\b(?:kota|kabupaten)\s+[\w.\-]+", re.IGNORECASE),
+)
+
+_SPECIFIC_LANDMARKS = re.compile(
+    r"\b(?:miko mall|borma|trans studio|ciwalk|pvj|alun-alun|gedung sate|rs immanuel|rs hasan sadikin|rshs|pasar baru|pasar caringin|pasar suci|stasiun bandung|stasiun kiaracondong)\b"
+    r"|\b(?:mall|borma|pasar|masjid|rs|rumah sakit|spbu|pom bensin|stasiun|terminal|taman)\s+[A-Z][a-zA-Z0-9]+\b",
+    re.IGNORECASE,
+)
+
+_AREA_SIGNALS = re.compile(
+    r"\b(?:kopo|pasteur|dago|buah batu|buahbatu|cibadak|asia afrika|riau|merdeka|supratman|gedebage|antapani|arcamanik|ciroyom|setiabudi|lembang|sukajadi|astanaanyar|lengkong|cikutra|cicadas|kiaracondong|batununggal|soekarno hatta|sukarno hatta|serayu)\b",
+    re.IGNORECASE,
 )
 
 
@@ -52,6 +63,26 @@ def resolve_location_completeness(
         entity.text for entity in entities if entity.label.upper() in {"LOC", "LOCATION", "LANDMARK"}
     )
     evidence = f"{normalized} {entity_text}"
-    if all(pattern.search(evidence) for pattern in _ADDRESS_SIGNALS):
+
+    # 1. Full formal administrative address
+    if all(pattern.search(evidence) for pattern in _FORMAL_ADDRESS_SIGNALS):
         return "SUFFICIENT"
+
+    # 2. Street + Street Number
+    has_street = bool(re.search(r"\b(?:jl\.?|jalan)\s+[a-zA-Z0-9\-]+", evidence, re.IGNORECASE))
+    has_number = bool(re.search(r"\b(?:no\.?|nomor)\s*\d+\b", evidence, re.IGNORECASE))
+    if has_street and has_number:
+        return "SUFFICIENT"
+
+    # 3. Recognizable Specific Landmark + Area
+    has_landmark = bool(_SPECIFIC_LANDMARKS.search(evidence))
+    has_area = bool(_AREA_SIGNALS.search(evidence))
+    if has_landmark and has_area:
+        return "SUFFICIENT"
+
+    # 4. Two or more distinct Location entities from NER with street and number or landmark
+    loc_ents = [e for e in entities if getattr(e, "label", "").upper() in {"LOC", "LOCATION"}]
+    if len(loc_ents) >= 2 and (has_landmark or (has_street and has_number)):
+        return "SUFFICIENT"
+
     return "INCOMPLETE"

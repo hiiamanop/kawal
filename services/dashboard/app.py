@@ -778,9 +778,39 @@ def create_dashboard_app(database_url: str) -> FastAPI:
     def get_ticket_detail(ticket_id: str) -> dict[str, Any]:
         clean_id = ticket_id.lstrip("#").strip()
 
-        # 1. Check in-memory resolution cache
-        if clean_id in ticket_resolutions_cache:
-            return ticket_resolutions_cache[clean_id]
+        # 1. Query ticket_resolutions table in database first
+        try:
+            with get_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        SELECT ticket_id, status, authority_unit_id, category, risk,
+                               location, citizen_text, admin_notes, resolution_photo_url,
+                               created_at, updated_at
+                        FROM ticket_resolutions
+                        WHERE ticket_id = %s
+                        LIMIT 1
+                        """,
+                        (clean_id,),
+                    )
+                    t_row = cur.fetchone()
+                    if t_row:
+                        return {
+                            "ticket_id": t_row["ticket_id"],
+                            "status": t_row["status"],
+                            "category": t_row["category"] or "PUBLIC_SERVICE",
+                            "risk": t_row["risk"] or "HIGH",
+                            "authority_unit_id": t_row["authority_unit_id"] or "Dinas Terkait",
+                            "citizen_text": t_row["citizen_text"] or "",
+                            "admin_notes": t_row["admin_notes"] or "",
+                            "resolution_photo_url": t_row["resolution_photo_url"] or "",
+                            "created_at": t_row["created_at"].isoformat() if hasattr(t_row["created_at"], "isoformat") else str(t_row["created_at"]),
+                            "updated_at": t_row["updated_at"].isoformat() if hasattr(t_row["updated_at"], "isoformat") else str(t_row["updated_at"]),
+                        }
+        except Exception as exc:
+            logger.debug("Query ticket_resolutions failed: %s", exc)
+
+        # 2. Check in-memory resolution cache
 
         # 2. Query database for case linked to this ticket
         try:

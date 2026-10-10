@@ -61,10 +61,11 @@ def test_admin_portal_renders_html() -> None:
 
 
 def test_ticket_detail_and_update_lifecycle() -> None:
+    from uuid import uuid4
     app = create_dashboard_app(database_url=DATABASE_URL)
     client = TestClient(app)
 
-    ticket_id = "TKT-life-999"
+    ticket_id = f"TKT-life-{uuid4().hex[:8]}"
 
     # 1. Citizen checks ticket detail via API
     get_res = client.get(f"/api/tickets/{ticket_id}")

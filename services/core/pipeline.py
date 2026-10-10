@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import hashlib
+import os
 from typing import Any, Sequence
 from uuid import uuid4
 
@@ -186,8 +187,8 @@ class CaseProcessingPipeline:
         jur_id = jurisdiction_id or self._default_jurisdiction_id
         text = " ".join(m.text for m in snapshot.messages)
 
-        # 0. Check for Citizen Status Inquiry Intent ("Cek Status")
-        t_lower = text.lower()
+        # 0. Check for Citizen Status Inquiry or Greeting
+        t_lower = text.lower().strip()
         status_cues = (
             "cek status", "cek tiket", "status tiket", "status laporan", "status aduan",
             "gimana perkembangan", "bagaimana perkembangan", "progres laporan", "cek progres",
@@ -195,6 +196,22 @@ class CaseProcessingPipeline:
         )
         if any(cue in t_lower for cue in status_cues) and len(text.strip()) < 80:
             return self._handle_status_inquiry(snapshot, text)
+
+        greeting_cues = (
+            "halo", "hai", "hi", "p", "halo min", "halo admin", "selamat pagi", "selamat siang",
+            "selamat sore", "selamat malam", "assalamualaikum", "tes", "test"
+        )
+        if t_lower in greeting_cues:
+            return self._handle_greeting(snapshot, text)
+
+        # 0c. Check for Cancellation / Reset Intent ("Batal", "Reset", "Laporan Baru")
+        cancel_cues = (
+            "batal", "cancel", "reset", "laporan baru", "aduan baru",
+            "batal laporan", "batalkan", "mulai baru", "ganti aduan", "ganti laporan"
+        )
+        latest_text = snapshot.messages[-1].text.lower().strip() if snapshot.messages else t_lower
+        if latest_text in cancel_cues or t_lower in cancel_cues:
+            return self._handle_cancellation(snapshot, latest_text)
 
         # 1. Local ML Runtime Inference (IndoBERT + NER + Hybrid Completeness)
         ml_res = self._ml_runtime.predict(text, context={"jurisdiction_id": jur_id})
@@ -347,9 +364,11 @@ class CaseProcessingPipeline:
                 conflicts.append(conflict)
 
             # Solusi 1: When clarifying details without explicit category correction, anchor to prior category
+            # unless the new incoming text introduces a new explicit category with high confidence
             cancel_cues = ("bukan", "salah lapor", "ralat aduan", "keliru")
             explicit_correction = any(cue in text.lower() for cue in cancel_cues)
-            if not explicit_correction and snapshot.revision > 1:
+            has_new_strong_issue = (pred is not None and float(pred.confidence) >= 0.75)
+            if not explicit_correction and snapshot.revision > 1 and not has_new_strong_issue:
                 category = previous_category
 
         # 2. Authority Routing Verification
@@ -438,7 +457,8 @@ class CaseProcessingPipeline:
                 proc_state = ProcessingState.TICKETED
                 ticket_id_val = ticket_receipt.ticket_id if ticket_receipt is not None else f"TKT-{snapshot.case_id}"
                 last_msg_src = snapshot.messages[-1].source_message_id if snapshot.messages else None
-                tracking_url = f"http://localhost:8088/track/{ticket_id_val}"
+                public_base = os.getenv("KAWAL_PUBLIC_BASE_URL", "http://localhost:8088").rstrip("/")
+                tracking_url = f"{public_base}/track/{ticket_id_val}"
                 reply_text = (
                     f"Terima kasih atas laporan Anda. Laporan mengenai {category.value} telah kami terima "
                     f"dan diteruskan ke {authority_unit_id} dengan ID Tiket #{ticket_id_val}.\n\n"
@@ -496,7 +516,23 @@ class CaseProcessingPipeline:
                 category=category,
                 missing_fields=missing_fields,
             )
-            clarification_session = session
+            target_round = min(max(1, snapshot.revision), 3)
+            if target_round > 1:
+                from services.clarification.engine import ClarificationRound
+                rounds_list = list(session.rounds)
+                for r in range(2, target_round + 1):
+                    rounds_list.append(
+                        ClarificationRound(
+                            round_number=r,
+                            questions=session.rounds[0].questions,
+                            asked_at=datetime.now(timezone.utc),
+                        )
+                    )
+                session = session.model_copy(update={
+                    "current_round": target_round,
+                    "rounds": tuple(rounds_list),
+                })
+
             last_msg_src = snapshot.messages[-1].source_message_id if snapshot.messages else None
             outbound_command = self._clarification_dispatcher.build_clarification_command(
                 session=session,
@@ -602,4 +638,71 @@ class CaseProcessingPipeline:
             outbound_command=outbound_command,
             reason_codes=("STATUS_INQUIRY_ANSWERED",),
             audit_trace={"status_inquiry": True, "ticket_found": ticket_info is not None},
+        )
+
+    def _handle_greeting(self, snapshot: CaseSnapshot, text: str) -> PipelineResult:
+        last_msg_src = snapshot.messages[-1].source_message_id if snapshot.messages else None
+        reply_text = (
+            "Halo! Selamat datang di layanan aduan warga KAWAL Pemerintah Kota Bandung.\n\n"
+            "Ada kendala fasilitas publik, jalan rusak, banjir, sampah liar, atau ketertiban yang ingin Anda laporkan? "
+            "Silakan kirimkan rincian keluhan beserta lokasi kejadian (nama jalan / kelurahan) atau bagikan pin lokasi Anda."
+        )
+        payload_hash = hashlib.sha256(reply_text.encode("utf-8")).hexdigest()
+        outbound_command = OutboundMessageCommand(
+            tenant_id=snapshot.tenant_id,
+            conversation_id=snapshot.conversation_id,
+            case_id=snapshot.case_id,
+            recipient_phone=snapshot.conversation_id,
+            text=reply_text,
+            quoted_source_message_id=last_msg_src,
+            idempotency_key=f"{snapshot.tenant_id}:{snapshot.conversation_id}:greeting:{snapshot.revision}",
+            purpose=OutboundPurpose.STATUS_UPDATE,
+            payload_hash=payload_hash,
+        )
+        return PipelineResult(
+            case_id=snapshot.case_id,
+            tenant_id=snapshot.tenant_id,
+            conversation_id=snapshot.conversation_id,
+            revision=snapshot.revision,
+            decision_mode=DecisionMode.EXECUTE,
+            processing_state=ProcessingState.READY,
+            category=Category.CIVIL_ADMIN,
+            risk=RiskLevel.LOW,
+            completeness="SUFFICIENT",
+            outbound_command=outbound_command,
+            reason_codes=("GREETING_ANSWERED",),
+            audit_trace={"greeting": True},
+        )
+
+    def _handle_cancellation(self, snapshot: CaseSnapshot, text: str) -> PipelineResult:
+        last_msg_src = snapshot.messages[-1].source_message_id if snapshot.messages else None
+        reply_text = (
+            "Baik, sesi aduan sebelumnya telah dibatalkan / direset.\n\n"
+            "Silakan sampaikan aduan baru Anda dengan menyertakan rincian masalah dan lokasi kejadian secara lengkap."
+        )
+        payload_hash = hashlib.sha256(reply_text.encode("utf-8")).hexdigest()
+        outbound_command = OutboundMessageCommand(
+            tenant_id=snapshot.tenant_id,
+            conversation_id=snapshot.conversation_id,
+            case_id=snapshot.case_id,
+            recipient_phone=snapshot.conversation_id,
+            text=reply_text,
+            quoted_source_message_id=last_msg_src,
+            idempotency_key=f"{snapshot.tenant_id}:{snapshot.conversation_id}:cancel:{snapshot.revision}",
+            purpose=OutboundPurpose.STATUS_UPDATE,
+            payload_hash=payload_hash,
+        )
+        return PipelineResult(
+            case_id=snapshot.case_id,
+            tenant_id=snapshot.tenant_id,
+            conversation_id=snapshot.conversation_id,
+            revision=snapshot.revision,
+            decision_mode=DecisionMode.REJECT_IGNORE,
+            processing_state=ProcessingState.REJECTED,
+            category=Category.CIVIL_ADMIN,
+            risk=RiskLevel.LOW,
+            completeness="SUFFICIENT",
+            outbound_command=outbound_command,
+            reason_codes=("SESSION_CANCELLED_BY_CITIZEN",),
+            audit_trace={"cancelled": True},
         )

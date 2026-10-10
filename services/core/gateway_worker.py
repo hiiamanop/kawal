@@ -67,9 +67,13 @@ class ToolGatewayWorker:
 
     @staticmethod
     def _handle_unprocessable_command(event: BrokerMessage, error: Exception) -> bool:
-        # If the case/tenant was deleted from DB, consuming the stale command is terminal.
+        # If the case/tenant was deleted from DB or an idempotency conflict occurs, consume without crashing.
         import psycopg
+        from services.intake.send_ledger import IdempotencyConflictError
         if isinstance(error, psycopg.errors.ForeignKeyViolation):
+            return True
+        if isinstance(error, IdempotencyConflictError):
+            logger.warning("Unprocessable idempotency conflict on message command: %s", error)
             return True
         return isinstance(error, UnprocessableCommandError)
 
@@ -112,6 +116,27 @@ class ToolGatewayWorker:
                 """,
                 (receipt.ticket_id, request.case_id, request.tenant_id),
             )
+            try:
+                cursor.execute(
+                    """
+                    INSERT INTO ticket_resolutions (
+                        ticket_id, case_id, tenant_id, status, authority_unit_id,
+                        category, risk, citizen_text, created_at, updated_at
+                    ) VALUES (%s, %s, %s, 'SUBMITTED', %s, %s, %s, %s, clock_timestamp(), clock_timestamp())
+                    ON CONFLICT (ticket_id) DO NOTHING
+                    """,
+                    (
+                        receipt.ticket_id,
+                        request.case_id,
+                        request.tenant_id,
+                        request.assigned_unit,
+                        request.category.value if hasattr(request.category, "value") else str(request.category),
+                        request.risk.value if hasattr(request.risk, "value") else str(request.risk),
+                        request.description,
+                    ),
+                )
+            except Exception:
+                pass
             cursor.execute(
                 """
                 INSERT INTO audit_traces (tenant_id, case_id, event_type, payload)
@@ -201,7 +226,15 @@ class ToolGatewayWorker:
 
     def _handle_message_command(self, connection: Connection, event: BrokerMessage) -> None:
         command = OutboundMessageCommand.model_validate(event.payload)
-        receipt = self._messaging_connector.send_text(command, connection=connection)
+        from services.intake.send_ledger import IdempotencyConflictError
+        try:
+            receipt = self._messaging_connector.send_text(command, connection=connection)
+        except IdempotencyConflictError:
+            # Suffix with payload hash to safely deliver distinct outbound message
+            fallback_cmd = command.model_copy(update={
+                "idempotency_key": f"{command.idempotency_key}:{command.payload_hash[:8]}"
+            })
+            receipt = self._messaging_connector.send_text(fallback_cmd, connection=connection)
         metrics.increment("kawal_message_commands_total", labels={"status": receipt.status.value})
         with connection.cursor() as cursor:
             # Delete any duplicate outbox item produced by record_pending_send to prevent loop

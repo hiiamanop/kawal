@@ -30,7 +30,7 @@ class OutboxRelay:
         self._store = store
         self._simulator = simulator
 
-    def lookup_operation(self, idempotency_key: str) -> TicketReceipt | None:
+    def lookup_operation(self, idempotency_key: str) -> TicketReceipt | Non  e:
         operation = self._simulator.lookup_operation(idempotency_key)
         return operation.receipt if operation is not None else None
 

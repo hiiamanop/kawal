@@ -194,7 +194,12 @@ class OpenWAConnector:
     def send_text(
         self, command: OutboundMessageCommand, connection: Any = None
     ) -> OutboundSendReceipt:
-        send_id, is_new = self._send_ledger.record_pending_send(connection, command)
+        try:
+            send_id, is_new = self._send_ledger.record_pending_send(
+                connection, command, skip_outbox=True
+            )
+        except TypeError:
+            send_id, is_new = self._send_ledger.record_pending_send(connection, command)
         if not is_new:
             existing = self._send_ledger.lookup_by_idempotency_key(
                 connection, command.idempotency_key
