@@ -10,7 +10,7 @@ from services.core.batcher import BatchItem, DynamicBatcher
 from services.core.escalation import EscalationCommand
 from services.core.model_gateway import ModelGateway
 from services.core.opa import OpaPolicyClient
-from services.core.policy import evaluate_ticket_creation
+from services.core.policy import evaluate_ticket_creation, resolve_department_name
 from services.intake.openwa import OpenWAConnector
 from services.outbox.broker import BrokerMessage
 from services.observability import metrics
@@ -116,27 +116,31 @@ class ToolGatewayWorker:
                 """,
                 (receipt.ticket_id, request.case_id, request.tenant_id),
             )
-            try:
-                cursor.execute(
-                    """
-                    INSERT INTO ticket_resolutions (
-                        ticket_id, case_id, tenant_id, status, authority_unit_id,
-                        category, risk, citizen_text, created_at, updated_at
-                    ) VALUES (%s, %s, %s, 'SUBMITTED', %s, %s, %s, %s, clock_timestamp(), clock_timestamp())
-                    ON CONFLICT (ticket_id) DO NOTHING
-                    """,
-                    (
-                        receipt.ticket_id,
-                        request.case_id,
-                        request.tenant_id,
-                        request.assigned_unit,
-                        request.category.value if hasattr(request.category, "value") else str(request.category),
-                        request.risk.value if hasattr(request.risk, "value") else str(request.risk),
-                        request.description,
-                    ),
-                )
-            except Exception:
-                pass
+            dept_name = resolve_department_name(request.category, request.authority_unit_id)
+            for t_id in {f"TKT-{request.case_id}", receipt.ticket_id}:
+                try:
+                    cursor.execute(
+                        """
+                        INSERT INTO ticket_resolutions (
+                            ticket_id, case_id, tenant_id, status, authority_unit_id,
+                            category, risk, citizen_text, created_at, updated_at
+                        ) VALUES (%s, %s, %s, 'SUBMITTED', %s, %s, %s, %s, clock_timestamp(), clock_timestamp())
+                        ON CONFLICT (ticket_id) DO UPDATE SET
+                            authority_unit_id = EXCLUDED.authority_unit_id,
+                            category = EXCLUDED.category
+                        """,
+                        (
+                            t_id,
+                            request.case_id,
+                            request.tenant_id,
+                            dept_name,
+                            request.category.value if hasattr(request.category, "value") else str(request.category),
+                            request.priority.value if hasattr(request.priority, "value") else str(request.priority),
+                            request.description,
+                        ),
+                    )
+                except Exception as exc:
+                    logger.debug("Failed to upsert ticket resolution %s: %s", t_id, exc)
             cursor.execute(
                 """
                 INSERT INTO audit_traces (tenant_id, case_id, event_type, payload)

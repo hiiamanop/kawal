@@ -179,7 +179,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="KAWAL Unified Background Workers Supervisor")
     parser.add_argument(
         "--database-url",
-        default=os.getenv("KAWAL_DATABASE_URL", "postgresql://postgres:postgres@127.0.0.1:54322/postgres"),
+        default=os.getenv("KAWAL_DATABASE_URL", "postgresql://postgres:postgres@127.0.0.1:5432/postgres"),
         help="PostgreSQL DSN",
     )
     parser.add_argument(

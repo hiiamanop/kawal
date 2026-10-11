@@ -409,9 +409,11 @@ class SemanticCacheEngine:
         )
 
         # 4. Duplicate Incident Evaluation
+        category_matches = (category_hint is None or best_entry.category == category_hint)
         if (
             best_sim >= self._duplicate_threshold
             and has_location_overlap
+            and category_matches
             and best_entry.is_active_incident
             and best_entry.ticket_id is not None
         ):
@@ -427,7 +429,7 @@ class SemanticCacheEngine:
             )
 
         # 5. Semantic Causal / Prediction Reuse
-        if best_sim >= self._semantic_threshold:
+        if best_sim >= self._semantic_threshold and category_matches:
             self._store.increment_hit(best_entry.entry_id)
             return CacheLookupResult(
                 hit=True,

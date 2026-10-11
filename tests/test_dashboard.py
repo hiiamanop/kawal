@@ -7,7 +7,7 @@ import pytest
 
 from services.dashboard.app import create_dashboard_app
 
-DATABASE_URL = os.getenv("KAWAL_DATABASE_URL", "postgresql://postgres:postgres@127.0.0.1:54322/postgres")
+DATABASE_URL = os.getenv("KAWAL_DATABASE_URL", "postgresql://postgres:postgres@127.0.0.1:5432/postgres")
 
 
 def test_dashboard_index_renders_html() -> None:

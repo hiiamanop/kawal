@@ -44,7 +44,7 @@ from services.core.decision import (
 )
 from services.core.escalation import EscalationCommand, build_anonymized_escalation_command
 from services.core.orchestrator import build_ticket_command
-from services.core.policy import AUTHORITY_DIRECTORY
+from services.core.policy import AUTHORITY_DIRECTORY, resolve_department_name
 from services.intelligence.causality import analyze_causality
 from services.intelligence.completeness import resolve_location_completeness
 from services.intelligence.semantic_cache import CacheLookupResult, SemanticCacheEngine
@@ -264,6 +264,7 @@ class CaseProcessingPipeline:
             tenant_id=snapshot.tenant_id,
             text=text,
             location_hints=loc_hints,
+            category_hint=category,
         )
 
         if (
@@ -328,7 +329,12 @@ class CaseProcessingPipeline:
                 },
             )
 
-        if cache_lookup.hit and cache_lookup.suggested_action == "REUSE_ANALYSIS" and cache_lookup.matched_entry is not None:
+        if (
+            cache_lookup.hit
+            and cache_lookup.suggested_action == "REUSE_ANALYSIS"
+            and cache_lookup.matched_entry is not None
+            and (cache_lookup.match_type == "EXACT" or pred is None)
+        ):
             if cache_lookup.matched_entry.root_cause_category is not None:
                 category = cache_lookup.matched_entry.root_cause_category
             elif cache_lookup.matched_entry.category is not None:
@@ -411,6 +417,8 @@ class CaseProcessingPipeline:
             is_complaint = False
 
         required_complete = (completeness == "SUFFICIENT")
+        if snapshot.revision >= 3 and is_complaint and len(text.strip()) > 15:
+            required_complete = True
         evidence_covered = (len(ml_res.entities) > 0 or len(text.strip()) > 20)
 
         escalation_candidates = ()
@@ -459,9 +467,10 @@ class CaseProcessingPipeline:
                 last_msg_src = snapshot.messages[-1].source_message_id if snapshot.messages else None
                 public_base = os.getenv("KAWAL_PUBLIC_BASE_URL", "http://localhost:8088").rstrip("/")
                 tracking_url = f"{public_base}/track/{ticket_id_val}"
+                authority_name = resolve_department_name(category, authority_unit_id)
                 reply_text = (
                     f"Terima kasih atas laporan Anda. Laporan mengenai {category.value} telah kami terima "
-                    f"dan diteruskan ke {authority_unit_id} dengan ID Tiket #{ticket_id_val}.\n\n"
+                    f"dan diteruskan ke {authority_name} dengan ID Tiket #{ticket_id_val}.\n\n"
                     f"Pantau perkembangan penanganan laporan Anda secara langsung melalui tautan:\n{tracking_url}"
                 )
                 payload_hash = hashlib.sha256(reply_text.encode("utf-8")).hexdigest()

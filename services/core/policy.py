@@ -42,6 +42,56 @@ AUTHORITY_DIRECTORY = {
     ("JUR-FICT-03", Category.PARKS_HOUSING): "UNIT-DPKP-03",
 }
 
+CATEGORY_DEPARTMENT_NAMES: dict[Category | str, str] = {
+    Category.ROAD: "Dinas Sumber Daya Air dan Bina Marga (DSDABM)",
+    Category.DRAINAGE_FLOOD: "Dinas Sumber Daya Air dan Bina Marga (DSDABM)",
+    Category.WASTE: "Dinas Lingkungan Hidup (DLH)",
+    Category.CLEAN_WATER: "Perumda Tirtawening (PDAM)",
+    Category.CIVIL_ADMIN: "Dinas Kependudukan dan Pencatatan Sipil (Disdukcapil)",
+    Category.HEALTH_SERVICE: "Dinas Kesehatan (Dinkes)",
+    Category.PUBLIC_ORDER: "Satuan Polisi Pamong Praja (Satpol PP)",
+    Category.TRANSPORTATION: "Dinas Perhubungan (Dishub)",
+    Category.FIRE_RESCUE: "Dinas Kebakaran dan Penanggulangan Bencana (Diskar PB)",
+    Category.SOCIAL_AFFAIRS: "Dinas Sosial (Dinsos)",
+    Category.EDUCATION: "Dinas Pendidikan (Disdik)",
+    Category.PARKS_HOUSING: "Dinas Perumahan dan Kawasan Permukiman (DPKP)",
+}
+
+UNIT_DEPARTMENT_NAMES: dict[str, str] = {
+    "UNIT-SDA-01": "Dinas Sumber Daya Air dan Bina Marga (DSDABM)",
+    "UNIT-BINA-MARGA-01": "Dinas Sumber Daya Air dan Bina Marga (DSDABM)",
+    "UNIT-LH-01": "Dinas Lingkungan Hidup (DLH)",
+    "UNIT-PDAM-01": "Perumda Tirtawening (PDAM)",
+    "UNIT-DUKCAPIL-01": "Dinas Kependudukan dan Pencatatan Sipil (Disdukcapil)",
+    "UNIT-DINKES-01": "Dinas Kesehatan (Dinkes)",
+    "UNIT-SATPOL-PP-01": "Satuan Polisi Pamong Praja (Satpol PP)",
+    "UNIT-DISHUB-01": "Dinas Perhubungan (Dishub)",
+    "UNIT-DISKAR-01": "Dinas Kebakaran dan Penanggulangan Bencana (Diskar PB)",
+    "UNIT-DINSOS-01": "Dinas Sosial (Dinsos)",
+    "UNIT-DISDIK-01": "Dinas Pendidikan (Disdik)",
+    "UNIT-DPKP-01": "Dinas Perumahan dan Kawasan Permukiman (DPKP)",
+}
+
+
+def resolve_department_name(category: Category | str | None, unit_id: str | None = None) -> str:
+    """Resolve human-readable municipal department name from category and technical unit."""
+    if unit_id and unit_id in UNIT_DEPARTMENT_NAMES:
+        return UNIT_DEPARTMENT_NAMES[unit_id]
+    if category is not None:
+        cat_key = (
+            category
+            if isinstance(category, Category)
+            else Category(category)
+            if category in Category._value2member_map_
+            else category
+        )
+        if cat_key in CATEGORY_DEPARTMENT_NAMES:
+            return CATEGORY_DEPARTMENT_NAMES[cat_key]
+        for c, name in CATEGORY_DEPARTMENT_NAMES.items():
+            if getattr(c, "value", str(c)) == str(category):
+                return name
+    return unit_id or "Dinas Terkait"
+
 
 def evaluate_ticket_creation(input_: PolicyInput) -> PolicyResult:
     try:

@@ -14,6 +14,8 @@ from pydantic import BaseModel, Field
 import psycopg
 from psycopg.rows import dict_row
 
+from services.core.policy import resolve_department_name
+
 logger = logging.getLogger("dashboard")
 
 
@@ -669,7 +671,7 @@ ADMIN_PORTAL_TEMPLATE = """<!DOCTYPE html>
                                 #${ticketId}
                                 <br><a href="/track/${ticketId}" target="_blank" class="text-sky-400 hover:underline text-[11px]">Portal Pelacakan</a>
                             </td>
-                            <td class="px-6 py-3.5 text-xs text-slate-200 font-medium">Dinas Terkait (${r.category})</td>
+                            <td class="px-6 py-3.5 text-xs text-slate-200 font-medium">${r.authority_unit_id || 'Dinas Terkait'}</td>
                             <td class="px-6 py-3.5">
                                 <span class="px-2 py-0.5 rounded text-xs bg-slate-800 text-slate-200">${r.category}</span>
                                 <span class="px-1.5 py-0.5 ml-1 rounded text-[10px] ${r.risk === 'HIGH' || r.risk === 'URGENT' ? 'bg-rose-950 text-rose-300' : 'bg-slate-800 text-slate-400'}">${r.risk}</span>
@@ -765,6 +767,94 @@ def create_dashboard_app(database_url: str) -> FastAPI:
     def index_page() -> str:
         return HTML_TEMPLATE
 
+    @app.get("/qr", response_class=HTMLResponse)
+    def view_qr_page() -> str:
+        import os, urllib.request, json
+        try:
+            import dotenv
+            dotenv.load_dotenv()
+        except ImportError:
+            pass
+        try:
+            session_id = os.getenv("KAWAL_OPENWA_SESSION_ID", "64ec8171-37c3-4839-aa66-789ad1bb1511")
+            api_key = os.getenv("KAWAL_OPENWA_API_KEY", "owa_k1_8a43beff838e4c9b0a7636840dc822d35d16839f2ebaceab20e0a2b479f1991a")
+            base_url = os.getenv("KAWAL_OPENWA_BASE_URL", "http://127.0.0.1:2785").rstrip("/")
+
+            # Check session status first
+            req_status = urllib.request.Request(
+                f"{base_url}/api/sessions/{session_id}",
+                headers={"X-Api-Key": api_key},
+            )
+            with urllib.request.urlopen(req_status, timeout=3.0) as resp:
+                session_data = json.loads(resp.read().decode())
+                status = session_data.get("status")
+                phone = session_data.get("phone") or "+6281928533753"
+
+            if status == "ready":
+                return f"""<!DOCTYPE html>
+                <html>
+                <head>
+                    <title>WhatsApp Terhubung - KAWAL</title>
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                    <script src="https://cdn.tailwindcss.com"></script>
+                </head>
+                <body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-4 font-sans">
+                    <div class="bg-slate-800 p-8 rounded-2xl max-w-sm w-full text-center border border-emerald-500/50 shadow-2xl">
+                        <div class="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                            ✓
+                        </div>
+                        <h1 class="text-xl font-bold mb-1 text-emerald-400">WhatsApp Terhubung!</h1>
+                        <p class="text-sm text-slate-300 mb-4">Sesi bot KAWAL sudah aktif dan siap menerima aduan.</p>
+                        <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-700 font-mono text-xs text-slate-300 mb-6">
+                            Nomor: <span class="text-emerald-400 font-semibold">{phone}</span><br>
+                            Status: <span class="text-emerald-400 font-semibold">READY</span>
+                        </div>
+                        <a href="/admin/tickets" class="inline-block w-full py-2.5 px-4 bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-bold rounded-xl transition text-sm">
+                            Buka Dasbor Tiket
+                        </a>
+                    </div>
+                </body>
+                </html>"""
+
+            req = urllib.request.Request(
+                f"{base_url}/api/sessions/{session_id}/qr",
+                headers={"X-Api-Key": api_key},
+            )
+            with urllib.request.urlopen(req, timeout=3.0) as resp:
+                data = json.loads(resp.read().decode())
+                qr_b64 = data.get("qrCode", "")
+                st = data.get("status", "unknown")
+            return f"""<!DOCTYPE html>
+            <html>
+            <head>
+                <title>Scan QR - KAWAL WhatsApp</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <script src="https://cdn.tailwindcss.com"></script>
+                <meta http-equiv="refresh" content="5">
+            </head>
+            <body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-4 font-sans">
+                <div class="bg-slate-800 p-8 rounded-2xl max-w-sm w-full text-center border border-slate-700 shadow-2xl">
+                    <h1 class="text-xl font-bold mb-1 text-emerald-400">Tautkan WhatsApp KAWAL</h1>
+                    <p class="text-xs text-slate-400 mb-6">Status: <span class="font-mono font-semibold text-amber-400">{st}</span></p>
+                    <div class="bg-white p-3 rounded-2xl inline-block mb-6 shadow-md">
+                        <img src="{qr_b64}" alt="QR Code WhatsApp" class="w-64 h-64 object-contain">
+                    </div>
+                    <div class="text-xs text-slate-300 space-y-1 text-left bg-slate-900/60 p-3 rounded-xl border border-slate-700/50">
+                        <p class="font-semibold text-emerald-400 mb-1">Cara scan di HP:</p>
+                        <p>1. Buka aplikasi WhatsApp</p>
+                        <p>2. Tekan <b>Titik Tiga</b> &gt; <b>Perangkat Tertaut</b></p>
+                        <p>3. Tekan <b>Tautkan Perangkat</b> dan arahkan kamera ke QR ini.</p>
+                    </div>
+                    <p class="text-[10px] text-slate-500 mt-4">Halaman merefresh QR otomatis setiap 5 detik.</p>
+                </div>
+            </body>
+            </html>"""
+        except Exception as exc:
+            return f"""<div style="font-family: sans-serif; padding: 20px; color: #ef4444;">
+                <h3>Gagal memuat QR Code:</h3><pre>{exc}</pre>
+                <p>Pastikan sesi OpenWA aktif.</p>
+            </div>"""
+
     @app.get("/admin/tickets", response_class=HTMLResponse)
     def admin_tickets_page() -> str:
         return ADMIN_PORTAL_TEMPLATE
@@ -800,7 +890,7 @@ def create_dashboard_app(database_url: str) -> FastAPI:
                             "status": t_row["status"],
                             "category": t_row["category"] or "PUBLIC_SERVICE",
                             "risk": t_row["risk"] or "HIGH",
-                            "authority_unit_id": t_row["authority_unit_id"] or "Dinas Terkait",
+                            "authority_unit_id": resolve_department_name(t_row.get("category"), t_row.get("authority_unit_id")),
                             "citizen_text": t_row["citizen_text"] or "",
                             "admin_notes": t_row["admin_notes"] or "",
                             "resolution_photo_url": t_row["resolution_photo_url"] or "",
@@ -846,7 +936,7 @@ def create_dashboard_app(database_url: str) -> FastAPI:
                             "status": status_val,
                             "category": row["category"],
                             "risk": row["risk"],
-                            "authority_unit_id": f"Dinas Pengampu ({row['category']})",
+                            "authority_unit_id": resolve_department_name(row.get("category")),
                             "citizen_text": citizen_text,
                             "admin_notes": "",
                             "resolution_photo_url": "",
@@ -968,6 +1058,7 @@ def create_dashboard_app(database_url: str) -> FastAPI:
                     cases_list = []
                     for c in cases:
                         c_dict = dict(c)
+                        c_dict["authority_unit_id"] = resolve_department_name(c_dict.get("category"))
                         # Deterministic coordinate mapping centered around Bandung (-6.9175, 107.6191)
                         h = int(hashlib.md5(str(c_dict["case_id"]).encode("utf-8")).hexdigest()[:6], 16)
                         lat_offset = ((h % 100) - 50) * 0.0008
