@@ -76,14 +76,16 @@ def test_analyze_image_error_resilience() -> None:
     assert "error" in res.raw_response
 
 
-def test_analyze_image_live_omniroute() -> None:
-    analyzer = VisionAnalyzer(model_id="antigravity/gemini-3-flash")
-    try:
-        res = analyzer.analyze_image(
-            image_data=TINY_PNG_BASE64,
-            citizen_text="lapor aspal berlubang parah",
-        )
-        assert isinstance(res, VisionAnalysisResult)
-        assert len(res.visual_description) > 0
-    except Exception as exc:
-        pytest.skip(f"OmniRoute proxy offline or unreachable: {exc}")
+def test_analyze_image_live_openrouter() -> None:
+    analyzer = VisionAnalyzer()
+    if not analyzer.api_key:
+        pytest.skip("OPENROUTER_API_KEY is not configured")
+
+    res = analyzer.analyze_image(
+        image_data=TINY_PNG_BASE64,
+        citizen_text="lapor aspal berlubang parah",
+    )
+    if res.raw_response.get("error"):
+        pytest.skip(f"OpenRouter unreachable: {res.raw_response['error']}")
+    assert isinstance(res, VisionAnalysisResult)
+    assert len(res.visual_description) > 0

@@ -155,7 +155,7 @@ def create_live_intake_app(connector: OpenWAConnector) -> FastAPI:
     vision_analyzer = None
     try:
         from services.intelligence.vision import VisionAnalyzer
-        vision_analyzer = VisionAnalyzer(model_id="antigravity/gemini-3-flash")
+        vision_analyzer = VisionAnalyzer()
     except Exception:
         vision_analyzer = None
 

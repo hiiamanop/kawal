@@ -3,7 +3,6 @@ from __future__ import annotations
 import base64
 import json
 import logging
-import os
 import re
 from typing import Any, Literal
 import urllib.error
@@ -12,6 +11,12 @@ import urllib.request
 from pydantic import BaseModel, ConfigDict, Field
 
 from contracts.models import Category
+from services.llm_config import (
+    openrouter_base_url,
+    openrouter_headers,
+    openrouter_model,
+    openrouter_model_for,
+)
 
 logger = logging.getLogger("vision-analyzer")
 
@@ -31,21 +36,25 @@ class VisionAnalysisResult(BaseModel):
 class VisionAnalyzer:
     """Multimodal Vision-Language Model analyzer for citizen complaint images.
 
-    Connects via OmniRoute / OpenAI-compatible endpoint using models like
-    antigravity/gemini-3-flash or auto/gemini.
+    Every image is sent to OpenRouter's OpenAI-compatible endpoint. The model
+    defaults to ``KAWAL_OPENROUTER_VISION_MODEL`` and falls back to the shared
+    ``KAWAL_OPENROUTER_MODEL``.
     """
 
     def __init__(
         self,
-        model_id: str = "antigravity/gemini-3-flash",
+        model_id: str | None = None,
         base_url: str | None = None,
         api_key: str | None = None,
-        timeout_seconds: float = 20.0,
+        timeout_seconds: float = 30.0,
     ) -> None:
-        self.model_id = model_id
-        self.base_url = (base_url or os.getenv("KAWAL_OMNIROUTE_URL", "http://localhost:20128/v1")).rstrip("/")
-        self.api_key = api_key or os.getenv("OMNIROUTE_API_KEY", "sk-496a5f477e68f0e1-1dd25c-1f86deed")
+        self.model_id = model_id or openrouter_model_for("vision") or openrouter_model()
+        self.base_url = openrouter_base_url(base_url)
+        self.api_key = api_key
         self.timeout_seconds = timeout_seconds
+
+    def _headers(self) -> dict[str, str]:
+        return openrouter_headers(self.api_key)
 
     def analyze_image(
         self,
@@ -103,10 +112,7 @@ class VisionAnalyzer:
         req = urllib.request.Request(
             f"{self.base_url}/chat/completions",
             data=json.dumps(payload).encode("utf-8"),
-            headers={
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            },
+            headers=self._headers(),
             method="POST",
         )
 

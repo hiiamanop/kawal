@@ -107,3 +107,33 @@ def test_ticket_detail_and_update_lifecycle() -> None:
     assert verified["status"] == "RESOLVED"
     assert "ditambal" in verified["admin_notes"]
     assert verified["resolution_photo_url"] == "https://example.com/proof-road-fixed.jpg"
+
+
+def test_social_posts_endpoint_returns_collected_items() -> None:
+    from uuid import uuid4
+    import psycopg
+
+    app = create_dashboard_app(database_url=DATABASE_URL)
+    client = TestClient(app)
+
+    external_id = f"test-web-{uuid4().hex[:10]}"
+    try:
+        with psycopg.connect(DATABASE_URL) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO social_media_posts (platform, external_id, query, url, author, text)
+                    VALUES ('web', %s, 'banjir bandung', 'https://example.com/aduan', 'warga', 'Banjir di Tegalega')
+                    ON CONFLICT (platform, external_id) DO NOTHING
+                    """,
+                    (external_id,),
+                )
+            conn.commit()
+    except Exception as exc:  # pragma: no cover - environment without the migration
+        pytest.skip(f"social_media_posts unavailable: {exc}")
+
+    response = client.get("/api/social/posts?platform=web")
+    assert response.status_code == 200
+    data = response.json()
+    assert "posts" in data
+    assert any(post["external_id"] == external_id for post in data["posts"])

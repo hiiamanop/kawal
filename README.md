@@ -128,7 +128,7 @@ kawal/
 ├── contracts/
 │   └── models.py               # Pydantic data contracts (immutable, strictly typed)
 ├── infra/
-│   ├── migrations/             # PostgreSQL DDL migrations (001 - 010)
+│   ├── migrations/             # PostgreSQL DDL migrations (001 - 013)
 │   └── docker-compose.yml      # Redpanda, OPA, OpenWA, PostgreSQL
 ├── scripts/
 │   ├── run_all_workers.py      # Multi-process supervisor for all background daemons
@@ -140,7 +140,7 @@ kawal/
 │   ├── core/
 │   │   ├── pipeline.py         # 4-Mode Decision Engine & incident orchestrator
 │   │   ├── batcher.py          # Dynamic Micro-Batcher & Single-Flight Concurrency Lock
-│   │   ├── model_gateway.py    # LLM Gateway (OmniRoute / Ollama) with PII Gating
+│   │   ├── model_gateway.py    # OpenRouter LLM Gateway with PII/egress gating
 │   │   └── opa.py              # Open Policy Agent client
 │   ├── intelligence/
 │   │   ├── embedder.py         # IndoBERT dense vector embedder (768-dim)
@@ -149,6 +149,7 @@ kawal/
 │   │   └── causality.py        # Causal disentanglement & root-cause resolver
 │   ├── intake/
 │   │   ├── openwa.py           # OpenWA normalizer & WhatsApp HTTP transport
+│   │   ├── social_reach.py     # Agent Reach social-media collector (X/FB/IG)
 │   │   ├── assembly.py         # Multi-bubble conversation assembler & timers
 │   │   └── send_ledger.py      # Idempotent send ledger preventing duplicate deliveries
 │   └── dashboard/
@@ -186,13 +187,52 @@ cp .env.example .env
 ```
 Ensure required variables are populated:
 ```env
-KAWAL_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
+KAWAL_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres
 KAWAL_OPENWA_BASE_URL=http://127.0.0.1:2785
 KAWAL_OPENWA_API_KEY=owa_k1_...
 KAWAL_OPENWA_SESSION_ID=...
-KAWAL_OMNIROUTE_URL=http://localhost:20128/v1
-OMNIROUTE_API_KEY=sk-...
+
+# OpenRouter is the only remote model provider.
+KAWAL_OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+OPENROUTER_API_KEY=sk-or-v1-...
+KAWAL_OPENROUTER_MODEL=google/gemini-2.5-flash
+KAWAL_OPENROUTER_VISION_MODEL=google/gemini-2.5-flash
+
+# Agent Reach social-media collection.
+KAWAL_AGENT_REACH_BIN=agent-reach
+KAWAL_SOCIAL_CHANNELS=twitter,facebook,instagram
 ```
+
+All remote LLM/VLM calls (gated escalation, causal disambiguation, and image
+analysis) go through OpenRouter. Local IndoBERT classification, NER, and
+embedding models stay on-device.
+
+### 3a. Install Agent Reach (social media)
+Agent Reach is a separate read-only CLI (not a PyPI dependency):
+```bash
+uv tool install https://github.com/Panniantong/Agent-Reach/releases/latest/download/agent-reach.zip
+agent-reach setup
+agent-reach channels
+```
+Optional/experimental social channels need a one-time login performed by you:
+```bash
+agent-reach login twitter
+agent-reach login facebook
+agent-reach login instagram
+```
+Then collect public posts into `social_media_posts`:
+```bash
+python scripts/run_social_collector.py --once
+# or inspect without writing to PostgreSQL
+python scripts/run_social_collector.py --dry-run --query "banjir bandung"
+```
+Collected items are exposed at `http://localhost:8088/api/social/posts`.
+
+The `web` channel works immediately through Agent Reach. X/Twitter, Facebook,
+and Instagram are Agent Reach's experimental browser channels: they require a
+local Chrome/Chromium plus a one-time login, and the collector reports
+`NEED_SETUP`/`NEED_LOGIN` per source instead of failing the whole cycle. Check
+readiness with `agent-reach doctor` and `agent-reach check twitter facebook instagram`.
 
 ### 4. Start Infrastructure Containers
 ```bash
@@ -225,7 +265,9 @@ pytest tests/ -v
 
 ### Test Coverage Highlights:
 - `test_batcher.py`: Verifies single-flight concurrency locks, priority sorting, and multi-item micro-batching.
-- `test_vision.py`: Tests VLM multimodal image comprehension via OmniRoute.
+- `test_vision.py`: Tests VLM multimodal image comprehension via OpenRouter.
+- `test_openrouter_adapter.py`: Verifies OpenRouter adapter configuration and egress gating.
+- `test_social_reach.py`: Verifies Agent Reach JSON parsing, normalization, failure isolation, and deduplication.
 - `test_semantic_cache.py`: Verifies exact hash hits, dense vector similarity search, and tenant data isolation.
 - `test_pipeline_semantic_cache.py`: Verifies incident clustering across duplicate complaints on the same street.
 - `test_end_to_end_pipeline.py`: Full lifecycle from raw citizen message to verified ticket receipt.
@@ -242,7 +284,7 @@ pytest tests/ -v
 | **Semantic Cache** | IndoBERT Dense Embedding + Postgres | `~15 ms` | $0.00 |
 | **Local Classification & NER** | IndoBERT Multitask ONNX (CPU) | `~40–70 ms` | $0.00 |
 | **Causal Disentanglement** | Heuristic Regex + Semantic Anchoring | `~5 ms` | $0.00 |
-| **VLM Multimodal Image Analysis** | VLM via OmniRoute | `~1.8 s` | Micro-API Cost |
+| **VLM Multimodal Image Analysis** | VLM via OpenRouter | `~1.8 s` | Micro-API Cost |
 | **Micro-Batch LLM Escalation** | Dynamic Batcher (5 items/call) | `~2.0 s total` (`~400 ms`/item) | 80% Token Savings |
 
 ---

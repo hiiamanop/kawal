@@ -43,7 +43,7 @@ class DynamicBatcher:
     """Combines concurrent escalation requests into single-flight micro-batches.
 
     Guarantees:
-    1. Single-Flight Concurrency: strictly <= 1 request to OmniRoute at any time.
+    1. Single-Flight Concurrency: strictly <= 1 request to OpenRouter at any time.
     2. Priority Ordering: URGENT and HIGH risk complaints jump to the front.
     3. High Throughput: 1 LLM request resolves up to `max_batch_size` complaints at once.
     4. Fail-closed PII gating: unauthorized requests are excluded before network egress.

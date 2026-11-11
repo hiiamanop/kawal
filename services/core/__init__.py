@@ -23,7 +23,7 @@ from services.core.decision import (
     expected_value_of_information,
 )
 from services.core.escalation import EscalationCommand, build_anonymized_escalation_command
-from services.core.model_gateway import EscalationResult, ModelGateway, OllamaLocalAdapter, OmniRouteAdapter
+from services.core.model_gateway import EscalationResult, ModelGateway, OpenRouterAdapter
 from services.core.opa import OpaPolicyClient
 from services.core.orchestrator import (
     CATEGORY_TITLES,
@@ -57,8 +57,8 @@ __all__ = [
     "EscalationCommand",
     "EscalationResult",
     "ModelGateway",
-    "OllamaLocalAdapter",
     "OmniRouteAdapter",
+    "OpenRouterAdapter",
     "OpaPolicyClient",
     "PipelineResult",
     "ResolutionCapability",

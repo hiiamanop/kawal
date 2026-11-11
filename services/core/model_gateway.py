@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import json
-import os
 from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 from services.core.decision import EgressDecision, EgressRequest, evaluate_egress
+from services.llm_config import (
+    openrouter_base_url,
+    openrouter_headers,
+    openrouter_model,
+)
 
 
 class EscalationResult(BaseModel):
@@ -28,50 +32,44 @@ class EscalationAdapter(Protocol):
     def run(self, prompt: str) -> EscalationResult: ...
 
 
-class OllamaLocalAdapter:
-    provider = "local"
+class OpenRouterAdapter:
+    """Escalation adapter for OpenRouter's OpenAI-compatible chat completions API.
 
-    def __init__(self, model_id: str, base_url: str = "http://127.0.0.1:11434", timeout_seconds: float = 15.0) -> None:
-        self.model_id = model_id
-        self._url = f"{base_url.rstrip('/')}/api/generate"
-        self._timeout_seconds = timeout_seconds
-
-    def run(self, prompt: str) -> EscalationResult:
-        request = Request(
-            self._url,
-            data=json.dumps({"model": self.model_id, "prompt": prompt, "stream": False}, separators=(",", ":")).encode("utf-8"),
-            headers={"Content-Type": "application/json", "Accept": "application/json"},
-            method="POST",
-        )
-        try:
-            with urlopen(request, timeout=self._timeout_seconds) as response:
-                if response.status != 200:
-                    return EscalationResult(status="UNAVAILABLE", provider=self.provider, model_id=self.model_id, reason="OLLAMA_HTTP_ERROR")
-                body = json.loads(response.read().decode("utf-8"))
-            content = body.get("response")
-            if not isinstance(content, str) or not content.strip():
-                return EscalationResult(status="UNAVAILABLE", provider=self.provider, model_id=self.model_id, reason="OLLAMA_INVALID_RESPONSE")
-            return EscalationResult(status="SUCCEEDED", provider=self.provider, model_id=self.model_id, content=content.strip())
-        except (HTTPError, URLError, TimeoutError, OSError, ValueError, json.JSONDecodeError):
-            return EscalationResult(status="UNAVAILABLE", provider=self.provider, model_id=self.model_id, reason="OLLAMA_UNAVAILABLE")
-
-
-class OmniRouteAdapter:
-    """Escalation adapter communicating with OmniRoute proxy (OpenAI-compatible) at localhost:20128."""
+    OpenRouter is the only remote provider used by KAWAL. The adapter keeps the
+    ``provider`` identity as ``openai`` because OpenRouter speaks the OpenAI
+    wire protocol and the deterministic egress allowlist evaluates providers by
+    protocol family, not by vendor hostname.
+    """
 
     provider = "openai"
 
     def __init__(
         self,
-        model_id: str = "gpt-4o-mini",
-        base_url: str = "http://localhost:20128/v1",
+        model_id: str | None = None,
+        base_url: str | None = None,
         api_key: str | None = None,
-        timeout_seconds: float = 15.0,
+        timeout_seconds: float = 30.0,
     ) -> None:
-        self.model_id = model_id
-        self._url = f"{base_url.rstrip('/')}/chat/completions"
-        self._api_key = api_key or os.environ.get("OMNIROUTE_API_KEY", "sk-496a5f477e68f0e1-1dd25c-1f86deed")
+        self.model_id = openrouter_model(model_id)
+        self._url = f"{openrouter_base_url(base_url)}/chat/completions"
+        self._api_key = api_key
         self._timeout_seconds = timeout_seconds
+
+    def _headers(self) -> dict[str, str]:
+        return openrouter_headers(self._api_key)
+
+    def _post(self, payload: dict[str, Any]) -> dict[str, Any] | None:
+        request = Request(
+            self._url,
+            data=json.dumps(payload, separators=(",", ":")).encode("utf-8"),
+            headers=self._headers(),
+            method="POST",
+        )
+        with urlopen(request, timeout=self._timeout_seconds) as response:
+            if response.status != 200:
+                return None
+            body = json.loads(response.read().decode("utf-8"))
+        return body if isinstance(body, dict) else None
 
     def run(self, prompt: str) -> EscalationResult:
         payload = {
@@ -79,33 +77,22 @@ class OmniRouteAdapter:
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.0,
         }
-        request = Request(
-            self._url,
-            data=json.dumps(payload, separators=(",", ":")).encode("utf-8"),
-            headers={
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-                "Authorization": f"Bearer {self._api_key}",
-            },
-            method="POST",
-        )
         try:
-            with urlopen(request, timeout=self._timeout_seconds) as response:
-                if response.status != 200:
-                    return EscalationResult(
-                        status="UNAVAILABLE",
-                        provider=self.provider,
-                        model_id=self.model_id,
-                        reason="OMNIROUTE_HTTP_ERROR",
-                    )
-                body = json.loads(response.read().decode("utf-8"))
+            body = self._post(payload)
+            if body is None:
+                return EscalationResult(
+                    status="UNAVAILABLE",
+                    provider=self.provider,
+                    model_id=self.model_id,
+                    reason="OPENROUTER_HTTP_ERROR",
+                )
             choices = body.get("choices")
             if not isinstance(choices, list) or not choices:
                 return EscalationResult(
                     status="UNAVAILABLE",
                     provider=self.provider,
                     model_id=self.model_id,
-                    reason="OMNIROUTE_INVALID_RESPONSE",
+                    reason="OPENROUTER_INVALID_RESPONSE",
                 )
             message = choices[0].get("message", {})
             content = message.get("content")
@@ -114,7 +101,7 @@ class OmniRouteAdapter:
                     status="UNAVAILABLE",
                     provider=self.provider,
                     model_id=self.model_id,
-                    reason="OMNIROUTE_EMPTY_RESPONSE",
+                    reason="OPENROUTER_EMPTY_RESPONSE",
                 )
             return EscalationResult(
                 status="SUCCEEDED",
@@ -127,7 +114,7 @@ class OmniRouteAdapter:
                 status="UNAVAILABLE",
                 provider=self.provider,
                 model_id=self.model_id,
-                reason="OMNIROUTE_UNAVAILABLE",
+                reason="OPENROUTER_UNAVAILABLE",
             )
 
     def disambiguate_complaint(self, text: str) -> dict[str, Any] | None:
@@ -153,21 +140,10 @@ class OmniRouteAdapter:
             "response_format": {"type": "json_object"},
             "temperature": 0.0,
         }
-        request = Request(
-            self._url,
-            data=json.dumps(payload, separators=(",", ":")).encode("utf-8"),
-            headers={
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-                "Authorization": f"Bearer {self._api_key}",
-            },
-            method="POST",
-        )
         try:
-            with urlopen(request, timeout=self._timeout_seconds) as response:
-                if response.status != 200:
-                    return None
-                body = json.loads(response.read().decode("utf-8"))
+            body = self._post(payload)
+            if body is None:
+                return None
             choices = body.get("choices")
             if not choices:
                 return None
@@ -175,6 +151,12 @@ class OmniRouteAdapter:
             return json.loads(content)
         except Exception:
             return None
+
+
+# Backwards-compatible alias for scripts and integrations written before the
+# OpenRouter migration. New code should use ``OpenRouterAdapter``.
+OmniRouteAdapter = OpenRouterAdapter
+
 
 
 class ModelGateway:

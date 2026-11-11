@@ -32,7 +32,7 @@ def test_landmark_disentanglement_road_near_hospital_multi_turn() -> None:
 
     # Turn 1: Informal citizen complaint with landmark "rs immanuel"
     msg1 = (
-        "halo min punten pisan, ini jalan kopo deket rs immanuel aspalnya ancur parah "
+        "halo min punten pisan, ini aspal di deket rs immanuel ancur parah "
         "bolong2 gede bgt, semalem ada bapak2 jatoh dari motor pas ujan. tolong bgt segera ditambal bahaya"
     )
     res1 = pipeline.process_messages(

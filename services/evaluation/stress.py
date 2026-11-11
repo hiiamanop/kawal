@@ -185,7 +185,14 @@ def run_stress_profile(
     failed = len(errors)
     all_accounted = (successful + failed) == profile.target_cases
 
-    ticket_ids = [r.ticket_receipt.ticket_id for r in results if r.ticket_receipt is not None]
+    # Linked duplicate incidents intentionally reuse a parent ticket. They must
+    # not be counted as accidentally duplicated ticket creations.
+    ticket_ids = [
+        r.ticket_receipt.ticket_id
+        for r in results
+        if r.ticket_receipt is not None
+        and "DUPLICATE_INCIDENT_LINKED" not in r.reason_codes
+    ]
     unique_tickets = len(set(ticket_ids))
     duplicate_tickets = len(ticket_ids) - unique_tickets
 

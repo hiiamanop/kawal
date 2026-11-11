@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from infra.db import TransactionRunner
 from services.core.gateway_worker import ToolGatewayWorker
-from services.core.model_gateway import ModelGateway, OllamaLocalAdapter, OmniRouteAdapter
+from services.core.model_gateway import ModelGateway, OpenRouterAdapter
 from services.core.opa import OpaPolicyClient
 from services.intake.openwa import OpenWAConnector, OpenWAHttpTransport
 from services.intake.send_ledger import SendLedgerStore
@@ -74,24 +74,29 @@ def main() -> int:
         help="Use the in-process policy evaluator instead of OPA",
     )
     parser.add_argument(
+        "--openrouter-model",
+        default=os.getenv("KAWAL_OPENROUTER_MODEL") or os.getenv("OPENROUTER_MODEL"),
+        help="OpenRouter model used for gated escalation commands (e.g. google/gemini-2.5-flash)",
+    )
+    parser.add_argument(
+        "--openrouter-url",
+        default=os.getenv("KAWAL_OPENROUTER_BASE_URL") or os.getenv("OPENROUTER_BASE_URL"),
+        help="OpenRouter API base URL",
+    )
+    parser.add_argument(
+        "--openrouter-api-key",
+        default=None,
+        help="OpenRouter API key (defaults to OPENROUTER_API_KEY)",
+    )
+    parser.add_argument(
         "--omniroute-model",
-        default=os.getenv("KAWAL_OMNIROUTE_MODEL"),
-        help="Optional OmniRoute model (e.g. gpt-4o-mini) for gated escalation commands",
+        default=None,
+        help=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--omniroute-url",
-        default=os.getenv("KAWAL_OMNIROUTE_URL", "http://localhost:20128/v1"),
-        help="OmniRoute base URL",
-    )
-    parser.add_argument(
-        "--ollama-model",
-        default=os.getenv("KAWAL_OLLAMA_MODEL"),
-        help="Optional local Ollama model for gated escalation commands",
-    )
-    parser.add_argument(
-        "--ollama-url",
-        default=os.getenv("KAWAL_OLLAMA_URL", "http://127.0.0.1:11434"),
-        help="Local Ollama API base URL",
+        default=None,
+        help=argparse.SUPPRESS,
     )
     args = parser.parse_args()
 
@@ -122,10 +127,15 @@ def main() -> int:
         messaging_connector = OpenWAConnector()
 
     model_gateway = None
-    if args.omniroute_model:
-        model_gateway = ModelGateway(OmniRouteAdapter(args.omniroute_model, base_url=args.omniroute_url))
-    elif args.ollama_model:
-        model_gateway = ModelGateway(OllamaLocalAdapter(args.ollama_model, base_url=args.ollama_url))
+    openrouter_model_id = args.openrouter_model or args.omniroute_model
+    if openrouter_model_id:
+        model_gateway = ModelGateway(
+            OpenRouterAdapter(
+                openrouter_model_id,
+                base_url=args.openrouter_url or args.omniroute_url,
+                api_key=args.openrouter_api_key,
+            )
+        )
 
     worker = ToolGatewayWorker(
         consumer=consumer,

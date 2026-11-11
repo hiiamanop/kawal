@@ -221,7 +221,7 @@ Panah jobs/results adalah logical flow di atas broker. Worker menyimpan result d
 | Embedding | Multilingual sentence encoder lokal; kandidat `intfloat/multilingual-e5-small` | Pilih lewat dev retrieval benchmark; bukan pengganti IndoBERT classifier |
 | Orchestrator | Custom Python module | Fungsi keputusan teruji; durable state di PostgreSQL |
 | Policy | Open Policy Agent / Rego bundle terversi | Hasil `ALLOW`/`DENY`; evaluator error ditangani fail-closed |
-| Gateway model | `ModelGateway` + OmniRoute; OpenRouter upstream untuk remote | Capability test URL gambar, structured output, usage, privacy sebelum model diaktifkan |
+| Gateway model | `ModelGateway` + OpenRouter untuk seluruh panggilan model remote | Capability test URL gambar, structured output, usage, privacy sebelum model diaktifkan |
 | SDK model | OpenAI-compatible Python client pada adapter | OpenAI Agents SDK tidak menjadi dependency wajib; jika dipakai hanya bounded runner tanpa handoff |
 | State dan objects | Supabase PostgreSQL + private Storage + pgvector | SQL migrations, RLS dan service privileges eksplisit |
 | Event bus | Redpanda, Kafka-compatible client | Separate topics/groups, outbox/inbox |
@@ -229,7 +229,7 @@ Panah jobs/results adalah logical flow di atas broker. Worker menyimpan result d
 | Packaging | Docker Compose dan locked dependencies | Satu deployment penelitian; tidak memerlukan Kubernetes |
 | UI opsional | SvelteKit + TypeScript; Bun untuk tooling | Tidak ada antrean approval |
 
-**Architecture Note / Open Issue — SDK dan gateway lama.** PRD lama mewajibkan agent loop/handoff SDK, sementara desain baru menggunakan agent non-LLM. Memaksakan loop akan menambah orchestration authority dan biaya. Opsi: mempertahankan SDK hanya sebagai bounded model runner, atau memakai client biasa. Rekomendasi: client biasa di `ModelGateway`, mempertahankan OmniRoute sebagai adapter yang sudah dipilih. Fallback ke provider lain hanya melalui gateway dan harus diotorisasi KAWAL; hidden retries/fallback gateway dinonaktifkan atau dilaporkan beserta semua attempt.
+**Architecture Note / Open Issue — SDK dan gateway lama.** PRD lama mewajibkan agent loop/handoff SDK, sementara desain baru menggunakan agent non-LLM. Memaksakan loop akan menambah orchestration authority dan biaya. Opsi: mempertahankan SDK hanya sebagai bounded model runner, atau memakai client biasa. Rekomendasi: client biasa di `ModelGateway` dengan OpenRouter sebagai satu-satunya adapter remote yang dipilih. Fallback ke provider lain hanya melalui gateway dan harus diotorisasi KAWAL; hidden retries/fallback gateway dinonaktifkan atau dilaporkan beserta semua attempt.
 
 ## 17. WhatsApp Intake Architecture
 
@@ -1140,7 +1140,7 @@ Production deployment, pemerintah asli, public dashboard, dan shadow pilot tidak
 | A4 unsafe ablation mengakses external tools | Policy test menghasilkan side effect nyata | Mock boundary dan no real egress credentials |
 | Ambisi melebihi waktu satu engineer | Tesis tertunda | Scope categories/tenant/UI dibatasi, six work packages, buffer |
 
-Open issues yang harus diputuskan saat dev freeze: final checkpoint revision, embedding model/dimension, OpenWA stable version dan receipt capability, OmniRoute–OpenRouter image URL compatibility, provider retention/cost capabilities, authority rubric, threshold/VOI weights, budget/sizing, dan sample size/power. Owner engineering: Ahmad; keputusan rubric/gold penelitian dibahas offline dengan pembimbing/evaluator. Tidak ada open issue yang diselesaikan dengan menambahkan human approval runtime.
+Open issues yang harus diputuskan saat dev freeze: final checkpoint revision, embedding model/dimension, OpenWA stable version dan receipt capability, OpenRouter image URL compatibility, provider retention/cost capabilities, authority rubric, threshold/VOI weights, budget/sizing, dan sample size/power. Owner engineering: Ahmad; keputusan rubric/gold penelitian dibahas offline dengan pembimbing/evaluator. Tidak ada open issue yang diselesaikan dengan menambahkan human approval runtime.
 
 ## 54. Thesis Deliverables
 

@@ -469,7 +469,7 @@ def test_local_runtime_available_with_mock_backend() -> None:
     assert result.prediction is not None
     assert result.prediction.category == "ROAD"
     assert result.prediction.confidence == 0.94
-    assert result.prediction.completeness == "INCOMPLETE"
+    assert result.prediction.completeness == "SUFFICIENT"
     assert len(result.entities) == 2
     assert result.entities[0].label == "B-LOC"
     assert result.entities[0].text == "Jalan Sudirman"

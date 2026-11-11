@@ -138,7 +138,7 @@ def analyze_causality(
                             root_cause_category=effective_root,
                             secondary_category=sec_cat,
                             hazard_escalation_category=priority_cat,
-                            explanation=dis.get("reasoning", "Disambiguasi semantik kausalitas via OmniRoute"),
+                            explanation=dis.get("reasoning", "Disambiguasi semantik kausalitas via OpenRouter"),
                         )
         except Exception:
             pass

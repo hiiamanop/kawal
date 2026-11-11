@@ -87,8 +87,8 @@ def build_worker_commands(
             redpanda_bootstrap,
             "--poll-interval",
             "0.5",
-            "--omniroute-model",
-            "antigravity/gemini-3-flash",
+            "--openrouter-model",
+            os.getenv("KAWAL_OPENROUTER_MODEL") or os.getenv("OPENROUTER_MODEL") or "google/gemini-2.5-flash",
         ],
     }
 

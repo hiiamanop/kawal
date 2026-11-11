@@ -95,7 +95,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
                 <div class="text-slate-400 text-xs font-medium uppercase tracking-wider">Panggilan Cloud LLM Dihindari</div>
                 <div class="text-2xl font-bold mt-1 text-sky-400" id="stat-saved-calls">0 Panggilan</div>
-                <div class="text-xs text-slate-500 mt-1">Beban OmniRoute yang berhasil di-bypass</div>
+                <div class="text-xs text-slate-500 mt-1">Beban OpenRouter yang berhasil di-bypass</div>
             </div>
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
                 <div class="text-slate-400 text-xs font-medium uppercase tracking-wider">Estimasi Penghematan Biaya</div>
@@ -1161,5 +1161,53 @@ def create_dashboard_app(database_url: str) -> FastAPI:
         except Exception as exc:
             logger.warning("Database unavailable for case detail: %s", exc)
             raise HTTPException(status_code=503, detail="Database currently unavailable")
+
+    @app.get("/api/social/posts")
+    def list_social_posts(
+        limit: int = Query(default=50, ge=1, le=200),
+        platform: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Expose social-media items collected through Agent Reach."""
+
+        try:
+            with get_db() as conn:
+                with conn.cursor() as cur:
+                    if platform:
+                        cur.execute(
+                            """
+                            SELECT post_id, platform, external_id, query, url, author,
+                                   text, published_at, fetched_at
+                            FROM social_media_posts
+                            WHERE platform = %s
+                            ORDER BY fetched_at DESC
+                            LIMIT %s
+                            """,
+                            (platform, limit),
+                        )
+                    else:
+                        cur.execute(
+                            """
+                            SELECT post_id, platform, external_id, query, url, author,
+                                   text, published_at, fetched_at
+                            FROM social_media_posts
+                            ORDER BY fetched_at DESC
+                            LIMIT %s
+                            """,
+                            (limit,),
+                        )
+                    rows = cur.fetchall()
+                    posts = []
+                    for row in rows:
+                        item = dict(row)
+                        for key in ("published_at", "fetched_at"):
+                            value = item.get(key)
+                            if hasattr(value, "isoformat"):
+                                item[key] = value.isoformat()
+                        item["post_id"] = str(item["post_id"])
+                        posts.append(item)
+                    return {"posts": posts, "count": len(posts)}
+        except Exception as exc:
+            logger.warning("Database unavailable for social posts: %s", exc)
+            return {"posts": [], "count": 0}
 
     return app
