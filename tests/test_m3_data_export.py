@@ -23,10 +23,13 @@ from services.dataset.generator import load_trajectories_from_jsonl
 from services.dataset.splits import audit_family_splits
 from services.ml.manifest import ArtifactManifest, compute_file_sha256
 
+pytestmark = pytest.mark.research
+
 
 @pytest.fixture(autouse=True)
 def enforce_no_network(monkeypatch: pytest.MonkeyPatch) -> None:
     """Ensure that all tests run strictly offline without network access."""
+
     def _blocked_connect(*args: Any, **kwargs: Any) -> None:
         raise RuntimeError("Network access is strictly forbidden in no-network tests.")
 
@@ -67,7 +70,13 @@ def test_deterministic_generation_reproducibility(tmp_path: Path) -> None:
         corpus_target_lines=300,
     )
 
-    for fname in ("train.jsonl", "dev.jsonl", "test_synthetic.jsonl", "corpus.txt", "sha256sums.txt"):
+    for fname in (
+        "train.jsonl",
+        "dev.jsonl",
+        "test_synthetic.jsonl",
+        "corpus.txt",
+        "sha256sums.txt",
+    ):
         file1 = dir1 / fname
         file2 = dir2 / fname
         assert file1.is_file() and file2.is_file()
@@ -82,8 +91,12 @@ def test_seed_sensitivity_different_hashes(tmp_path: Path) -> None:
     dir1 = tmp_path / "seed_42"
     dir2 = tmp_path / "seed_43"
 
-    generate_and_export_m3_dataset(output_dir=dir1, seed=42, num_scenarios=72, corpus_target_lines=200)
-    generate_and_export_m3_dataset(output_dir=dir2, seed=43, num_scenarios=72, corpus_target_lines=200)
+    generate_and_export_m3_dataset(
+        output_dir=dir1, seed=42, num_scenarios=72, corpus_target_lines=200
+    )
+    generate_and_export_m3_dataset(
+        output_dir=dir2, seed=43, num_scenarios=72, corpus_target_lines=200
+    )
 
     hash1 = compute_file_sha256(dir1 / "train.jsonl")
     hash2 = compute_file_sha256(dir2 / "train.jsonl")
@@ -126,7 +139,9 @@ def test_stratified_category_coverage() -> None:
         split_file = dataset_dir / split_fname
         trajectories = load_trajectories_from_jsonl(split_file)
         cats = {t.category for t in trajectories}
-        assert cats == all_categories, f"Split {split_fname} missing categories: {all_categories - cats}"
+        assert cats == all_categories, (
+            f"Split {split_fname} missing categories: {all_categories - cats}"
+        )
 
 
 def test_multitask_heads_label_coverage_in_all_splits() -> None:
@@ -148,13 +163,22 @@ def test_multitask_heads_label_coverage_in_all_splits() -> None:
         risks = {str(t.world_truth.get("risk")) for t in trajectories}
         completeness = {str(t.world_truth.get("completeness")) for t in trajectories}
 
-        assert intents == expected_intents, f"{split_fname} missing intents: {expected_intents - intents}"
-        assert categories == expected_categories, f"{split_fname} missing categories: {expected_categories - categories}"
-        assert risks == expected_risks, f"{split_fname} missing risks: {expected_risks - risks}"
-        assert completeness == expected_completeness, f"{split_fname} missing completeness: {expected_completeness - completeness}"
+        assert intents == expected_intents, (
+            f"{split_fname} missing intents: {expected_intents - intents}"
+        )
+        assert categories == expected_categories, (
+            f"{split_fname} missing categories: {expected_categories - categories}"
+        )
+        assert risks == expected_risks, (
+            f"{split_fname} missing risks: {expected_risks - risks}"
+        )
+        assert completeness == expected_completeness, (
+            f"{split_fname} missing completeness: {expected_completeness - completeness}"
+        )
 
         # 2. Multitask sample extractor verification
         from scripts.train_multitask import extract_trajectory_multitask_samples
+
         samples = extract_trajectory_multitask_samples(trajectories)
         s_intents = {s["intent"] for s in samples}
         s_categories = {s["category"] for s in samples}
@@ -181,12 +205,18 @@ def test_dataset_manifest_multitask_head_coverage() -> None:
         split_meta = splits.get(split_name, {})
         assert "intents" in split_meta, f"Missing intents in {split_name} manifest"
         assert "risks" in split_meta, f"Missing risks in {split_name} manifest"
-        assert "completeness" in split_meta, f"Missing completeness in {split_name} manifest"
+        assert "completeness" in split_meta, (
+            f"Missing completeness in {split_name} manifest"
+        )
 
         assert set(split_meta["intents"].keys()) == {"COMPLAINT", "INQUIRY", "FEEDBACK"}
         assert set(split_meta["categories"].keys()) == {c.value for c in Category}
         assert set(split_meta["risks"].keys()) == {"LOW", "MEDIUM", "HIGH", "URGENT"}
-        assert set(split_meta["completeness"].keys()) == {"SUFFICIENT", "INCOMPLETE", "AMBIGUOUS"}
+        assert set(split_meta["completeness"].keys()) == {
+            "SUFFICIENT",
+            "INCOMPLETE",
+            "AMBIGUOUS",
+        }
 
 
 def test_synthetic_heldout_clear_labeling() -> None:
@@ -236,14 +266,18 @@ def test_dapt_corpus_quality_and_anti_leak() -> None:
     corpus_lines = load_corpus(corpus_path, pii_scrubbing=True)
     assert len(corpus_lines) >= 1500
 
-    test_trajectories = load_trajectories_from_jsonl(dataset_dir / "test_synthetic.jsonl")
+    test_trajectories = load_trajectories_from_jsonl(
+        dataset_dir / "test_synthetic.jsonl"
+    )
     dev_trajectories = load_trajectories_from_jsonl(dataset_dir / "dev.jsonl")
 
     corpus_violations = audit_corpus_anti_leak(
         corpus_lines=corpus_lines,
         heldout_trajectories=test_trajectories + dev_trajectories,
     )
-    assert len(corpus_violations) == 0, f"Corpus anti-leak failed: {corpus_violations[:3]}"
+    assert len(corpus_violations) == 0, (
+        f"Corpus anti-leak failed: {corpus_violations[:3]}"
+    )
 
 
 def test_artifact_manifest_validation() -> None:
@@ -253,7 +287,9 @@ def test_artifact_manifest_validation() -> None:
     results = manifest.validate_all(dataset_dir)
     assert len(results) >= 7
     for name, res in results.items():
-        assert res.is_valid is True, f"Artifact {name} failed validation: {res.error_message}"
+        assert res.is_valid is True, (
+            f"Artifact {name} failed validation: {res.error_message}"
+        )
         assert res.file_exists is True
 
 
@@ -271,7 +307,9 @@ def test_sha256sums_file_matches_actual_files() -> None:
                 continue
             expected_sha, fname = stripped.split()
             target_path = dataset_dir / fname
-            assert target_path.is_file(), f"File {fname} in sha256sums.txt does not exist"
+            assert target_path.is_file(), (
+                f"File {fname} in sha256sums.txt does not exist"
+            )
             actual_sha = compute_file_sha256(target_path)
             assert actual_sha == expected_sha, f"Hash mismatch for {fname}"
             checked_count += 1
@@ -382,12 +420,25 @@ def test_exported_dataset_grounded_risk_and_ambiguous_evidence() -> None:
         elif risk == "HIGH":
             assert any(
                 w in all_text
-                for w in ("sangat parah", "bahaya", "mendesak", "segera ditangani", "sgr ditangani")
+                for w in (
+                    "sangat parah",
+                    "bahaya",
+                    "mendesak",
+                    "segera ditangani",
+                    "sgr ditangani",
+                )
             ), f"HIGH risk ungrounded in: {all_text}"
         elif risk == "URGENT":
             assert any(
                 w in all_text
-                for w in ("sangat darurat", "darurat parah", "bahaya sekali", "sekarang", "skrg", "darurat sangat mendesak")
+                for w in (
+                    "sangat darurat",
+                    "darurat parah",
+                    "bahaya sekali",
+                    "sekarang",
+                    "skrg",
+                    "darurat sangat mendesak",
+                )
             ), f"URGENT risk ungrounded in: {all_text}"
 
         # Completeness grounding & ambiguous evidence
@@ -410,7 +461,9 @@ def test_exported_dataset_grounded_risk_and_ambiguous_evidence() -> None:
         if intent == "COMPLAINT":
             assert any(w in all_text for w in ("lapor", "laporkan", "laporan"))
         elif intent == "INQUIRY":
-            assert any(w in all_text for w in ("informasi", "info", "bagaimana", "keterangan"))
+            assert any(
+                w in all_text for w in ("informasi", "info", "bagaimana", "keterangan")
+            )
         elif intent == "FEEDBACK":
             assert any(w in all_text for w in ("terima kasih", "makasih", "penanganan"))
 
@@ -432,9 +485,9 @@ def test_exported_dataset_scale_and_family_diversity() -> None:
         cat_to_fams[t.category].add(t.family_id)
 
     for cat in Category:
-        assert (
-            len(cat_to_fams[cat]) >= 12
-        ), f"Category {cat} has {len(cat_to_fams[cat])} exported families, expected >= 12"
+        assert len(cat_to_fams[cat]) >= 12, (
+            f"Category {cat} has {len(cat_to_fams[cat])} exported families, expected >= 12"
+        )
 
     manifest_path = dataset_dir / "dataset_manifest.json"
     with open(manifest_path, "r", encoding="utf-8") as f:
@@ -480,9 +533,9 @@ def test_exported_dataset_category_anchor_lexicon_integrity() -> None:
             for bubble in turn.bubbles:
                 text_lower = bubble.text.lower()
                 for c_name in category_enum_names:
-                    assert (
-                        c_name not in text_lower
-                    ), f"Category enum {c_name} found leaked in bubble: {bubble.text}"
+                    assert c_name not in text_lower, (
+                        f"Category enum {c_name} found leaked in bubble: {bubble.text}"
+                    )
 
 
 def test_exported_trajectories_category_anchor_composition() -> None:
@@ -491,18 +544,30 @@ def test_exported_trajectories_category_anchor_composition() -> None:
     trajectories = load_trajectories_from_jsonl(dataset_dir / "trajectories.jsonl")
     assert len(trajectories) == 720
 
-    drainage_cues = ("drainase", "parit", "gorong", "limpasan", "banjir", "saluran", "genangan", "luapan")
+    drainage_cues = (
+        "drainase",
+        "parit",
+        "gorong",
+        "limpasan",
+        "banjir",
+        "saluran",
+        "genangan",
+        "luapan",
+    )
     waste_cues = ("sampah", "limbah", "kotoran", "residu")
     clean_water_cues = ("air bersih", "pdam", "kran", "leding", "perpipaan", "meteran")
 
     for traj in trajectories:
         b1_text = traj.turns[0].bubbles[0].text.lower()
         if traj.category == Category.DRAINAGE_FLOOD:
-            assert any(c in b1_text for c in drainage_cues), f"Drainage cue missing in {traj.scenario_id}: {b1_text}"
+            assert any(c in b1_text for c in drainage_cues), (
+                f"Drainage cue missing in {traj.scenario_id}: {b1_text}"
+            )
         elif traj.category == Category.WASTE:
-            assert any(c in b1_text for c in waste_cues), f"Waste cue missing in {traj.scenario_id}: {b1_text}"
+            assert any(c in b1_text for c in waste_cues), (
+                f"Waste cue missing in {traj.scenario_id}: {b1_text}"
+            )
         elif traj.category == Category.CLEAN_WATER:
-            assert any(c in b1_text for c in clean_water_cues), f"Clean water cue missing in {traj.scenario_id}: {b1_text}"
-
-
-
+            assert any(c in b1_text for c in clean_water_cues), (
+                f"Clean water cue missing in {traj.scenario_id}: {b1_text}"
+            )

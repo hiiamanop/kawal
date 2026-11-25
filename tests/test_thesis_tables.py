@@ -2,12 +2,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from scripts.generate_thesis_tables import (
     generate_latex_tables,
     generate_markdown_tables,
     load_stress_report,
     load_thesis_report,
 )
+
+pytestmark = pytest.mark.research
 
 
 def test_generate_thesis_tables_content() -> None:

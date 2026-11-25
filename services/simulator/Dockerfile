@@ -1,16 +1,18 @@
-FROM python:3.12-slim-bookworm
+FROM python:3.12-alpine
 
+# Alpine keeps the simulator image small; all runtime dependencies are pure
+# Python or ship musl-compatible wheels.
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app
 
 WORKDIR /app
 
-RUN groupadd --system --gid 10001 kawal && \
-    useradd --system --uid 10001 --gid kawal --no-create-home --shell /usr/sbin/nologin kawal
+RUN addgroup -S -g 10001 kawal && \
+    adduser -S -u 10001 -G kawal -h /app -s /sbin/nologin kawal
 
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements-simulator.txt ./
+RUN pip install --no-cache-dir -r requirements-simulator.txt
 
 COPY contracts/ ./contracts/
 COPY services/__init__.py ./services/__init__.py

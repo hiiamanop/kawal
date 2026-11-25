@@ -7,7 +7,9 @@ import pytest
 
 from services.dashboard.app import create_dashboard_app
 
-DATABASE_URL = os.getenv("KAWAL_DATABASE_URL", "postgresql://postgres:postgres@127.0.0.1:5432/postgres")
+DATABASE_URL = os.getenv(
+    "KAWAL_DATABASE_URL", "postgresql://postgres:postgres@127.0.0.1:5432/postgres"
+)
 
 
 def test_dashboard_index_renders_html() -> None:
@@ -60,8 +62,10 @@ def test_admin_portal_renders_html() -> None:
     assert "Filter Dinas" in response.text
 
 
+@pytest.mark.integration
 def test_ticket_detail_and_update_lifecycle() -> None:
     from uuid import uuid4
+
     app = create_dashboard_app(database_url=DATABASE_URL)
     client = TestClient(app)
 
@@ -106,7 +110,9 @@ def test_ticket_detail_and_update_lifecycle() -> None:
     verified = verify_res.json()
     assert verified["status"] == "RESOLVED"
     assert "ditambal" in verified["admin_notes"]
-    assert verified["resolution_photo_url"] == "https://example.com/proof-road-fixed.jpg"
+    assert (
+        verified["resolution_photo_url"] == "https://example.com/proof-road-fixed.jpg"
+    )
 
 
 def test_social_posts_endpoint_returns_collected_items() -> None:
