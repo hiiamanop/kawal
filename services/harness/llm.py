@@ -12,6 +12,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from contracts.harness import (
     AgentResult,
     AgentUsage,
+    ArbitrationOutput,
+    ExtractionOutput,
     TriageOutput,
     VerificationOutput,
 )
@@ -78,6 +80,7 @@ class OpenRouterChatClient:
         input_price_per_million: float = 0.0,
         output_price_per_million: float = 0.0,
         timeout_seconds: float = 30.0,
+        reasoning_enabled: bool | None = None,
     ) -> None:
         self.model_id = openrouter_model(model_id)
         self._base_url = openrouter_base_url(base_url)
@@ -85,6 +88,7 @@ class OpenRouterChatClient:
         self._input_price = input_price_per_million
         self._output_price = output_price_per_million
         self._timeout_seconds = timeout_seconds
+        self._reasoning_enabled = reasoning_enabled
 
     def estimate_cost(self, input_tokens: int, output_tokens: int) -> float:
         return (
@@ -113,6 +117,8 @@ class OpenRouterChatClient:
             "max_tokens": max_tokens,
             "response_format": {"type": "json_object"},
         }
+        if self._reasoning_enabled is not None:
+            payload["reasoning"] = {"enabled": self._reasoning_enabled}
         request = urllib.request.Request(
             f"{self._base_url}/chat/completions",
             data=json.dumps(payload, separators=(",", ":")).encode("utf-8"),
@@ -197,6 +203,83 @@ def _extract_json(text: str) -> dict[str, Any] | None:
     return parsed if isinstance(parsed, dict) else None
 
 
+def _as_string_tuple(value: Any) -> tuple[str, ...]:
+    if isinstance(value, str):
+        return (value.strip(),) if value.strip() else ()
+    if isinstance(value, (list, tuple)):
+        return tuple(str(item).strip() for item in value if str(item).strip())
+    return ()
+
+
+def _as_confidence(value: Any, default: float = 0.5) -> float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        number = default
+    return min(1.0, max(0.0, number))
+
+
+def _normalize_category(value: Any, is_complaint: bool) -> str:
+    if isinstance(value, str):
+        clean = value.strip().upper()
+        if clean in Category._value2member_map_:
+            return clean
+    if not is_complaint:
+        return Category.ROAD.value
+    raise ValueError("invalid category for a complaint")
+
+
+def _normalize_triage(data: dict[str, Any]) -> dict[str, Any]:
+    is_complaint = bool(data.get("is_complaint", False))
+    risk_value = str(data.get("risk", "MEDIUM")).strip().upper()
+    if risk_value not in RiskLevel._value2member_map_:
+        risk_value = RiskLevel.MEDIUM.value
+    return {
+        "is_complaint": is_complaint,
+        "category": _normalize_category(data.get("category"), is_complaint),
+        "risk": risk_value,
+        "confidence": _as_confidence(data.get("confidence")),
+        "reason_codes": _as_string_tuple(data.get("reason_codes")),
+    }
+
+
+def _normalize_extraction(data: dict[str, Any]) -> dict[str, Any]:
+    def optional_text(value: Any) -> str | None:
+        return value.strip() if isinstance(value, str) and value.strip() else None
+
+    return {
+        "location": optional_text(data.get("location")),
+        "object": optional_text(data.get("object")),
+        "time": optional_text(data.get("time")),
+        "evidence_spans": _as_string_tuple(data.get("evidence_spans")),
+        "confidence": _as_confidence(data.get("confidence")),
+    }
+
+
+def _normalize_verification(data: dict[str, Any]) -> dict[str, Any]:
+    is_complaint = bool(data.get("is_complaint", False))
+    return {
+        "is_complaint": is_complaint,
+        "category": _normalize_category(data.get("category"), is_complaint),
+        "evidence_supported": bool(data.get("evidence_supported", False)),
+        "issues": _as_string_tuple(data.get("issues")),
+        "confidence": _as_confidence(data.get("confidence")),
+    }
+
+
+def _normalize_arbitration(data: dict[str, Any]) -> dict[str, Any]:
+    is_complaint = bool(data.get("is_complaint", False))
+    rationale = data.get("rationale")
+    return {
+        "is_complaint": is_complaint,
+        "category": _normalize_category(data.get("category"), is_complaint),
+        "rationale": rationale.strip()
+        if isinstance(rationale, str) and rationale.strip()
+        else "Arbiter output incomplete.",
+        "confidence": _as_confidence(data.get("confidence")),
+    }
+
+
 class LLMAgent:
     """Agent backed by a chat client; the orchestrator sees only AgentResult."""
 
@@ -209,8 +292,9 @@ class LLMAgent:
         system_prompt: str,
         user_prompt_builder: Callable[[AgentTask], str],
         output_model: type[BaseModel],
+        output_normalizer: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
         max_input_tokens: int = 2000,
-        max_output_tokens: int = 500,
+        max_output_tokens: int = 800,
         prompt_version: str = "llm-v1",
         block_pii: bool = True,
     ) -> None:
@@ -220,6 +304,7 @@ class LLMAgent:
         self._system_prompt = system_prompt
         self._user_prompt_builder = user_prompt_builder
         self._output_model = output_model
+        self._output_normalizer = output_normalizer
         self._max_input_tokens = max_input_tokens
         self._max_output_tokens = max_output_tokens
         self._prompt_version = prompt_version
@@ -274,6 +359,8 @@ class LLMAgent:
                 error="INVALID_JSON",
             )
         try:
+            if self._output_normalizer is not None:
+                parsed = self._output_normalizer(parsed)
             output = self._output_model.model_validate(parsed)
         except Exception:
             return AgentResult(
@@ -324,11 +411,12 @@ class LLMTriageAgent(LLMAgent):
     def __init__(self, client: ChatClient, **kwargs: Any) -> None:
         system_prompt = (
             "You classify Indonesian public complaints for a municipal service. "
-            "Return only a JSON object with keys: is_complaint (boolean), category, "
-            "risk, confidence (0..1), reason_codes (array of short strings). "
-            f"category must be one of: {_category_values()}. "
+            "Return ONLY one JSON object with exactly these keys: is_complaint "
+            "(boolean), category, risk, confidence (number 0..1), reason_codes "
+            "(array of short strings). Include every key, even when reason_codes is "
+            f"empty. category must be one of: {_category_values()}. "
             f"risk must be one of: {_risk_values()}. "
-            "Do not add markdown or explanation outside the JSON."
+            "No markdown, no extra keys, no explanation outside the JSON."
         )
         super().__init__(
             agent_id="llm-triage-v1",
@@ -337,6 +425,7 @@ class LLMTriageAgent(LLMAgent):
             system_prompt=system_prompt,
             user_prompt_builder=lambda task: task.source_text,
             output_model=TriageOutput,
+            output_normalizer=_normalize_triage,
             **kwargs,
         )
 
@@ -347,11 +436,12 @@ class LLMVerifierAgent(LLMAgent):
             "You are an independent verifier for Indonesian public complaints. "
             "Decide independently whether the post is a complaint and which category "
             "it belongs to. Check whether the extraction fields are supported by the "
-            "source text. Return only a JSON object with keys: is_complaint (boolean), "
-            "category, evidence_supported (boolean), issues (array of short strings), "
-            "confidence (0..1). "
+            "source text. Return ONLY one JSON object with exactly these keys: "
+            "is_complaint (boolean), category, evidence_supported (boolean), issues "
+            "(array of short strings), confidence (number 0..1). Include every key; "
+            "use an empty issues array when there are no issues. "
             f"category must be one of: {_category_values()}. "
-            "Do not assume another agent's answer. Do not add markdown."
+            "Do not assume another agent's answer. No markdown, no extra keys."
         )
 
         def build_user_prompt(task: AgentTask) -> str:
@@ -369,5 +459,63 @@ class LLMVerifierAgent(LLMAgent):
             system_prompt=system_prompt,
             user_prompt_builder=build_user_prompt,
             output_model=VerificationOutput,
+            output_normalizer=_normalize_verification,
+            **kwargs,
+        )
+
+
+class LLMExtractionAgent(LLMAgent):
+    def __init__(self, client: ChatClient, **kwargs: Any) -> None:
+        system_prompt = (
+            "Extract factual complaint fields from the Indonesian source text. "
+            "Return ONLY one JSON object with exactly these keys: location (string "
+            "or null), object (string or null), time (string or null), evidence_spans "
+            "(array of exact substrings copied from the source), confidence (number "
+            "0..1). Include every key; use null when a field is absent and an empty "
+            "array when there are no evidence spans. Never invent a location or an "
+            "object that is not supported by the text. No markdown, no extra keys."
+        )
+        super().__init__(
+            agent_id="llm-extraction-v1",
+            role="extraction",
+            client=client,
+            system_prompt=system_prompt,
+            user_prompt_builder=lambda task: task.source_text,
+            output_model=ExtractionOutput,
+            output_normalizer=_normalize_extraction,
+            **kwargs,
+        )
+
+
+class LLMArbiterAgent(LLMAgent):
+    def __init__(self, client: ChatClient, **kwargs: Any) -> None:
+        system_prompt = (
+            "You are an explanatory arbiter for a complaint harness. Two agents "
+            "disagree. Return ONLY one JSON object with exactly these keys: "
+            "is_complaint (boolean), category, rationale (short string), confidence "
+            "(number 0..1). Include every key. "
+            f"category must be one of: {_category_values()}. "
+            "You explain the conflict; you do not authorize automatic acceptance. "
+            "No markdown, no extra keys."
+        )
+
+        def build_user_prompt(task: AgentTask) -> str:
+            return (
+                f"Source post:\n{task.source_text}\n\n"
+                "Triage output:\n"
+                f"{json.dumps(task.context.get('triage'), ensure_ascii=False, sort_keys=True)}\n\n"
+                "Verification output:\n"
+                f"{json.dumps(task.context.get('verification'), ensure_ascii=False, sort_keys=True)}"
+            )
+
+        super().__init__(
+            agent_id="llm-arbiter-v1",
+            role="arbiter",
+            client=client,
+            system_prompt=system_prompt,
+            user_prompt_builder=build_user_prompt,
+            output_model=ArbitrationOutput,
+            output_normalizer=_normalize_arbitration,
+            max_output_tokens=500,
             **kwargs,
         )

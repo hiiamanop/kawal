@@ -15,5 +15,9 @@
 - [x] M2: implement LLM chat client and agent-agnostic LLM agents <!-- id=13 priority=high done=2026-11-25 created=2026-11-25 -->
 - [x] M2: add PII fail-closed guard and structured output validation <!-- id=14 priority=high done=2026-11-25 created=2026-11-25 -->
 - [x] M2: add rule-vs-LLM comparison runner and CLI <!-- id=15 priority=high done=2026-11-25 created=2026-11-25 -->
-- [•] M2: add tests, docs, and run local CI <!-- id=16 priority=high created=2026-11-25 -->
-- [ ] M2: run live OpenRouter comparison if credentials become available <!-- id=17 priority=medium created=2026-11-25 -->
+- [x] M2: add tests, docs, and run local CI <!-- id=16 priority=high done=2026-11-25 created=2026-11-25 -->
+- [x] M2: run live OpenRouter comparison if credentials become available <!-- id=17 priority=medium done=2026-11-25 created=2026-11-25 -->
+- [x] M3.1: persist the live M2 comparison as a repo evaluation table <!-- id=18 priority=high done=2026-11-25 created=2026-11-25 -->
+- [x] M3.2: add LLM Extraction and LLM Arbiter agents with tests <!-- id=19 priority=high done=2026-11-25 created=2026-11-25 -->
+- [x] M3.3: expand real X fixtures and run aggregate comparison <!-- id=20 priority=high done=2026-11-25 created=2026-11-25 -->
+- [x] M3.4: update docs and run local CI before pushing <!-- id=21 priority=high done=2026-11-25 created=2026-11-25 -->

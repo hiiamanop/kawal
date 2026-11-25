@@ -8,18 +8,21 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-try:
-    import dotenv
-    dotenv.load_dotenv()
-except ImportError:
-    pass
-
 import uvicorn
 
 from services.dashboard.app import create_dashboard_app
 
 
+def load_environment() -> None:
+    try:
+        import dotenv
+    except ImportError:
+        return
+    dotenv.load_dotenv()
+
+
 def main() -> int:
+    load_environment()
     parser = argparse.ArgumentParser(description="KAWAL Live Web Inspector & Dashboard")
     parser.add_argument(
         "--host",
@@ -34,7 +37,10 @@ def main() -> int:
     )
     parser.add_argument(
         "--database-url",
-        default=os.getenv("KAWAL_DATABASE_URL", "postgresql://postgres:postgres@127.0.0.1:5432/postgres"),
+        default=os.getenv(
+            "KAWAL_DATABASE_URL",
+            "postgresql://postgres:postgres@127.0.0.1:5432/postgres",
+        ),
         help="PostgreSQL connection DSN",
     )
     args = parser.parse_args()
