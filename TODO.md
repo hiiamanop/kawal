@@ -11,4 +11,9 @@
 - [x] M1.5: normalize X status IDs and support replay directories <!-- id=9 priority=high done=2026-11-25 created=2026-11-25 -->
 - [x] M1.5: implement batch runner and evaluation summary <!-- id=10 priority=high done=2026-11-25 created=2026-11-25 -->
 - [x] M1.5: add batch CLI and fixture capture <!-- id=11 priority=high done=2026-11-25 created=2026-11-25 -->
-- [•] M1.5: add tests, docs, and run local CI <!-- id=12 priority=high created=2026-11-25 -->
+- [x] M1.5: add tests, docs, and run local CI <!-- id=12 priority=high done=2026-11-25 created=2026-11-25 -->
+- [x] M2: implement LLM chat client and agent-agnostic LLM agents <!-- id=13 priority=high done=2026-11-25 created=2026-11-25 -->
+- [x] M2: add PII fail-closed guard and structured output validation <!-- id=14 priority=high done=2026-11-25 created=2026-11-25 -->
+- [x] M2: add rule-vs-LLM comparison runner and CLI <!-- id=15 priority=high done=2026-11-25 created=2026-11-25 -->
+- [•] M2: add tests, docs, and run local CI <!-- id=16 priority=high created=2026-11-25 -->
+- [ ] M2: run live OpenRouter comparison if credentials become available <!-- id=17 priority=medium created=2026-11-25 -->

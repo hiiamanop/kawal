@@ -18,6 +18,7 @@ from services.harness.sinks import FileRunSink
 class BatchItemSummary(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
+    post_id: str
     run_id: str
     case_id: str | None = None
     status: str
@@ -87,6 +88,7 @@ class HarnessBatchRunner:
             except Exception as exc:
                 items.append(
                     BatchItemSummary(
+                        post_id=post.post_id,
                         run_id=f"failed-{uuid4().hex[:8]}",
                         status="FAILED",
                         error=type(exc).__name__,
@@ -95,7 +97,7 @@ class HarnessBatchRunner:
                 continue
 
             sink.write(run)
-            items.append(self._summarize(run))
+            items.append(self._summarize(post, run))
 
         categories = Counter(item.category for item in items if item.category)
         report = BatchReport(
@@ -136,9 +138,10 @@ class HarnessBatchRunner:
             )
 
     @staticmethod
-    def _summarize(run: HarnessRun) -> BatchItemSummary:
+    def _summarize(post: SocialPost, run: HarnessRun) -> BatchItemSummary:
         case = run.case
         return BatchItemSummary(
+            post_id=post.post_id,
             run_id=run.run_id,
             case_id=case.case_id if case is not None else None,
             status=run.status,
