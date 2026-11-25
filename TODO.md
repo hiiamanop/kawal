@@ -24,3 +24,5 @@
 - [x] M4.1: add location specificity guardrail to the harness <!-- id=22 priority=high done=2026-11-25 created=2026-11-25 -->
 - [x] M4.2: add ground-truth labels and evaluation metrics <!-- id=23 priority=high done=2026-11-25 created=2026-11-25 -->
 - [x] M4.3: rerun Tencent comparison, persist metrics, and run local CI <!-- id=24 priority=high done=2026-11-25 created=2026-11-25 -->
+- [x] M4.4: expand real X dataset to 18 posts and labels <!-- id=25 priority=high done=2026-11-25 created=2026-11-25 -->
+- [x] M4.5: run aggregated comparison and persist dataset metrics <!-- id=26 priority=high done=2026-11-25 created=2026-11-25 -->
