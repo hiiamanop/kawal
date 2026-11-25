@@ -15,7 +15,15 @@ from services.harness.sinks import FileRunSink
 from services.harness.sources import ReplayXSource
 
 
-FIXTURE = Path(__file__).parent / "fixtures" / "x_posts" / "synthetic_road_bandung_001.json"
+FIXTURE = (
+    Path(__file__).parent / "fixtures" / "x_posts" / "synthetic_road_bandung_001.json"
+)
+REAL_FIXTURE = (
+    Path(__file__).parent.parent
+    / "fixtures"
+    / "x_posts"
+    / "x_mgt_radio_2026159892885832085.json"
+)
 
 
 def _orchestrator() -> HarnessOrchestrator:
@@ -56,6 +64,15 @@ def test_e2e_replay_is_idempotent(tmp_path: Path) -> None:
     assert run_2.case is not None
     assert run_1.case.case_id == run_2.case.case_id
     assert len([path for path in tmp_path.iterdir() if path.is_dir()]) == 2
+
+
+def test_real_x_fixture_is_accepted() -> None:
+    post = ReplayXSource(REAL_FIXTURE).fetch()[0]
+    run = _orchestrator().run(post, run_id="run-real-fixture")
+    assert run.case is not None
+    assert run.case.status == "ACCEPTED"
+    assert run.case.extraction.location == "Gatot Subroto"
+    assert run.case.triage.category.value == "ROAD"
 
 
 def test_cli_returns_zero_and_prints_case_id(tmp_path: Path, capsys: object) -> None:

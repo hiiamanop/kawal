@@ -1,0 +1,20 @@
+{
+  "post": {
+    "post_id": "2026159892885832085",
+    "platform": "x",
+    "url": "https://x.com/MGT_RADIO/status/2026159892885832085",
+    "author_handle": "MGT_RADIO",
+    "text": "Seorang warga melaporkan kondisi jalan di area TSM ke arah Binong yang penuh lubang bekas galian tanpa rambu peringatan. Kondisi jalan yang gelap di malam hari membuat lubang-lubang ini menjadi \"jebakan\" bagi pengguna jalan di Jl. Gatot Subroto Bandung #MGTRADIO #MGTWhatsUp",
+    "media_urls": [
+      "https://pbs.twimg.com/amplify_video_thumb/2026159712144908288/img/T_G0un30IF9ReO1d?format=jpg&name=medium"
+    ],
+    "posted_at": "2026-02-24T04:58:57.351Z",
+    "collected_at": "2026-11-25T00:00:00+00:00",
+    "raw": {
+      "source": "agent-reach read",
+      "backend": "jina",
+      "channel": "web",
+      "note": "Public X post captured without a logged-in X session."
+    }
+  }
+}
