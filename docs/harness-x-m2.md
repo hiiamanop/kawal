@@ -84,6 +84,12 @@ decision.
 A complaint can only be accepted when its location is `SPECIFIC`; `MISSING` and
 `VAGUE` locations force `NEEDS_REVIEW` on both paths.
 
+Before the final decision, source text is classified as `CITIZEN_COMPLAINT`,
+`NEWS_REPORT`, `OPINION`, `QUESTION`, `ANNOUNCEMENT`, or `UNKNOWN`. Clear
+non-citizen sources force `REJECTED` when Triage says the post is a complaint;
+`UNKNOWN` continues through the normal pipeline. See
+`docs/evaluations/2026-11-25-harness-x-m5-actionability.md`.
+
 ## Offline tests
 
 Tests use a fake chat client and do not need a key or network:

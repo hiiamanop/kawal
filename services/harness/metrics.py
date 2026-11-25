@@ -45,6 +45,9 @@ class ModeMetrics(BaseModel):
     category_accuracy: float = Field(ge=0.0, le=1.0)
     decision_correct: int = Field(ge=0)
     decision_accuracy: float = Field(ge=0.0, le=1.0)
+    accepted: int = Field(ge=0)
+    accepted_true: int = Field(ge=0)
+    accepted_precision: float = Field(ge=0.0, le=1.0)
     location_correct: int = Field(ge=0)
     location_evaluated: int = Field(ge=0)
     location_accuracy: float = Field(ge=0.0, le=1.0)
@@ -81,6 +84,8 @@ def _score_mode(
     category_correct = 0
     category_evaluated = 0
     decision_correct = 0
+    accepted_count = 0
+    accepted_true = 0
     location_correct = 0
     location_evaluated = 0
     review_count = 0
@@ -120,6 +125,10 @@ def _score_mode(
 
         if status in label.acceptable_statuses:
             decision_correct += 1
+        if status == "COMPLETED":
+            accepted_count += 1
+            if label.is_complaint:
+                accepted_true += 1
         if status == "COMPLETED" and "COMPLETED" not in label.acceptable_statuses:
             false_accepts += 1
         if status == "REJECTED" and label.is_complaint:
@@ -152,6 +161,9 @@ def _score_mode(
         else 0.0,
         decision_correct=decision_correct,
         decision_accuracy=(decision_correct / total) if total else 0.0,
+        accepted=accepted_count,
+        accepted_true=accepted_true,
+        accepted_precision=(accepted_true / accepted_count) if accepted_count else 0.0,
         location_correct=location_correct,
         location_evaluated=location_evaluated,
         location_accuracy=(location_correct / location_evaluated)

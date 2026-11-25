@@ -42,6 +42,7 @@ def _render_markdown(report: MetricsReport) -> str:
         ("Complaint recall", "complaint_recall"),
         ("Category accuracy", "category_accuracy"),
         ("Decision accuracy", "decision_accuracy"),
+        ("Accepted precision", "accepted_precision"),
         ("Location accuracy", "location_accuracy"),
         ("Review rate", "review_rate"),
         ("False accepts", "false_accepts"),
@@ -85,6 +86,7 @@ def main(argv: list[str] | None = None) -> int:
         "labels": metrics.labels_count,
         "rule": {
             "decision_accuracy": metrics.rule.decision_accuracy,
+            "accepted_precision": metrics.rule.accepted_precision,
             "complaint_precision": metrics.rule.complaint_precision,
             "complaint_recall": metrics.rule.complaint_recall,
             "category_accuracy": metrics.rule.category_accuracy,
@@ -94,6 +96,7 @@ def main(argv: list[str] | None = None) -> int:
         },
         "llm": {
             "decision_accuracy": metrics.llm.decision_accuracy,
+            "accepted_precision": metrics.llm.accepted_precision,
             "complaint_precision": metrics.llm.complaint_precision,
             "complaint_recall": metrics.llm.complaint_recall,
             "category_accuracy": metrics.llm.category_accuracy,

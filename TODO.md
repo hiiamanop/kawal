@@ -26,3 +26,6 @@
 - [x] M4.3: rerun Tencent comparison, persist metrics, and run local CI <!-- id=24 priority=high done=2026-11-25 created=2026-11-25 -->
 - [x] M4.4: expand real X dataset to 18 posts and labels <!-- id=25 priority=high done=2026-11-25 created=2026-11-25 -->
 - [x] M4.5: run aggregated comparison and persist dataset metrics <!-- id=26 priority=high done=2026-11-25 created=2026-11-25 -->
+- [x] M5.1: add actionable-complaint source-intent guardrail <!-- id=27 priority=high done=2026-11-25 created=2026-11-25 -->
+- [x] M5.1: propagate source intent through cases, batches, and comparisons <!-- id=28 priority=high done=2026-11-25 created=2026-11-25 -->
+- [x] M5.1: add tests, rerun 18-post evaluation, and run local CI <!-- id=29 priority=high done=2026-11-25 created=2026-11-25 -->

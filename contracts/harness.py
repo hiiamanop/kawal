@@ -9,6 +9,14 @@ from pydantic import BaseModel, ConfigDict, Field
 from contracts.models import Category, RiskLevel
 
 LocationQuality = Literal["MISSING", "VAGUE", "SPECIFIC"]
+SourceIntent = Literal[
+    "CITIZEN_COMPLAINT",
+    "NEWS_REPORT",
+    "OPINION",
+    "QUESTION",
+    "ANNOUNCEMENT",
+    "UNKNOWN",
+]
 
 
 class SocialPost(BaseModel):
@@ -117,6 +125,7 @@ class ComplaintCase(BaseModel):
     verification: VerificationOutput
     arbitration: ArbitrationOutput | None = None
     location_quality: LocationQuality | None = None
+    source_intent: SourceIntent | None = None
     trust_decision: Literal["AGREED", "NEEDS_REVIEW", "REJECTED"]
     status: Literal["ACCEPTED", "NEEDS_REVIEW", "REJECTED"]
     reason_codes: tuple[str, ...] = ()

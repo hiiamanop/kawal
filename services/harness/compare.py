@@ -25,6 +25,8 @@ class ComparisonItem(BaseModel):
     llm_is_complaint: bool | None = None
     rule_location_quality: str | None = None
     llm_location_quality: str | None = None
+    rule_source_intent: str | None = None
+    llm_source_intent: str | None = None
     agreement: bool
     rule_cost_usd: float = Field(default=0.0, ge=0.0)
     llm_cost_usd: float = Field(default=0.0, ge=0.0)
@@ -100,6 +102,8 @@ class HarnessComparisonRunner:
                     llm_is_complaint=llm_item.is_complaint,
                     rule_location_quality=rule_item.location_quality,
                     llm_location_quality=llm_item.location_quality,
+                    rule_source_intent=rule_item.source_intent,
+                    llm_source_intent=llm_item.source_intent,
                     agreement=(
                         rule_item.status == llm_item.status
                         and rule_item.category == llm_item.category
