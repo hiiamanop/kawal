@@ -21,3 +21,6 @@
 - [x] M3.2: add LLM Extraction and LLM Arbiter agents with tests <!-- id=19 priority=high done=2026-11-25 created=2026-11-25 -->
 - [x] M3.3: expand real X fixtures and run aggregate comparison <!-- id=20 priority=high done=2026-11-25 created=2026-11-25 -->
 - [x] M3.4: update docs and run local CI before pushing <!-- id=21 priority=high done=2026-11-25 created=2026-11-25 -->
+- [x] M4.1: add location specificity guardrail to the harness <!-- id=22 priority=high done=2026-11-25 created=2026-11-25 -->
+- [x] M4.2: add ground-truth labels and evaluation metrics <!-- id=23 priority=high done=2026-11-25 created=2026-11-25 -->
+- [x] M4.3: rerun Tencent comparison, persist metrics, and run local CI <!-- id=24 priority=high done=2026-11-25 created=2026-11-25 -->

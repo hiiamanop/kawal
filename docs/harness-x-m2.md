@@ -66,6 +66,24 @@ The command writes:
 The report includes agreement rate, rule/LLM status counts, total cost, total
 latency, and per-post decisions.
 
+## Ground-truth scoring
+
+The comparison report can be scored against `fixtures/x_labels.json`:
+
+```bash
+python scripts/score_harness_comparison.py \
+  --comparison runs/m2/comparison-m2-001/comparison.json \
+  --labels fixtures/x_labels.json
+```
+
+This writes `metrics.json` and `metrics.md` next to the comparison report. The
+metrics cover complaint precision/recall, category accuracy, decision accuracy,
+location accuracy, false accepts/rejects, review rate, and cost per correct
+decision.
+
+A complaint can only be accepted when its location is `SPECIFIC`; `MISSING` and
+`VAGUE` locations force `NEEDS_REVIEW` on both paths.
+
 ## Offline tests
 
 Tests use a fake chat client and do not need a key or network:

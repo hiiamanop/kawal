@@ -1,0 +1,58 @@
+{
+  "labels": {
+    "1807221515089506334": {
+      "is_complaint": true,
+      "category": "ROAD",
+      "location_quality": "VAGUE",
+      "acceptable_statuses": [
+        "NEEDS_REVIEW"
+      ],
+      "notes": "Road complaint in Sundanese; no specific street or administrative area."
+    },
+    "2076110894149652629": {
+      "is_complaint": true,
+      "category": "ROAD",
+      "location_quality": "SPECIFIC",
+      "acceptable_statuses": [
+        "NEEDS_REVIEW"
+      ],
+      "notes": "Accident report at a named road; whether it is an actionable complaint is ambiguous."
+    },
+    "931149896203169792": {
+      "is_complaint": true,
+      "category": "ROAD",
+      "location_quality": "SPECIFIC",
+      "acceptable_statuses": [
+        "COMPLETED"
+      ],
+      "notes": "Road damage near Stasiun Bandung; flooding is described as an effect."
+    },
+    "2026159892885832085": {
+      "is_complaint": true,
+      "category": "ROAD",
+      "location_quality": "SPECIFIC",
+      "acceptable_statuses": [
+        "COMPLETED"
+      ],
+      "notes": "Potholes on Jl. Gatot Subroto Bandung with a specific road name."
+    },
+    "2125560260849193400": {
+      "is_complaint": false,
+      "category": null,
+      "location_quality": "VAGUE",
+      "acceptable_statuses": [
+        "REJECTED"
+      ],
+      "notes": "Weather remark with no public-service complaint."
+    },
+    "2116307635217838493": {
+      "is_complaint": true,
+      "category": "DRAINAGE_FLOOD",
+      "location_quality": "SPECIFIC",
+      "acceptable_statuses": [
+        "COMPLETED"
+      ],
+      "notes": "Flood location at Jalan Cihampelas; specific landmark."
+    }
+  }
+}

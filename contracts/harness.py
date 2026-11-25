@@ -8,6 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from contracts.models import Category, RiskLevel
 
+LocationQuality = Literal["MISSING", "VAGUE", "SPECIFIC"]
+
 
 class SocialPost(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -114,6 +116,7 @@ class ComplaintCase(BaseModel):
     extraction: ExtractionOutput
     verification: VerificationOutput
     arbitration: ArbitrationOutput | None = None
+    location_quality: LocationQuality | None = None
     trust_decision: Literal["AGREED", "NEEDS_REVIEW", "REJECTED"]
     status: Literal["ACCEPTED", "NEEDS_REVIEW", "REJECTED"]
     reason_codes: tuple[str, ...] = ()
@@ -141,5 +144,7 @@ class RunReceipt(BaseModel):
 
 
 def deterministic_case_id(post: SocialPost) -> str:
-    digest = hashlib.sha256(f"{post.platform}:{post.post_id}".encode("utf-8")).hexdigest()
+    digest = hashlib.sha256(
+        f"{post.platform}:{post.post_id}".encode("utf-8")
+    ).hexdigest()
     return f"case-x-{digest[:16]}"
