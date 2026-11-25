@@ -5,11 +5,15 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 from typing import Any, Callable, Mapping, Sequence
 
 from contracts.harness import SocialPost
+
+
+_STATUS_ID_PATTERN = re.compile(r"/status/(\d+)")
 
 
 class SourceError(RuntimeError):
@@ -74,7 +78,14 @@ def _media_urls(item: Mapping[str, Any]) -> tuple[str, ...]:
     return tuple(urls)
 
 
-def _post_from_item(item: Mapping[str, Any], collected_at: datetime) -> SocialPost | None:
+def _status_id_from_url(url: str) -> str | None:
+    match = _STATUS_ID_PATTERN.search(url)
+    return match.group(1) if match else None
+
+
+def _post_from_item(
+    item: Mapping[str, Any], collected_at: datetime
+) -> SocialPost | None:
     text = _first_text(item, ("text", "content", "full_text", "body"))
     if not text:
         return None
@@ -82,7 +93,11 @@ def _post_from_item(item: Mapping[str, Any], collected_at: datetime) -> SocialPo
     url = _first_text(item, ("url", "link", "permalink", "post_url"))
     post_id = _first_text(item, ("id", "tweet_id", "post_id", "note_id"))
     if not post_id:
-        post_id = url or hashlib.sha256(text.encode("utf-8")).hexdigest()
+        post_id = (
+            _status_id_from_url(url)
+            or url
+            or hashlib.sha256(text.encode("utf-8")).hexdigest()
+        )
 
     author = _first_text(
         item, ("author", "username", "user", "screen_name", "account", "author_handle")
@@ -107,39 +122,56 @@ def _post_from_item(item: Mapping[str, Any], collected_at: datetime) -> SocialPo
 
 
 class ReplayXSource:
-    """Read a recorded X post or Agent-Reach response from a JSON file."""
+    """Read recorded X posts from a JSON file or a directory of JSON files."""
 
     def __init__(self, path: str | Path) -> None:
         self._path = Path(path)
 
     def fetch(self, query: str = "", limit: int = 1) -> list[SocialPost]:
         del query
+        collected_at = datetime.now(timezone.utc)
+        if self._path.is_dir():
+            files = sorted(self._path.glob("*.json"))
+            if not files:
+                raise SourceError(
+                    "FIXTURE_NOT_FOUND", f"No JSON fixtures found in: {self._path}"
+                )
+            posts: list[SocialPost] = []
+            for fixture in files:
+                posts.extend(self._load_file(fixture, collected_at))
+                if len(posts) >= max(0, limit):
+                    break
+            return posts[: max(0, limit)]
+
         if not self._path.is_file():
             raise SourceError("FIXTURE_NOT_FOUND", f"Fixture not found: {self._path}")
-        try:
-            payload = json.loads(self._path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as exc:
-            raise SourceError("FIXTURE_INVALID", f"Invalid fixture: {self._path}") from exc
+        return self._load_file(self._path, collected_at)[: max(0, limit)]
 
-        collected_at = datetime.now(timezone.utc)
+    @staticmethod
+    def _load_file(path: Path, collected_at: datetime) -> list[SocialPost]:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise SourceError("FIXTURE_INVALID", f"Invalid fixture: {path}") from exc
+
         if isinstance(payload, Mapping) and isinstance(payload.get("post"), Mapping):
-            post = SocialPost.model_validate(payload["post"])
-            return [post]
+            return [SocialPost.model_validate(payload["post"])]
 
         items = payload.get("items") if isinstance(payload, Mapping) else payload
         if isinstance(items, Mapping):
             items = [items]
         if not isinstance(items, list):
-            raise SourceError("FIXTURE_INVALID", "Fixture must contain a post or an items list")
+            raise SourceError(
+                "FIXTURE_INVALID", "Fixture must contain a post or an items list"
+            )
 
-        posts = [
+        return [
             post
             for item in items
             if isinstance(item, Mapping)
             for post in [_post_from_item(item, collected_at)]
             if post is not None
         ]
-        return posts[: max(0, limit)]
 
 
 class AgentReachXSource:
@@ -165,7 +197,9 @@ class AgentReachXSource:
 
     def fetch(self, query: str, limit: int = 5) -> list[SocialPost]:
         if not query.strip():
-            raise AgentReachSourceError("INVALID_QUERY", "Search query must not be empty")
+            raise AgentReachSourceError(
+                "INVALID_QUERY", "Search query must not be empty"
+            )
         if limit < 1:
             return []
 
@@ -210,7 +244,9 @@ class AgentReachXSource:
         if isinstance(items, Mapping):
             items = [items]
         if not isinstance(items, list):
-            raise AgentReachSourceError("BAD_OUTPUT", "Agent-Reach returned no items list")
+            raise AgentReachSourceError(
+                "BAD_OUTPUT", "Agent-Reach returned no items list"
+            )
 
         collected_at = datetime.now(timezone.utc)
         posts = [
@@ -225,7 +261,9 @@ class AgentReachXSource:
     @staticmethod
     def _parse_payload(stdout: str) -> Any:
         if not stdout:
-            raise AgentReachSourceError("BAD_OUTPUT", "Agent-Reach returned empty output")
+            raise AgentReachSourceError(
+                "BAD_OUTPUT", "Agent-Reach returned empty output"
+            )
         try:
             return json.loads(stdout)
         except json.JSONDecodeError:
@@ -237,4 +275,6 @@ class AgentReachXSource:
                     return json.loads(line)
                 except json.JSONDecodeError:
                     continue
-            raise AgentReachSourceError("BAD_OUTPUT", "Agent-Reach returned non-JSON output")
+            raise AgentReachSourceError(
+                "BAD_OUTPUT", "Agent-Reach returned non-JSON output"
+            )

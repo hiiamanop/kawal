@@ -8,3 +8,7 @@
 - [x] Add CLI, synthetic test fixture, and E2E tests for main/conflict/budget paths <!-- id=6 priority=high done=2026-11-25 created=2026-11-25 -->
 - [x] Capture one real X post through Agent-Reach as the milestone fixture <!-- id=7 priority=high done=2026-11-25 created=2026-11-25 -->
 - [x] Run full validation and prepare branch for review <!-- id=8 priority=high done=2026-11-25 created=2026-11-25 -->
+- [x] M1.5: normalize X status IDs and support replay directories <!-- id=9 priority=high done=2026-11-25 created=2026-11-25 -->
+- [x] M1.5: implement batch runner and evaluation summary <!-- id=10 priority=high done=2026-11-25 created=2026-11-25 -->
+- [x] M1.5: add batch CLI and fixture capture <!-- id=11 priority=high done=2026-11-25 created=2026-11-25 -->
+- [•] M1.5: add tests, docs, and run local CI <!-- id=12 priority=high created=2026-11-25 -->

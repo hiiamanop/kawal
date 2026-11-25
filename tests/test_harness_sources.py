@@ -14,7 +14,9 @@ from services.harness.sources import (
 )
 
 
-FIXTURE = Path(__file__).parent / "fixtures" / "x_posts" / "synthetic_road_bandung_001.json"
+FIXTURE = (
+    Path(__file__).parent / "fixtures" / "x_posts" / "synthetic_road_bandung_001.json"
+)
 
 
 def test_replay_source_reads_fixture() -> None:
@@ -60,6 +62,53 @@ def test_agent_reach_source_parses_items() -> None:
     assert posts[0].post_id == "123"
     assert posts[0].author_handle == "warga"
     assert posts[0].posted_at is not None
+
+
+def test_replay_source_reads_directory(tmp_path: Path) -> None:
+    for index in (1, 2):
+        (tmp_path / f"post-{index}.json").write_text(
+            json.dumps(
+                {
+                    "post": {
+                        "post_id": f"directory-post-{index}",
+                        "platform": "x",
+                        "url": f"https://x.com/example/status/{index}",
+                        "text": f"Jalan rusak nomor {index}",
+                        "collected_at": "2026-11-25T00:00:00+00:00",
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    posts = ReplayXSource(tmp_path).fetch(limit=10)
+    assert [post.post_id for post in posts] == ["directory-post-1", "directory-post-2"]
+
+
+def test_agent_reach_source_extracts_status_id_from_url() -> None:
+    payload = {
+        "ok": True,
+        "items": [
+            {
+                "text": "Jalan rusak di Bandung",
+                "url": "https://x.com/warga/status/987654321",
+                "author": "warga",
+            }
+        ],
+    }
+
+    def runner(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(
+            args=args[0],
+            returncode=0,
+            stdout=json.dumps(payload),
+            stderr="",
+        )
+
+    posts = AgentReachXSource(binary="agent-reach", runner=runner).fetch(
+        "jalan rusak bandung"
+    )
+    assert posts[0].post_id == "987654321"
 
 
 def test_agent_reach_source_reports_need_setup() -> None:

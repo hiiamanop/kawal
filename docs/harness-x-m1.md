@@ -175,3 +175,8 @@ class Agent(Protocol):
 
 The orchestrator does not import a provider SDK. A model-backed agent can be
 added without changing the source adapters, sink, or trust rules.
+
+## M1.5 batch evaluation
+
+For live X batch processing, fixture capture, and evaluation summaries, see
+`docs/harness-x-m15.md`.
