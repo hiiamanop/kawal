@@ -16,6 +16,7 @@ from services.harness.agents import (
     RuleTriageAgent,
     RuleVerifierAgent,
 )
+from services.harness.cassette import CassetteChatClient, CassetteError
 from services.harness.compare import HarnessComparisonRunner
 from services.harness.llm import (
     LLMArbiterAgent,
@@ -58,12 +59,58 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Disable model reasoning (useful for reasoning models that emit no content)",
     )
+    parser.add_argument(
+        "--cassette",
+        default=None,
+        help="Path to a cassette JSON file for recording or replay",
+    )
+    parser.add_argument(
+        "--replay-cassette",
+        action="store_true",
+        help="Replay --cassette without calling the live model",
+    )
+    parser.add_argument(
+        "--cassette-overwrite",
+        action="store_true",
+        help="Replace an existing cassette when recording",
+    )
     return parser
+
+
+def _build_client(
+    args: argparse.Namespace,
+) -> CassetteChatClient | OpenRouterChatClient:
+    live = OpenRouterChatClient(
+        model_id=args.model,
+        input_price_per_million=args.input_price_per_million,
+        output_price_per_million=args.output_price_per_million,
+        reasoning_enabled=False if args.no_reasoning else None,
+    )
+    if not args.cassette:
+        return live
+    if args.replay_cassette:
+        return CassetteChatClient(
+            args.cassette,
+            mode="replay",
+            input_price_per_million=args.input_price_per_million,
+            output_price_per_million=args.output_price_per_million,
+        )
+    return CassetteChatClient(
+        args.cassette,
+        mode="record",
+        inner=live,
+        input_price_per_million=args.input_price_per_million,
+        output_price_per_million=args.output_price_per_million,
+        overwrite=args.cassette_overwrite,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    if not openrouter_api_key():
+    if args.replay_cassette and not args.cassette:
+        print("--replay-cassette requires --cassette", file=sys.stderr)
+        return 2
+    if not args.replay_cassette and not openrouter_api_key():
         print("OPENROUTER_API_KEY is required for the LLM comparison", file=sys.stderr)
         return 2
 
@@ -83,12 +130,11 @@ def main(argv: list[str] | None = None) -> int:
         arbiter=RuleArbiterAgent(),
         max_cost_usd=args.max_cost_usd,
     )
-    client = OpenRouterChatClient(
-        model_id=args.model,
-        input_price_per_million=args.input_price_per_million,
-        output_price_per_million=args.output_price_per_million,
-        reasoning_enabled=False if args.no_reasoning else None,
-    )
+    try:
+        client = _build_client(args)
+    except CassetteError as exc:
+        print(f"Cassette error [{exc.code}]: {exc}", file=sys.stderr)
+        return 2
     llm_orchestrator = HarnessOrchestrator(
         triage=LLMTriageAgent(client),
         extraction=(

@@ -171,6 +171,7 @@ class AgentResult(BaseModel):
     output: dict[str, Any] | None
     usage: AgentUsage
     prompt_version: str
+    attempts: int = 1
     error: str | None = None
 
 class ComplaintCase(BaseModel):

@@ -1,0 +1,1378 @@
+{
+  "version": 1,
+  "model_id": "tencent/hy4-flash",
+  "provider": "openai",
+  "input_price_per_million": 0.035,
+  "output_price_per_million": 0.1405,
+  "created_at": "2026-11-25T23:37:47.079046Z",
+  "entries": [
+    {
+      "request_key": "54cd34213b8d2cd9170e13664f68ab9c2c17938cc1e121eb1fb5cbc5f3a0ee50",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "ca30bd010b70fb544fd8f750f395d3a0a865403bfb4be0f6bc4b322ff1ed0a23",
+      "user_prompt_sha256": "341617b9003f0a8c0a2e278caa684dcc8d953df1e1c9f8febd8f237da175bf16",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":true,\"category\":\"ROAD\",\"risk\":\"HIGH\",\"confidence\":0.95,\"reason_codes\":[\"road_damaged\",\"pothole\",\"night_rain_hazard\",\"injury_reported\"]}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 335,
+          "output_tokens": 52,
+          "cost_usd": 1.9031e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 2561.5316640000856
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:36:42.783731Z"
+    },
+    {
+      "request_key": "c07e53c919d8457cb2adec769d01afbf8732c068da57d67358d840a72f3d54a2",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "72dafd6c97ff8f7b35a8eb99984049afef3c030aa5269eb13368ccda8c4fa0af",
+      "user_prompt_sha256": "341617b9003f0a8c0a2e278caa684dcc8d953df1e1c9f8febd8f237da175bf16",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"location\":\"jalan raya di daerah abi seer\",\"object\":\"jalan rusak/berlubang\",\"time\":\"wengi sabari hujan ageng\",\"evidence_spans\":[\"jalan rusak/berlubang\",\"ieu jalan raya di daerah abi seer nu rusak\",\"wengi sabari hujan ageng\"],\"confidence\":0.86}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 281,
+          "output_tokens": 86,
+          "cost_usd": 4.3836e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 924.5809560002272
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:36:43.709205Z"
+    },
+    {
+      "request_key": "1284ee2fe51051e71c764ac9363b69141ed2feb0e878063823e34ceb2e1dd2fc",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "fe8a9c6004089285835e675b5ce42cfa3a7e1b6f8ce45fde1e0cd44f3087eaff",
+      "user_prompt_sha256": "0fbdd54aee4d61131635d9e7c31caed80c7a9306236a2aab916ee74f1a0578e8",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":true,\"category\":\"ROAD\",\"evidence_supported\":true,\"issues\":[],\"confidence\":0.95}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 481,
+          "output_tokens": 31,
+          "cost_usd": 4.2381e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 830.0501890003034
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:36:44.540055Z"
+    },
+    {
+      "request_key": "007f634e4e7038eabb2e35156e2e9ad6ea008575f51fce28e2448f24c93b510d",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "ca30bd010b70fb544fd8f750f395d3a0a865403bfb4be0f6bc4b322ff1ed0a23",
+      "user_prompt_sha256": "f38f995552bddeb825856b5f5699635c33cef3a9d8c11102a959f3f12c442823",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":false,\"category\":\"TRANSPORTATION\",\"risk\":\"LOW\",\"confidence\":0.94,\"reason_codes\":[\"QUESTION_ONLY\",\"NO_SERVICE_ISSUE\"]}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 286,
+          "output_tokens": 42,
+          "cost_usd": 3.1822e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 824.0053800000169
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:36:45.365238Z"
+    },
+    {
+      "request_key": "70a1b3975706200a987b9abb48b41ec8d2bdbcd027f69ec8a420299a96273843",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "72dafd6c97ff8f7b35a8eb99984049afef3c030aa5269eb13368ccda8c4fa0af",
+      "user_prompt_sha256": "f38f995552bddeb825856b5f5699635c33cef3a9d8c11102a959f3f12c442823",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"location\":\"IKEA KBP\",\"object\":\"parkir motor\",\"time\":null,\"evidence_spans\":[\"IKEA KBP\",\"parkir motor\"],\"confidence\":0.95}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 232,
+          "output_tokens": 43,
+          "cost_usd": 2.8323e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 858.9295669999046
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:36:46.224721Z"
+    },
+    {
+      "request_key": "c2be514dfdb50c0ef94e169c0bc4d6ba139b29f6814218eddf9f1eab71c36626",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "fe8a9c6004089285835e675b5ce42cfa3a7e1b6f8ce45fde1e0cd44f3087eaff",
+      "user_prompt_sha256": "93097134385df1e1d8675a02f26eac99ce0a15cde87035900408c459bbcaf7ad",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":false,\"category\":\"TRANSPORTATION\",\"evidence_supported\":true,\"issues\":[],\"confidence\":0.97}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 383,
+          "output_tokens": 33,
+          "cost_usd": 1.80415e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 1744.8263430001134
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:36:47.970297Z"
+    },
+    {
+      "request_key": "f60964db0f7a1469113f3228d8d174c260b5c9f68093fdafcf11a7420170d6fb",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "ca30bd010b70fb544fd8f750f395d3a0a865403bfb4be0f6bc4b322ff1ed0a23",
+      "user_prompt_sha256": "6108f4ac5300c16edd71c28b535aabf7f35d84d0595c0430eb69bdfddd1ac12b",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":false,\"category\":\"TRANSPORTATION\",\"risk\":\"LOW\",\"confidence\":0.97,\"reason_codes\":[\"INFO_REQUEST\",\"NO_COMPLAINT\"]}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 276,
+          "output_tokens": 41,
+          "cost_usd": 3.0841e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 863.498484000047
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:36:48.834884Z"
+    },
+    {
+      "request_key": "fcea7071f7b5979c51a8282d2f1b0c5427b092d87cbbed7bc88ea042966db7e4",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "72dafd6c97ff8f7b35a8eb99984049afef3c030aa5269eb13368ccda8c4fa0af",
+      "user_prompt_sha256": "6108f4ac5300c16edd71c28b535aabf7f35d84d0595c0430eb69bdfddd1ac12b",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"location\":\"stasiun Padalarang ke IKEA KBP\",\"object\":\"angkot\",\"time\":null,\"evidence_spans\":[\"stasiun Padalarang ke IKEA KBP\",\"angkot\"],\"confidence\":0.95}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 222,
+          "output_tokens": 55,
+          "cost_usd": 3.0995e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 877.1467269998539
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:36:49.712549Z"
+    },
+    {
+      "request_key": "20294680ac109ae46e39660d20b939169491b871341948d32abf22c01e65c4df",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "fe8a9c6004089285835e675b5ce42cfa3a7e1b6f8ce45fde1e0cd44f3087eaff",
+      "user_prompt_sha256": "436eba5775ebb3773d132182b7b044b49011040809eef22fb7fd77519afd3e53",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":false,\"category\":\"TRANSPORTATION\",\"evidence_supported\":true,\"issues\":[],\"confidence\":0.98}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 383,
+          "output_tokens": 33,
+          "cost_usd": 3.6083e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 804.0704909999477
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:36:50.517351Z"
+    },
+    {
+      "request_key": "574c9908805d490716f463950a318a4b2ca66b933d33162561f29bccfc9e368a",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "ca30bd010b70fb544fd8f750f395d3a0a865403bfb4be0f6bc4b322ff1ed0a23",
+      "user_prompt_sha256": "53b63eb7147c9be38f4296279e9cefbd44eedd4406b58b1cf5a307fe80f1d58e",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":true,\"category\":\"ROAD\",\"risk\":\"MEDIUM\",\"confidence\":0.86,\"reason_codes\":[\"traffic_disruption\",\"roadside_incident\",\"public_light_damage\"]}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 317,
+          "output_tokens": 47,
+          "cost_usd": 3.5397e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 825.1197849999699
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:36:51.343785Z"
+    },
+    {
+      "request_key": "5e076b8909efd0c55577147e92445e73ec67e50e8be8db0e5329fbc9e51062f8",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "72dafd6c97ff8f7b35a8eb99984049afef3c030aa5269eb13368ccda8c4fa0af",
+      "user_prompt_sha256": "53b63eb7147c9be38f4296279e9cefbd44eedd4406b58b1cf5a307fe80f1d58e",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"location\":\"Jalan Ir. H. Juanda (Dago), dekat pertigaan Jalan Dayang Sumbi, Kota Bandung\",\"object\":\"mobil\",\"time\":\"Minggu (12/7/2026)\",\"evidence_spans\":[\"mobil\",\"tiang lampu penerangan jalan\",\"Jalan Ir. H. Juanda (Dago), dekat pertigaan Jalan Dayang Sumbi, Kota Bandung\",\"Minggu (12/7/2026)\"],\"confidence\":0.98}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 263,
+          "output_tokens": 119,
+          "cost_usd": 5.1849e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 945.3248700001495
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:36:52.289781Z"
+    },
+    {
+      "request_key": "28417290261787f8ec79fec57e8adce302388ceb66f4000241d15cda4b6cc7d1",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "fe8a9c6004089285835e675b5ce42cfa3a7e1b6f8ce45fde1e0cd44f3087eaff",
+      "user_prompt_sha256": "cfb0f1f0b42528f136923e3613d00c61e120637e62e5406f351f3621b15b8b72",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":false,\"category\":\"TRANSPORTATION\",\"evidence_supported\":true,\"issues\":[],\"confidence\":0.95}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 495,
+          "output_tokens": 33,
+          "cost_usd": 4.3923e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 784.5468720001918
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:36:53.075270Z"
+    },
+    {
+      "request_key": "a5281afd5697caa8783d55629debfb4cce36fd512f0d4911f5c1197dfe525154",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "ec2d4f4f1244bb16b3206c7e6841aaea0848b9df775439252f530eccf8e104c2",
+      "user_prompt_sha256": "80858e7aa0117a948bbb7bfbb6ca575b575e5c1d24e1611b18487bc2f1c770eb",
+      "max_tokens": 500,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":false,\"category\":\"TRANSPORTATION\",\"rationale\":\"The post reports a traffic accident causing congestion; it is an incident/news item rather than a complaint, and transportation is the closer category than road maintenance.\",\"confidence\":0.9}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 452,
+          "output_tokens": 58,
+          "cost_usd": 2.3969e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 1921.784206999746
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:36:54.997902Z"
+    },
+    {
+      "request_key": "0ac5da37accdf102f2c0af667b2287ad54c99169fd343a324cbfc606c1c6f57d",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "ca30bd010b70fb544fd8f750f395d3a0a865403bfb4be0f6bc4b322ff1ed0a23",
+      "user_prompt_sha256": "fc3690b7afb10d734136d6a5761a80258ef042bfd8516689f2605ba89a4eb69f",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":true,\"category\":\"ROAD\",\"risk\":\"MEDIUM\",\"confidence\":0.93,\"reason_codes\":[\"traffic_jam\",\"narrow_road\",\"lack_of_traffic_signs\",\"lane_dispute\"]}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 313,
+          "output_tokens": 53,
+          "cost_usd": 1.84015e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 1384.0142829999422
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:36:56.383247Z"
+    },
+    {
+      "request_key": "431783c3cd9d8a94ad3604adce38dc93d02d6a69ffe7edac38a0d94fcc3ef4e5",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "72dafd6c97ff8f7b35a8eb99984049afef3c030aa5269eb13368ccda8c4fa0af",
+      "user_prompt_sha256": "fc3690b7afb10d734136d6a5761a80258ef042bfd8516689f2605ba89a4eb69f",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"location\":\"Nagreg, Bandung, Jawa Barat\",\"object\":\"Antrean kendaraan\",\"time\":null,\"evidence_spans\":[\"JALAN LINGKAR NAGREG\",\"Antrean kendaraan yang melintasi Nagreg, Bandung, Jawa Barat\",\"Kemacetan tersebut akibat penyempitan jalur serta minimnya rambu lalu lintas sehingga terjadi saling serobot jalur antar pengemudi.\"],\"confidence\":0.95}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 259,
+          "output_tokens": 108,
+          "cost_usd": 4.8478e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 1084.4511710001825
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:36:57.468536Z"
+    },
+    {
+      "request_key": "28509789c3ac72873f448870fcd79eb574c71afe4295c15cd025a5a95fb139a4",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "fe8a9c6004089285835e675b5ce42cfa3a7e1b6f8ce45fde1e0cd44f3087eaff",
+      "user_prompt_sha256": "63c2d3675a6deb1a8602ac225e0f56a836948cd8518039885afb60f28af486de",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":true,\"category\":\"ROAD\",\"evidence_supported\":true,\"issues\":[],\"confidence\":0.95}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 482,
+          "output_tokens": 31,
+          "cost_usd": 4.2451e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 821.6496519999055
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:36:58.291084Z"
+    },
+    {
+      "request_key": "ec39a26680e84a87034aac2ac8d4bd3e25eec8ab07f16a8ef0abfe8d08c7f7ff",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "ca30bd010b70fb544fd8f750f395d3a0a865403bfb4be0f6bc4b322ff1ed0a23",
+      "user_prompt_sha256": "0b65c5a9f3ddf61882446dfe268208e2f705998a2de5167339682e06f933439a",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":true,\"category\":\"CIVIL_ADMIN\",\"risk\":\"LOW\",\"confidence\":0.86,\"reason_codes\":[\"DATA_INACCURACY\",\"GOVERNMENT_ASSESSMENT\",\"PUBLIC_INFO_CORRECTION\"]}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 328,
+          "output_tokens": 57,
+          "cost_usd": 3.8977e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 927.8420730001926
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:36:59.220184Z"
+    },
+    {
+      "request_key": "90d178ead99e735f92b7fed582bc230821903862396f595d62d4eaddffde47dc",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "72dafd6c97ff8f7b35a8eb99984049afef3c030aa5269eb13368ccda8c4fa0af",
+      "user_prompt_sha256": "0b65c5a9f3ddf61882446dfe268208e2f705998a2de5167339682e06f933439a",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"location\":\"Kota Bandung, Kelurahan Rancanumpang, Gedebage; Kelurahan Ledeng, Cidadap\",\"object\":\"data ketinggian Kota Bandung / assessment / solusi pemerintah\",\"time\":null,\"evidence_spans\":[\"Kota Bandung\",\"titik terendah di Kelurahan Rancanumpang, Gedebage 666 mdpl\",\"titik tertinggi di Kelurahan Ledeng, Cidadap 892 mdpl\",\"Pemerintah kalau salah data, salah assessment, salah solusi.\"],\"confidence\":0.86}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 274,
+          "output_tokens": 131,
+          "cost_usd": 2.79955e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 1524.0469250002207
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:00.745067Z"
+    },
+    {
+      "request_key": "929c1eec19b7101d1b11604f4e5cd11c09bbf1f5ceae15e1471f94271060ce0e",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "fe8a9c6004089285835e675b5ce42cfa3a7e1b6f8ce45fde1e0cd44f3087eaff",
+      "user_prompt_sha256": "66cc80c052344800c911791d25c7c9f686843fb8755d257d2fd327354f94ddcf",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":true,\"category\":\"CIVIL_ADMIN\",\"evidence_supported\":true,\"issues\":[],\"confidence\":0.88}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 519,
+          "output_tokens": 34,
+          "cost_usd": 4.5884e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 746.9669880001675
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:01.493011Z"
+    },
+    {
+      "request_key": "1f6b7e5455f88626bccbdf420ad201ef30c2cbcfa4fb8d222ddb817161d56f64",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "ca30bd010b70fb544fd8f750f395d3a0a865403bfb4be0f6bc4b322ff1ed0a23",
+      "user_prompt_sha256": "4263bc13ad39b56ca57978ce35d6b3d725bef72793952f2a21d95347517f60df",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":true,\"category\":\"PARKS_HOUSING\",\"risk\":\"HIGH\",\"confidence\":0.9,\"reason_codes\":[\"housing_damage\",\"windstorm\",\"multiple_houses_affected\"]}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 348,
+          "output_tokens": 49,
+          "cost_usd": 3.8129e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 770.8539650002422
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:02.265139Z"
+    },
+    {
+      "request_key": "4149129911e32fdff7fb45d0214df917027e1e1dbd5b28d99fa737b1fb69fa3c",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "72dafd6c97ff8f7b35a8eb99984049afef3c030aa5269eb13368ccda8c4fa0af",
+      "user_prompt_sha256": "4263bc13ad39b56ca57978ce35d6b3d725bef72793952f2a21d95347517f60df",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"location\":\"Kecamatan Pasirjambu, Kabupaten Bandung; Desa Tenjolaya dan Desa Margamulya\",\"object\":\"81 rumah warga\",\"time\":null,\"evidence_spans\":[\"Kecamatan Pasirjambu, Kabupaten Bandung\",\"Sebanyak 81 rumah di Desa Tenjolaya dan Desa Margamulya mengalami kerusakan pada atap, genteng, asbes, dan kanopi.\"],\"confidence\":0.95}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 294,
+          "output_tokens": 109,
+          "cost_usd": 5.1209e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 1021.2190419997569
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:03.287210Z"
+    },
+    {
+      "request_key": "e0bd5fb0bc234f1f01bc74599a48dd9873a6ac93390a5165337e6d7c6ff8e65e",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "fe8a9c6004089285835e675b5ce42cfa3a7e1b6f8ce45fde1e0cd44f3087eaff",
+      "user_prompt_sha256": "3a00e752ca4e7de88305a2acd0b10799dca039d00c8e58648efdd9cdb053ed3c",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":false,\"category\":\"PARKS_HOUSING\",\"evidence_supported\":true,\"issues\":[],\"confidence\":0.9}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 511,
+          "output_tokens": 35,
+          "cost_usd": 2.28025e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 1396.016672999849
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:04.684193Z"
+    },
+    {
+      "request_key": "74eee4f335451f91e560c24ef8d055a355ba83973ee7f7240a735c2fc6248edd",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "ca30bd010b70fb544fd8f750f395d3a0a865403bfb4be0f6bc4b322ff1ed0a23",
+      "user_prompt_sha256": "0968767a7c77200b1082f5a9ee3322835337f81b389b28d4f8ffffbb463ffc4d",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":true,\"category\":\"ROAD\",\"risk\":\"HIGH\",\"confidence\":0.94,\"reason_codes\":[\"road_damage\",\"flooding\",\"hidden_pothole\",\"safety_risk\",\"repair_request\"]}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 325,
+          "output_tokens": 54,
+          "cost_usd": 3.7924e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 824.8030040003869
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:05.510247Z"
+    },
+    {
+      "request_key": "f810b7e358ac4a57f73608594226b9cc150ae9e204228e58547edfb9340c6d6f",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "72dafd6c97ff8f7b35a8eb99984049afef3c030aa5269eb13368ccda8c4fa0af",
+      "user_prompt_sha256": "0968767a7c77200b1082f5a9ee3322835337f81b389b28d4f8ffffbb463ffc4d",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"location\":\"jl stasiun selatan area stasiun bandung\",\"object\":\"Jalan\",\"time\":null,\"evidence_spans\":[\"jl stasiun selatan area stasiun bandung\",\"Jalan udh rusak parah\"],\"confidence\":0.95}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 271,
+          "output_tokens": 61,
+          "cost_usd": 3.6111e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 895.4877820001457
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:06.406592Z"
+    },
+    {
+      "request_key": "1d48367b8a74775b3e3a4f3916ccb9c92c6ab8988b99fe0af0d80fb3751c403a",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "fe8a9c6004089285835e675b5ce42cfa3a7e1b6f8ce45fde1e0cd44f3087eaff",
+      "user_prompt_sha256": "a2d1adf8cc2ab3b3b32f833abb38232e872e212170455bb2ebe30607aaaf8a2a",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":true,\"category\":\"ROAD\",\"evidence_supported\":true,\"issues\":[],\"confidence\":0.97}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 440,
+          "output_tokens": 31,
+          "cost_usd": 3.9511e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 967.3570780000773
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:07.374860Z"
+    },
+    {
+      "request_key": "3e333f59d743d732f3bc3166bbd3f3c14300c510c69f1b03e1639be4ce85622a",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "ca30bd010b70fb544fd8f750f395d3a0a865403bfb4be0f6bc4b322ff1ed0a23",
+      "user_prompt_sha256": "076dd2637faf76d00e98967f07c212291fa1309a211f2d8e930d9990dafee079",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":false,\"category\":\"FIRE_RESCUE\",\"risk\":\"LOW\",\"confidence\":0.96,\"reason_codes\":[\"INFO_ONLY\",\"EARTHQUAKE_INFO\",\"NO_SERVICE_REQUEST\"]}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 318,
+          "output_tokens": 48,
+          "cost_usd": 3.5748e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 1581.4579309999317
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:08.957668Z"
+    },
+    {
+      "request_key": "a4ffe05e0e854509b883aebe2bc1a964351112520d8486a43ab45494cccc45ce",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "72dafd6c97ff8f7b35a8eb99984049afef3c030aa5269eb13368ccda8c4fa0af",
+      "user_prompt_sha256": "076dd2637faf76d00e98967f07c212291fa1309a211f2d8e930d9990dafee079",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"location\":\"66 km Selatan Kota Sukabumi, Jabar\",\"object\":\"Gempa Mag: 4.6\",\"time\":\"21-Nov-26\",\"evidence_spans\":[\"Gempa Mag: 4.6\",\"21-Nov-26\",\"66 km Selatan Kota Sukabumi, Jabar\"],\"confidence\":0.98}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 264,
+          "output_tokens": 77,
+          "cost_usd": 4.0117e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 803.1417489996784
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:09.761805Z"
+    },
+    {
+      "request_key": "7ea5243f6c53dbaa031116ad3edd519d0fa02d901e12bd3ef6251b0c419772c3",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "fe8a9c6004089285835e675b5ce42cfa3a7e1b6f8ce45fde1e0cd44f3087eaff",
+      "user_prompt_sha256": "e517b0b6fcacf69cc0a367f38b7dcea0e9460672233b257bac79384060e4f2a2",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":false,\"category\":\"PUBLIC_ORDER\",\"evidence_supported\":true,\"issues\":[],\"confidence\":0.99}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 453,
+          "output_tokens": 32,
+          "cost_usd": 2.0351e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 1784.699597999861
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:11.547437Z"
+    },
+    {
+      "request_key": "77a36b30e3f179c6dd7b7b0050ca795925211bf148cdf54b065fb3176dc12109",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "ec2d4f4f1244bb16b3206c7e6841aaea0848b9df775439252f530eccf8e104c2",
+      "user_prompt_sha256": "2a03870e34f8f4dd048df8b95c29b67774e283c425368cc7d51806c15ca5c94d",
+      "max_tokens": 500,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":false,\"category\":\"FIRE_RESCUE\",\"rationale\":\"The post is an earthquake information bulletin with no service request or complaint; triage correctly treated it as informational disaster/rescue-related content, while verification's PUBLIC_ORDER category is less fitting.\",\"confidence\":0.9}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 451,
+          "output_tokens": 66,
+          "cost_usd": 2.5058e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 1880.908049000027
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:13.429225Z"
+    },
+    {
+      "request_key": "41934fa1f97bad8ee7c9b1103517a262b82b1aa8d6568db8c5d1d90a442f1d93",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "ca30bd010b70fb544fd8f750f395d3a0a865403bfb4be0f6bc4b322ff1ed0a23",
+      "user_prompt_sha256": "e652de7163167a4811f321c58a28fb3afc71bdf056b063cef0c7b0a42e0cac08",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":false,\"category\":\"TRANSPORTATION\",\"risk\":\"LOW\",\"confidence\":0.86,\"reason_codes\":[\"observational\",\"no_explicit_complaint\",\"parking_context\"]}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 309,
+          "output_tokens": 47,
+          "cost_usd": 3.4837e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 894.7983540001587
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:14.325522Z"
+    },
+    {
+      "request_key": "3d7e899aba9253a58725f65263ab73c083dfb6942c94a77b90e7df9771be1a62",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "72dafd6c97ff8f7b35a8eb99984049afef3c030aa5269eb13368ccda8c4fa0af",
+      "user_prompt_sha256": "e652de7163167a4811f321c58a28fb3afc71bdf056b063cef0c7b0a42e0cac08",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"location\":\"Bandung\",\"object\":\"KBP\",\"time\":\"3 hari kemarin\",\"evidence_spans\":[\"3 hari kemarin di Bandung\",\"KBP gada tukang parkir/gate parkir\"],\"confidence\":0.86}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 255,
+          "output_tokens": 54,
+          "cost_usd": 3.3024e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 823.4727600001861
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:15.149818Z"
+    },
+    {
+      "request_key": "27a96fbcc182467bc327648abbb32f7b4b1f6bc247e475ae90b224d788964061",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "fe8a9c6004089285835e675b5ce42cfa3a7e1b6f8ce45fde1e0cd44f3087eaff",
+      "user_prompt_sha256": "ef8f386aa4a1e9e135b4945019e9ee7a598789e1701034f18e50c9526e33e2ac",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":true,\"category\":\"PUBLIC_ORDER\",\"evidence_supported\":true,\"issues\":[],\"confidence\":0.78}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 416,
+          "output_tokens": 32,
+          "cost_usd": 3.8112e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 776.3164369998776
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:15.927103Z"
+    },
+    {
+      "request_key": "ce156c138f163d49140c74218d75f2f9b2e5550899d734d023bdc0a21b8033e5",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "ec2d4f4f1244bb16b3206c7e6841aaea0848b9df775439252f530eccf8e104c2",
+      "user_prompt_sha256": "69db8c4eb139aab00035806291304e7df368bb0470c185abc536320532b671b2",
+      "max_tokens": 500,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":false,\"category\":\"TRANSPORTATION\",\"rationale\":\"The post is observational/comparative about Bandung development and parking conditions; it does not clearly report a service failure or request action, despite parking context.\",\"confidence\":0.82}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 433,
+          "output_tokens": 59,
+          "cost_usd": 4.6889e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 938.0025279997426
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:16.866165Z"
+    },
+    {
+      "request_key": "ad0b402275b89e367d12225dcde2a79a4af980824bc0978d307da1772a57af73",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "ca30bd010b70fb544fd8f750f395d3a0a865403bfb4be0f6bc4b322ff1ed0a23",
+      "user_prompt_sha256": "ee043bb8eaef019dc68c1747a79cce1fdc40d7dde7465670dd1ebf750db33ddc",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":false,\"category\":\"DRAINAGE_FLOOD\",\"risk\":\"MEDIUM\",\"confidence\":0.86,\"reason_codes\":[\"weather_warning\",\"potential_flood\",\"informational\"]}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 301,
+          "output_tokens": 48,
+          "cost_usd": 3.4558e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 831.4777360001244
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:17.699073Z"
+    },
+    {
+      "request_key": "2ed8d78711282543303fbea093bf78c688282361827d2426c09e3348bea4ef63",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "72dafd6c97ff8f7b35a8eb99984049afef3c030aa5269eb13368ccda8c4fa0af",
+      "user_prompt_sha256": "ee043bb8eaef019dc68c1747a79cce1fdc40d7dde7465670dd1ebf750db33ddc",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"location\":\"Bandung\",\"object\":\"bencana hidrometeorologi seperti banjir\",\"time\":\"pada peralihan musim kemarau menuju musim hujan\",\"evidence_spans\":[\"BMKG Bandung\",\"peringatan akan potensi bencana hidrometeorologi seperti banjir\",\"pada peralihan musim kemarau menuju musim hujan\"],\"confidence\":0.9}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 247,
+          "output_tokens": 92,
+          "cost_usd": 4.3142e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 1028.161141000055
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:18.728053Z"
+    },
+    {
+      "request_key": "29128fa64b166640c1ad5cbbacea0e88ae4856d74dc73d5e33bb2eb8a3214df3",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "fe8a9c6004089285835e675b5ce42cfa3a7e1b6f8ce45fde1e0cd44f3087eaff",
+      "user_prompt_sha256": "9b87699f45d631d82c96b4293b36b5726d170a9cf0d5a1e22e91979183108df7",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":false,\"category\":\"DRAINAGE_FLOOD\",\"evidence_supported\":true,\"issues\":[],\"confidence\":0.95}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 451,
+          "output_tokens": 36,
+          "cost_usd": 4.1686e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 786.328863000108
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:19.515354Z"
+    },
+    {
+      "request_key": "f820f3683f6cfe204f3ecccc490e73a3316aa6932613b99b9366bf29101cf329",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "ca30bd010b70fb544fd8f750f395d3a0a865403bfb4be0f6bc4b322ff1ed0a23",
+      "user_prompt_sha256": "6bcf11f62e2ca4d991753317b219588cb78bc51cbd5d36c6b952532049389d24",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":true,\"category\":\"ROAD\",\"risk\":\"HIGH\",\"confidence\":0.97,\"reason_codes\":[\"road_potholes\",\"excavation\",\"no_warning_signs\",\"dark_night\",\"traffic_hazard\"]}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 340,
+          "output_tokens": 56,
+          "cost_usd": 1.9768e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 2020.8195699997304
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:21.537571Z"
+    },
+    {
+      "request_key": "79e20d55fdd1b843512be2d804efb13d749589d8ece768573836c0d925ff15b3",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "72dafd6c97ff8f7b35a8eb99984049afef3c030aa5269eb13368ccda8c4fa0af",
+      "user_prompt_sha256": "6bcf11f62e2ca4d991753317b219588cb78bc51cbd5d36c6b952532049389d24",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"location\":\"area TSM ke arah Binong, Jl. Gatot Subroto Bandung\",\"object\":\"jalan yang penuh lubang bekas galian tanpa rambu peringatan\",\"time\":\"malam hari\",\"evidence_spans\":[\"kondisi jalan di area TSM ke arah Binong yang penuh lubang bekas galian tanpa rambu peringatan\",\"Kondisi jalan yang gelap di malam hari\",\"Jl. Gatot Subroto Bandung\"],\"confidence\":0.95}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 286,
+          "output_tokens": 120,
+          "cost_usd": 2.687e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 1490.5976059999375
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:23.029054Z"
+    },
+    {
+      "request_key": "7743e254fd72d8a0515fc59d3d76682cf29f6982803a9c32a601f5789a78c2e3",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "fe8a9c6004089285835e675b5ce42cfa3a7e1b6f8ce45fde1e0cd44f3087eaff",
+      "user_prompt_sha256": "187e6495b22b16ebe143658b2055bd3dbe68cfa088231e029fafccd0967b4cb2",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":true,\"category\":\"ROAD\",\"evidence_supported\":true,\"issues\":[],\"confidence\":0.98}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 516,
+          "output_tokens": 31,
+          "cost_usd": 4.4831e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 844.0357710001081
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:23.874125Z"
+    },
+    {
+      "request_key": "d588162ec96d7577219d9f2318d8cdc83aba1efc4e27c7fbc45e56db9589e78e",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "ca30bd010b70fb544fd8f750f395d3a0a865403bfb4be0f6bc4b322ff1ed0a23",
+      "user_prompt_sha256": "f0573552ff383c1a744e2eba67ac5864b2e6efe540764800a6a82b0632e7d6be",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":false,\"category\":\"DRAINAGE_FLOOD\",\"risk\":\"LOW\",\"confidence\":0.72,\"reason_codes\":[\"weather_observation\",\"no_explicit_service_request\"]}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 265,
+          "output_tokens": 46,
+          "cost_usd": 3.1476e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 1072.6528079999298
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:24.948204Z"
+    },
+    {
+      "request_key": "8b56b0269c62e0da2218ba64ebb9ac71ee799bf4ed9494e95dd7f9232233c485",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "72dafd6c97ff8f7b35a8eb99984049afef3c030aa5269eb13368ccda8c4fa0af",
+      "user_prompt_sha256": "f0573552ff383c1a744e2eba67ac5864b2e6efe540764800a6a82b0632e7d6be",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"location\":\"bandung\",\"object\":\"hujan\",\"time\":null,\"evidence_spans\":[\"bandung\",\"ujannya gak berhenti berhenti\"],\"confidence\":0.95}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 211,
+          "output_tokens": 43,
+          "cost_usd": 2.6853e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 795.0986999999259
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:25.744173Z"
+    },
+    {
+      "request_key": "978026b6b2eda1e926e5b4992bab1fa405bd5248131fd2c2cd5692d39020fc2c",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "fe8a9c6004089285835e675b5ce42cfa3a7e1b6f8ce45fde1e0cd44f3087eaff",
+      "user_prompt_sha256": "f3a80d8a624d6acdaf37e21b5c7cfb99beac63d01799d1c58d00e1672d58218e",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":false,\"category\":\"DRAINAGE_FLOOD\",\"evidence_supported\":true,\"issues\":[\"No explicit complaint or impact such as flooding, drainage problem, damage, or service failure; only states continuous rain in Bandung.\"],\"confidence\":0.86}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 366,
+          "output_tokens": 63,
+          "cost_usd": 4.3323e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 951.6931610000938
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:26.696869Z"
+    },
+    {
+      "request_key": "47972f221027ccf009bb5cfd0b641b2186f22a8f535069d4ba3c12fbda4fbcd2",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "ca30bd010b70fb544fd8f750f395d3a0a865403bfb4be0f6bc4b322ff1ed0a23",
+      "user_prompt_sha256": "151af6ca62258e340e3f606d68e729409ae5956c6b413b7e864f8e4b2dd51302",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":true,\"category\":\"PARKS_HOUSING\",\"risk\":\"HIGH\",\"confidence\":0.86,\"reason_codes\":[\"extreme_weather\",\"building_collapse\",\"fallen_tree\",\"property_damage\"]}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 343,
+          "output_tokens": 52,
+          "cost_usd": 3.8622e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 799.1532130004089
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:27.497609Z"
+    },
+    {
+      "request_key": "6c836122605743bbf2fb9f6f70a3576ce84522eced1546c22606f4b6ed134b20",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "72dafd6c97ff8f7b35a8eb99984049afef3c030aa5269eb13368ccda8c4fa0af",
+      "user_prompt_sha256": "151af6ca62258e340e3f606d68e729409ae5956c6b413b7e864f8e4b2dd51302",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"location\":\"7 Desa di Batujajar Bandung Barat, Kabupaten Bandung Barat\",\"object\":\"atap rumah, pohon, bangunan, 5 motor hingga mobil\",\"time\":null,\"evidence_spans\":[\"Hujan Angin Terjang 7 Desa di Batujajar Bandung Barat\",\"sejumlah wilayah di Kabupaten Bandung Barat\",\"atap rumah beterbangan, pohon tumbang, dan bangunan roboh\",\"5 Motor Hingga Mobil Rusak\"],\"confidence\":0.95}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 289,
+          "output_tokens": 119,
+          "cost_usd": 5.3669e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 1033.2437340002798
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:28.531750Z"
+    },
+    {
+      "request_key": "82d6403f97917022549c975394157a447bd03b23a24382d2734bc0cf9e825449",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "fe8a9c6004089285835e675b5ce42cfa3a7e1b6f8ce45fde1e0cd44f3087eaff",
+      "user_prompt_sha256": "14f928fd70306bedc2f9110605fd54fe0beb8a377f584a9b3a72be2f5abb4452",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":false,\"category\":\"PARKS_HOUSING\",\"evidence_supported\":true,\"issues\":[],\"confidence\":0.86}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 520,
+          "output_tokens": 35,
+          "cost_usd": 2.31175e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 1984.4068100001095
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:30.517286Z"
+    },
+    {
+      "request_key": "09f99b298c8960daaed4728f1e2146141c8b8fae15f9eefa16f27de35bdcb39f",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "ca30bd010b70fb544fd8f750f395d3a0a865403bfb4be0f6bc4b322ff1ed0a23",
+      "user_prompt_sha256": "651600181f3c25823c9b91965e63fed87fbeb5a249cf084374cbb238ee8d07e7",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":true,\"category\":\"ROAD\",\"risk\":\"HIGH\",\"confidence\":0.95,\"reason_codes\":[\"road_closure\",\"unsafe_alternative_route\",\"uneven_road\",\"accident_risk\"]}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 353,
+          "output_tokens": 52,
+          "cost_usd": 3.9322e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 802.0131580001362
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:31.321024Z"
+    },
+    {
+      "request_key": "e7141ffc048dd0de3dc23dc37459187a3ebdf8c65b3180d6d03b868f9a6e1ef8",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "72dafd6c97ff8f7b35a8eb99984049afef3c030aa5269eb13368ccda8c4fa0af",
+      "user_prompt_sha256": "651600181f3c25823c9b91965e63fed87fbeb5a249cf084374cbb238ee8d07e7",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"location\":\"kawasan Saguling-Kota Baru Parahyangan (KBP), Kabupaten Bandung Barat\",\"object\":\"jalur alternatif penuh batu\",\"time\":null,\"evidence_spans\":[\"Penutupan jalur utama menuju kawasan Saguling-Kota Baru Parahyangan (KBP), Kabupaten Bandung Barat\",\"Jalur alternatif memiliki bagian jalan yang tidak rata dan rawan kecelakaan.\"],\"confidence\":0.9}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 299,
+          "output_tokens": 109,
+          "cost_usd": 2.57795e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 2003.838213999643
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:33.325848Z"
+    },
+    {
+      "request_key": "ce4a0bb732fd46a93ae10b57370f6be00115257357078eae4474b6b91513008b",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "fe8a9c6004089285835e675b5ce42cfa3a7e1b6f8ce45fde1e0cd44f3087eaff",
+      "user_prompt_sha256": "7bd1af588669d01c183874c9b6550c93b697f0f03e98467e40c4928273049b07",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":true,\"category\":\"ROAD\",\"evidence_supported\":true,\"issues\":[],\"confidence\":0.95}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 516,
+          "output_tokens": 31,
+          "cost_usd": 2.24155e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 2350.352679000025
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:35.677370Z"
+    },
+    {
+      "request_key": "e0363bba3949465eb4433a63a86489292b51064b0a7fde784670116fd3efaec3",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "ca30bd010b70fb544fd8f750f395d3a0a865403bfb4be0f6bc4b322ff1ed0a23",
+      "user_prompt_sha256": "c6d54bc5b4f7c33f1968820f9f8f1f1d2ba3c0778bfbf8974a16a7d4a849dd79",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":false,\"category\":\"PUBLIC_ORDER\",\"risk\":\"LOW\",\"confidence\":0.96,\"reason_codes\":[\"informational_news\",\"no_complaint_language\"]}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 311,
+          "output_tokens": 44,
+          "cost_usd": 1.7067e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 1730.7550479999918
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:37.409522Z"
+    },
+    {
+      "request_key": "56e9ca0f6be1a4d8f11261f46fa80344e5d05b385b3fa182e65a14f49b969afb",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "72dafd6c97ff8f7b35a8eb99984049afef3c030aa5269eb13368ccda8c4fa0af",
+      "user_prompt_sha256": "c6d54bc5b4f7c33f1968820f9f8f1f1d2ba3c0778bfbf8974a16a7d4a849dd79",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"location\":\"Kota Bandung\",\"object\":\"pemadaman listrik\",\"time\":\"Malam Ini Mulai Jam 18.30 hingga 21.30 WIB\",\"evidence_spans\":[\"Jadwal Pemadaman Listrik di Bandung Malam Ini Mulai Jam 18.30 hingga 21.30 WIB\",\"PT PLN kembali melakukan pemadaman listrik di sejumlah wilayah Kota Bandung.\"],\"confidence\":0.95}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 257,
+          "output_tokens": 104,
+          "cost_usd": 2.3607e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 1688.1903069997861
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:39.098642Z"
+    },
+    {
+      "request_key": "2039c1191fe31df2e47506f98d00e8033391513d6b3c482d521d3151aea7bb30",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "fe8a9c6004089285835e675b5ce42cfa3a7e1b6f8ce45fde1e0cd44f3087eaff",
+      "user_prompt_sha256": "e1523a59b7446a43e458d96c2ae4f59212a1214b50abc952ecbb627a1b8b2fff",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":false,\"category\":\"PUBLIC_ORDER\",\"evidence_supported\":true,\"issues\":[],\"confidence\":0.93}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 470,
+          "output_tokens": 32,
+          "cost_usd": 4.1892e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 843.2945050003582
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:39.943106Z"
+    },
+    {
+      "request_key": "f82efced0962bfe790d604641bbc3de49f2fc7c35114d31243e97ed1474234b2",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "ca30bd010b70fb544fd8f750f395d3a0a865403bfb4be0f6bc4b322ff1ed0a23",
+      "user_prompt_sha256": "ad52e5c2436dbf761c2995f1741feaf0672fc306ec3880bf02b09dc1d384b101",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":true,\"category\":\"FIRE_RESCUE\",\"risk\":\"HIGH\",\"confidence\":0.96,\"reason_codes\":[\"fire_incident\",\"property_damage\",\"residential_impact\"]}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 308,
+          "output_tokens": 48,
+          "cost_usd": 3.5048e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 781.7092990003403
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:40.726223Z"
+    },
+    {
+      "request_key": "3963d70f810138d5e3b54a95a81ded422aae7105d6129b8c631a48206bf6c8ef",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "72dafd6c97ff8f7b35a8eb99984049afef3c030aa5269eb13368ccda8c4fa0af",
+      "user_prompt_sha256": "ad52e5c2436dbf761c2995f1741feaf0672fc306ec3880bf02b09dc1d384b101",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"location\":\"garasi Damri di Bandung\",\"object\":\"10 bus serta 13 rumah warga\",\"time\":null,\"evidence_spans\":[\"garasi Damri di Bandung\",\"10 bus serta 13 rumah warga\"],\"confidence\":0.95}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 254,
+          "output_tokens": 57,
+          "cost_usd": 1.68985e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 1742.6333530002012
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:42.469761Z"
+    },
+    {
+      "request_key": "30e7c7d5fc00cc225867588215fd78c1157a5590ef0a0098f3322444f5b2298f",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "fe8a9c6004089285835e675b5ce42cfa3a7e1b6f8ce45fde1e0cd44f3087eaff",
+      "user_prompt_sha256": "283f70b0ea283d1cd4df26687201838fc924ad696ce6608173127984bbbeb6ab",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":false,\"category\":\"FIRE_RESCUE\",\"evidence_supported\":true,\"issues\":[],\"confidence\":0.9}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 419,
+          "output_tokens": 34,
+          "cost_usd": 1.9442e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 1710.112185000071
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:44.181022Z"
+    },
+    {
+      "request_key": "554ab1419d7b5d7248c6611f7ec624daf559707edf2da20759a98a33835ce59e",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "ca30bd010b70fb544fd8f750f395d3a0a865403bfb4be0f6bc4b322ff1ed0a23",
+      "user_prompt_sha256": "be4be9d232a96987cbb9f6b5effbfce847d8a1d492565faf5f3cdb2aed978bff",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":true,\"category\":\"DRAINAGE_FLOOD\",\"risk\":\"HIGH\",\"confidence\":0.97,\"reason_codes\":[\"flood_location\",\"river_embankment_breach\",\"residential_flooding\"]}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 320,
+          "output_tokens": 56,
+          "cost_usd": 3.8136e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 878.5054749996561
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:45.060987Z"
+    },
+    {
+      "request_key": "7c6cfdd0cf08ea16efb6d748e16d76f52ad9efb0768d8f28e05b8b0349d6f879",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "72dafd6c97ff8f7b35a8eb99984049afef3c030aa5269eb13368ccda8c4fa0af",
+      "user_prompt_sha256": "be4be9d232a96987cbb9f6b5effbfce847d8a1d492565faf5f3cdb2aed978bff",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"location\":\"sekitar Jalan Cihampelas, tepatnya di depan Hotel Grand Tjokro Bandung\",\"object\":\"tanggul Sungai Cikapundung\",\"time\":\"23 Oktober 2026\",\"evidence_spans\":[\"Lokasi banjir berada di sekitar Jalan Cihampelas, tepatnya di depan Hotel Grand Tjokro Bandung.\",\"pada 23 Oktober 2026, tanggul Sungai Cikapundung dilaporkan jebol dan air masuk ke permukiman warga.\"],\"confidence\":0.98}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 266,
+          "output_tokens": 134,
+          "cost_usd": 5.6274e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 1184.02745100002
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:46.246042Z"
+    },
+    {
+      "request_key": "f60dcb7e6540bcbd8f1527e6c2af0dbfacfc349be5d1d3d31727fd6adc24a481",
+      "model": "tencent/hy4-flash",
+      "provider": "openai",
+      "system_prompt_sha256": "fe8a9c6004089285835e675b5ce42cfa3a7e1b6f8ce45fde1e0cd44f3087eaff",
+      "user_prompt_sha256": "c6a63e8d64f6979d354682288f6a8d67461ddbf0583c8bc15127543caed2038a",
+      "max_tokens": 800,
+      "timeout_seconds": 30.0,
+      "response": {
+        "content": "{\"is_complaint\":true,\"category\":\"DRAINAGE_FLOOD\",\"evidence_supported\":true,\"issues\":[],\"confidence\":0.97}",
+        "model": "tencent/hy4-flash",
+        "provider": "openai",
+        "usage": {
+          "input_tokens": 508,
+          "output_tokens": 36,
+          "cost_usd": 4.5676e-05,
+          "cost_source": "provider"
+        },
+        "latency_ms": 831.717751999804
+      },
+      "error_code": null,
+      "error_message": null,
+      "recorded_at": "2026-11-25T23:37:47.079000Z"
+    }
+  ]
+}
