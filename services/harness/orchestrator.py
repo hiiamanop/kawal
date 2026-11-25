@@ -16,6 +16,7 @@ from contracts.harness import (
     deterministic_case_id,
 )
 from services.harness.budget import BudgetExceededError, BudgetTracker
+from services.harness.location import assess_location
 from services.harness.ports import Agent, AgentTask
 from services.harness.trace import TraceRecorder
 
@@ -122,6 +123,18 @@ class HarnessOrchestrator:
             trace.add("run.failed", reason="EXTRACTION_INVALID")
             return self._finish(resolved_run_id, post, "FAILED", None, trace, budget)
 
+        location_assessment = assess_location(
+            extraction.location,
+            extraction.evidence_spans,
+            post.text,
+        )
+        trace.add(
+            "location.assessed",
+            case_id=case_id,
+            quality=location_assessment.quality,
+            reason_codes=list(location_assessment.reason_codes),
+        )
+
         verifier_result, exceeded = self._call_agent(
             self._verifier,
             AgentTask(
@@ -217,11 +230,11 @@ class HarnessOrchestrator:
             trust_decision = "REJECTED"
             status = "REJECTED"
         else:
-            location_present = bool(extraction.location and extraction.location.strip())
+            location_specific = location_assessment.quality == "SPECIFIC"
             if not verification.evidence_supported:
                 reason_codes.append("EVIDENCE_NOT_SUPPORTED")
-            if not location_present:
-                reason_codes.append("LOCATION_MISSING")
+            if not location_specific:
+                reason_codes.extend(location_assessment.reason_codes)
             if reason_codes:
                 trust_decision = "NEEDS_REVIEW"
                 status = "NEEDS_REVIEW"
@@ -237,6 +250,7 @@ class HarnessOrchestrator:
             extraction=extraction,
             verification=verification,
             arbitration=arbitration,
+            location_quality=location_assessment.quality,
             trust_decision=trust_decision,  # type: ignore[arg-type]
             status=status,  # type: ignore[arg-type]
             reason_codes=tuple(reason_codes),
@@ -314,7 +328,9 @@ class HarnessOrchestrator:
         return result, False
 
     @staticmethod
-    def _parse_triage(output: dict[str, Any] | None, trace: TraceRecorder) -> TriageOutput | None:
+    def _parse_triage(
+        output: dict[str, Any] | None, trace: TraceRecorder
+    ) -> TriageOutput | None:
         try:
             return TriageOutput.model_validate(output)
         except Exception:
@@ -369,5 +385,7 @@ class HarnessOrchestrator:
             status=status,  # type: ignore[arg-type]
             case=case,
             trace=trace.events,
-            cost=budget.report(arbiter_calls=arbiter_calls, budget_status=budget_status),
+            cost=budget.report(
+                arbiter_calls=arbiter_calls, budget_status=budget_status
+            ),
         )
