@@ -9,8 +9,8 @@ WORKDIR /app
 RUN groupadd --system --gid 10001 kawal && \
     useradd --system --uid 10001 --gid kawal --no-create-home --shell /usr/sbin/nologin kawal
 
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements-simulator.txt ./
+RUN pip install --no-cache-dir -r requirements-simulator.txt
 
 COPY contracts/ ./contracts/
 COPY services/__init__.py ./services/__init__.py

@@ -6,8 +6,17 @@
 .pytest_cache
 __pycache__
 *.py[cod]
+.venv
+.venv-ml
+.cache
+artifacts
 docs
+fixtures
 infra
 policies
+runs
+scripts
+supabase
 tests
+OpenWA
 .DS_Store
