@@ -38,8 +38,12 @@ from services.dataset.splits import (
 import scripts.generate_m3_dataset as _m3_gen
 
 _m3_gen.ALL_SCENARIO_TEMPLATES = tuple(
-    t for t in _m3_gen.ALL_SCENARIO_TEMPLATES if t.category in _m3_gen.CATEGORY_ANCHOR_LEXICONS
+    t
+    for t in _m3_gen.ALL_SCENARIO_TEMPLATES
+    if t.category in _m3_gen.CATEGORY_ANCHOR_LEXICONS
 )
+
+pytestmark = pytest.mark.research
 
 
 def test_assign_split_deterministic() -> None:
@@ -290,9 +294,7 @@ def test_audit_family_splits_detects_action_consistency_violations() -> None:
             TrajectoryTurn(
                 turn=1,
                 bubbles=(
-                    TrajectoryBubble(
-                        source_message_id="m1", text="Lapor aspal ambles"
-                    ),
+                    TrajectoryBubble(source_message_id="m1", text="Lapor aspal ambles"),
                 ),
                 expected_action=TurnExpectedAction(
                     turn=1,
@@ -348,9 +350,7 @@ def test_audit_family_splits_detects_cross_split_duplicates() -> None:
         turns=(
             TrajectoryTurn(
                 turn=1,
-                bubbles=(
-                    TrajectoryBubble(source_message_id="m1", text=repeated_text),
-                ),
+                bubbles=(TrajectoryBubble(source_message_id="m1", text=repeated_text),),
                 expected_action=TurnExpectedAction(
                     turn=1,
                     allowed_actions=(DecisionMode.EXECUTE,),
@@ -368,9 +368,7 @@ def test_audit_family_splits_detects_cross_split_duplicates() -> None:
         turns=(
             TrajectoryTurn(
                 turn=1,
-                bubbles=(
-                    TrajectoryBubble(source_message_id="m2", text=repeated_text),
-                ),
+                bubbles=(TrajectoryBubble(source_message_id="m2", text=repeated_text),),
                 expected_action=TurnExpectedAction(
                     turn=1,
                     allowed_actions=(DecisionMode.EXECUTE,),
@@ -533,8 +531,12 @@ def test_reporter_bubbles_contain_no_identifiers_or_labels() -> None:
                             assert scen_id.lower() not in b_text_lower
                             assert template.family_id.lower() not in b_text_lower
                             for cat in Category:
-                                assert f"category: {cat.value.lower()}" not in b_text_lower
-                                assert f"kategori: {cat.value.lower()}" not in b_text_lower
+                                assert (
+                                    f"category: {cat.value.lower()}" not in b_text_lower
+                                )
+                                assert (
+                                    f"kategori: {cat.value.lower()}" not in b_text_lower
+                                )
                                 if "_" in cat.value:
                                     assert cat.value.lower() not in b_text_lower
                             for k, v in template.world_truth.items():
@@ -556,9 +558,15 @@ def test_category_stratified_family_splits_all_p0_categories_represented() -> No
         for cat in Category:
             cat_fams = [f for f, c in f2c.items() if c == cat]
             cat_splits = {split_map[f] for f in cat_fams}
-            assert DatasetSplit.TRAIN in cat_splits, f"Category {cat} missing TRAIN with seed {test_seed}"
-            assert DatasetSplit.DEV in cat_splits, f"Category {cat} missing DEV with seed {test_seed}"
-            assert DatasetSplit.TEST in cat_splits, f"Category {cat} missing TEST with seed {test_seed}"
+            assert DatasetSplit.TRAIN in cat_splits, (
+                f"Category {cat} missing TRAIN with seed {test_seed}"
+            )
+            assert DatasetSplit.DEV in cat_splits, (
+                f"Category {cat} missing DEV with seed {test_seed}"
+            )
+            assert DatasetSplit.TEST in cat_splits, (
+                f"Category {cat} missing TEST with seed {test_seed}"
+            )
 
             part_train = set(partition[DatasetSplit.TRAIN])
             part_dev = set(partition[DatasetSplit.DEV])
@@ -589,9 +597,7 @@ def test_partition_and_build_split_map_with_category_stratification() -> None:
     stratified_partition = partition_families_by_split(
         fam_ids, seed=42, family_to_category=f2c
     )
-    stratified_map = build_family_split_map(
-        fam_ids, seed=42, family_to_category=f2c
-    )
+    stratified_map = build_family_split_map(fam_ids, seed=42, family_to_category=f2c)
 
     for cat in Category:
         cat_fams = [f for f, c in f2c.items() if c == cat]
@@ -615,7 +621,9 @@ def test_generate_dataset_has_all_p0_categories_in_all_splits() -> None:
 
     for split in (DatasetSplit.TRAIN, DatasetSplit.DEV, DatasetSplit.TEST):
         for cat in Category:
-            assert cat in categories_by_split[split], f"Category {cat} missing in split {split}"
+            assert cat in categories_by_split[split], (
+                f"Category {cat} missing in split {split}"
+            )
 
 
 def test_multitask_head_coverage_across_dataset_splits() -> None:
@@ -673,9 +681,15 @@ def test_multitask_head_coverage_across_dataset_splits() -> None:
         assert len(split_trajs) > 0
         samples = extract_trajectory_multitask_samples(split_trajs)
         assert {s["intent"] for s in samples} == {"COMPLAINT", "INQUIRY", "FEEDBACK"}
-        assert {s["category"] for s in samples} == {c.value for c in CATEGORY_ANCHOR_LEXICONS}
+        assert {s["category"] for s in samples} == {
+            c.value for c in CATEGORY_ANCHOR_LEXICONS
+        }
         assert {s["risk"] for s in samples} == {"LOW", "MEDIUM", "HIGH", "URGENT"}
-        assert {s["completeness"] for s in samples} == {"SUFFICIENT", "INCOMPLETE", "AMBIGUOUS"}
+        assert {s["completeness"] for s in samples} == {
+            "SUFFICIENT",
+            "INCOMPLETE",
+            "AMBIGUOUS",
+        }
 
 
 def test_audit_detects_scenario_id_leakage_in_bubble() -> None:
@@ -866,7 +880,9 @@ def test_audit_detects_ngram_cross_split_leakage() -> None:
     result = audit_family_splits([t_train, t_test])
     assert result.passed is False
     assert any("Cross-split 6-gram leakage" in v for v in result.violations)
-    assert any("gorong gorong tersumbat lumpur pekat parah" in v for v in result.violations)
+    assert any(
+        "gorong gorong tersumbat lumpur pekat parah" in v for v in result.violations
+    )
 
 
 def test_audit_allows_common_language_ngrams_across_splits() -> None:
@@ -960,14 +976,19 @@ def test_generated_dataset_zero_leakage_multiple_seeds() -> None:
     for seed in (1, 7, 42, 100, 2024):
         dataset = generate_dataset(num_scenarios=36, seed=seed)
         audit_res = audit_family_splits(dataset)
-        assert audit_res.passed is True, f"Failed for seed {seed}: {audit_res.violations}"
+        assert audit_res.passed is True, (
+            f"Failed for seed {seed}: {audit_res.violations}"
+        )
         assert len(audit_res.violations) == 0
         assert len(audit_res.oracle_leakages) == 0
         assert len(audit_res.cross_split_text_duplicates) == 0
 
 
 def test_risk_labels_grounded_in_explicit_evidence_consistently() -> None:
-    from scripts.generate_m3_dataset import ALL_SCENARIO_TEMPLATES, generate_safe_trajectory
+    from scripts.generate_m3_dataset import (
+        ALL_SCENARIO_TEMPLATES,
+        generate_safe_trajectory,
+    )
 
     template = ALL_SCENARIO_TEMPLATES[0]
     risks = ("LOW", "MEDIUM", "HIGH", "URGENT")
@@ -993,30 +1014,54 @@ def test_risk_labels_grounded_in_explicit_evidence_consistently() -> None:
                 if risk == "LOW":
                     assert any(
                         marker in b1_text
-                        for marker in ("belum parah", "tidak ada bahaya", "tidak mendesak", "tidak darurat")
+                        for marker in (
+                            "belum parah",
+                            "tidak ada bahaya",
+                            "tidak mendesak",
+                            "tidak darurat",
+                        )
                     ), f"LOW risk missing explicit evidence in: {b1_text}"
                     assert "bahaya sekali" not in b1_text
                 elif risk == "MEDIUM":
                     assert any(
                         marker in b1_text
-                        for marker in ("makin rusak", "semakin rusak", "belum darurat", "belum sangat parah")
+                        for marker in (
+                            "makin rusak",
+                            "semakin rusak",
+                            "belum darurat",
+                            "belum sangat parah",
+                        )
                     ), f"MEDIUM risk missing explicit evidence in: {b1_text}"
                 elif risk == "HIGH":
                     assert any(
                         marker in b1_text
-                        for marker in ("sangat parah", "bahaya", "mendesak", "segera ditangani")
+                        for marker in (
+                            "sangat parah",
+                            "bahaya",
+                            "mendesak",
+                            "segera ditangani",
+                        )
                     ), f"HIGH risk missing explicit evidence in: {b1_text}"
                     assert "tidak ada bahaya" not in b1_text
                 elif risk == "URGENT":
                     assert any(
                         marker in b1_text
-                        for marker in ("sangat darurat", "darurat parah", "bahaya sekali", "sekarang", "darurat bahaya")
+                        for marker in (
+                            "sangat darurat",
+                            "darurat parah",
+                            "bahaya sekali",
+                            "sekarang",
+                            "darurat bahaya",
+                        )
                     ), f"URGENT risk missing explicit evidence in: {b1_text}"
                     assert "tidak ada bahaya" not in b1_text
 
 
 def test_completeness_labels_grounded_and_emit_ambiguous_evidence() -> None:
-    from scripts.generate_m3_dataset import ALL_SCENARIO_TEMPLATES, generate_safe_trajectory
+    from scripts.generate_m3_dataset import (
+        ALL_SCENARIO_TEMPLATES,
+        generate_safe_trajectory,
+    )
 
     template = ALL_SCENARIO_TEMPLATES[0]
     personas = ("STANDARD", "FORMAL", "FRUSTRATED_RAMBLING", "PANICKED")
@@ -1038,7 +1083,9 @@ def test_completeness_labels_grounded_and_emit_ambiguous_evidence() -> None:
             )
             assert traj.location_completeness == "AMBIGUOUS"
             assert traj.world_truth.get("completeness") == "AMBIGUOUS"
-            assert traj.turns[0].expected_action.allowed_actions == (DecisionMode.REQUEST_CLARIFICATION,)
+            assert traj.turns[0].expected_action.allowed_actions == (
+                DecisionMode.REQUEST_CLARIFICATION,
+            )
             assert traj.turns[0].expected_action.missing == ("location_ambiguity",)
             b2_text = traj.turns[0].bubbles[1].text.lower()
             assert any(
@@ -1062,7 +1109,9 @@ def test_completeness_labels_grounded_and_emit_ambiguous_evidence() -> None:
         )
         assert traj.location_completeness == "INCOMPLETE"
         assert traj.world_truth.get("completeness") == "INCOMPLETE"
-        assert traj.turns[0].expected_action.allowed_actions == (DecisionMode.REQUEST_CLARIFICATION,)
+        assert traj.turns[0].expected_action.allowed_actions == (
+            DecisionMode.REQUEST_CLARIFICATION,
+        )
         assert traj.turns[0].expected_action.missing == ("jurisdiction",)
 
     # SUFFICIENT
@@ -1087,7 +1136,10 @@ def test_completeness_labels_grounded_and_emit_ambiguous_evidence() -> None:
 
 
 def test_intents_have_semantic_language() -> None:
-    from scripts.generate_m3_dataset import ALL_SCENARIO_TEMPLATES, generate_safe_trajectory
+    from scripts.generate_m3_dataset import (
+        ALL_SCENARIO_TEMPLATES,
+        generate_safe_trajectory,
+    )
 
     template = ALL_SCENARIO_TEMPLATES[0]
     intents = ("COMPLAINT", "INQUIRY", "FEEDBACK")
@@ -1114,37 +1166,59 @@ def test_intents_have_semantic_language() -> None:
                 if intent == "COMPLAINT":
                     assert any(w in b1_text for w in ("lapor", "laporkan", "laporan"))
                 elif intent == "INQUIRY":
-                    assert any(w in b1_text for w in ("informasi", "info", "bagaimana", "keterangan"))
+                    assert any(
+                        w in b1_text
+                        for w in ("informasi", "info", "bagaimana", "keterangan")
+                    )
                 elif intent == "FEEDBACK":
-                    assert any(w in b1_text for w in ("terima kasih", "makasih", "penanganan"))
+                    assert any(
+                        w in b1_text for w in ("terima kasih", "makasih", "penanganan")
+                    )
 
 
 def test_categories_distinguishable_road_vs_drainage_flood() -> None:
     from scripts.generate_m3_dataset import ALL_SCENARIO_TEMPLATES
 
     road_templates = [t for t in ALL_SCENARIO_TEMPLATES if t.category == Category.ROAD]
-    drainage_templates = [t for t in ALL_SCENARIO_TEMPLATES if t.category == Category.DRAINAGE_FLOOD]
+    drainage_templates = [
+        t for t in ALL_SCENARIO_TEMPLATES if t.category == Category.DRAINAGE_FLOOD
+    ]
 
     assert len(road_templates) >= 6
     assert len(drainage_templates) >= 6
 
-    drainage_keywords = {"drainase", "parit", "gorong", "saluran air", "pintu air", "retensi", "banjir"}
+    drainage_keywords = {
+        "drainase",
+        "parit",
+        "gorong",
+        "saluran air",
+        "pintu air",
+        "retensi",
+        "banjir",
+    }
     road_keywords = {"jalan", "aspal", "trotoar", "lalu lintas"}
 
     for t in road_templates:
         issue_lower = t.issue.lower()
         for kw in drainage_keywords:
-            assert kw not in issue_lower, f"Road template {t.family_id} contains drainage keyword '{kw}': {t.issue}"
+            assert kw not in issue_lower, (
+                f"Road template {t.family_id} contains drainage keyword '{kw}': {t.issue}"
+            )
 
     for t in drainage_templates:
         issue_lower = t.issue.lower()
         for kw in road_keywords:
-            assert kw not in issue_lower, f"Drainage template {t.family_id} contains road keyword '{kw}': {t.issue}"
+            assert kw not in issue_lower, (
+                f"Drainage template {t.family_id} contains road keyword '{kw}': {t.issue}"
+            )
 
 
 def test_family_diversity_per_category_at_least_12() -> None:
     """Verify that ALL_SCENARIO_TEMPLATES provides at least 12 independent families per category."""
-    from scripts.generate_m3_dataset import ALL_SCENARIO_TEMPLATES, CATEGORY_ANCHOR_LEXICONS
+    from scripts.generate_m3_dataset import (
+        ALL_SCENARIO_TEMPLATES,
+        CATEGORY_ANCHOR_LEXICONS,
+    )
 
     assert len(ALL_SCENARIO_TEMPLATES) >= 72
     family_ids = [t.family_id for t in ALL_SCENARIO_TEMPLATES]
@@ -1152,9 +1226,9 @@ def test_family_diversity_per_category_at_least_12() -> None:
 
     for cat in CATEGORY_ANCHOR_LEXICONS:
         cat_templates = [t for t in ALL_SCENARIO_TEMPLATES if t.category == cat]
-        assert (
-            len(cat_templates) >= 12
-        ), f"Category {cat} has only {len(cat_templates)} families, expected >= 12"
+        assert len(cat_templates) >= 12, (
+            f"Category {cat} has only {len(cat_templates)} families, expected >= 12"
+        )
 
 
 def test_semantic_category_anchor_lexicons_no_enum_leaks() -> None:
@@ -1170,24 +1244,27 @@ def test_semantic_category_anchor_lexicons_no_enum_leaks() -> None:
         assert len(CATEGORY_ANCHOR_LEXICONS[cat]["anchors"]) > 0
 
     for template in ALL_SCENARIO_TEMPLATES:
-        assert (
-            validate_scenario_template_lexicon(template) is True
-        ), f"Template {template.family_id} failed lexicon validation: {template.issue}"
+        assert validate_scenario_template_lexicon(template) is True, (
+            f"Template {template.family_id} failed lexicon validation: {template.issue}"
+        )
 
         issue_lower = template.issue.lower()
         landmark_lower = template.landmark.lower()
         for c in Category:
-            assert (
-                c.value.lower() not in issue_lower
-            ), f"Category enum {c.value} leaked into issue of {template.family_id}"
-            assert (
-                c.value.lower() not in landmark_lower
-            ), f"Category enum {c.value} leaked into landmark of {template.family_id}"
+            assert c.value.lower() not in issue_lower, (
+                f"Category enum {c.value} leaked into issue of {template.family_id}"
+            )
+            assert c.value.lower() not in landmark_lower, (
+                f"Category enum {c.value} leaked into landmark of {template.family_id}"
+            )
 
 
 def test_compact_ner_object_location_time_evidence_presence() -> None:
     """Verify that generated trajectories yield compact OBJ, LOC, and TIME NER entity evidence."""
-    from scripts.generate_m3_dataset import ALL_SCENARIO_TEMPLATES, generate_safe_trajectory
+    from scripts.generate_m3_dataset import (
+        ALL_SCENARIO_TEMPLATES,
+        generate_safe_trajectory,
+    )
     from scripts.train_ner import extract_trajectory_ner_samples
 
     trajectories = []
@@ -1209,11 +1286,7 @@ def test_compact_ner_object_location_time_evidence_presence() -> None:
     samples = extract_trajectory_ner_samples(trajectories)
     assert len(samples) > 0
 
-    all_labels = {
-        lbl
-        for s in samples
-        for _, _, lbl in s.get("spans", [])
-    }
+    all_labels = {lbl for s in samples for _, _, lbl in s.get("spans", [])}
     assert "LOC" in all_labels, "Extracted NER samples must contain LOC entities"
     assert "OBJ" in all_labels, "Extracted NER samples must contain OBJ entities"
     assert "TIME" in all_labels, "Extracted NER samples must contain TIME entities"
@@ -1245,9 +1318,20 @@ def test_category_anchor_composition_injection_in_reporter_bubbles() -> None:
     )
 
     family_to_cat = {t.family_id: t.category for t in ALL_SCENARIO_TEMPLATES}
-    split_map = build_family_split_map(tuple(family_to_cat.keys()), seed=42, family_to_category=family_to_cat)
+    split_map = build_family_split_map(
+        tuple(family_to_cat.keys()), seed=42, family_to_category=family_to_cat
+    )
 
-    drainage_cues = ("drainase", "parit", "gorong", "limpasan", "banjir", "saluran", "genangan", "luapan")
+    drainage_cues = (
+        "drainase",
+        "parit",
+        "gorong",
+        "limpasan",
+        "banjir",
+        "saluran",
+        "genangan",
+        "luapan",
+    )
     waste_cues = ("sampah", "limbah", "kotoran", "residu")
     clean_water_cues = ("air bersih", "pdam", "kran", "leding", "perpipaan", "meteran")
 
@@ -1268,17 +1352,23 @@ def test_category_anchor_composition_injection_in_reporter_bubbles() -> None:
 
         b1_text = traj.turns[0].bubbles[0].text.lower()
         anchors = CATEGORY_ANCHOR_LEXICONS[tmpl.category]["anchors"]
-        assert any(
-            a.lower() in b1_text for a in anchors
-        ), f"Trajectory for {tmpl.category} missing category compact object anchor in bubble: {b1_text}"
+        assert any(a.lower() in b1_text for a in anchors), (
+            f"Trajectory for {tmpl.category} missing category compact object anchor in bubble: {b1_text}"
+        )
 
         # Contrast drainage vs waste vs clean water
         if tmpl.category == Category.DRAINAGE_FLOOD:
-            assert any(c in b1_text for c in drainage_cues), f"Drainage cue missing in: {b1_text}"
+            assert any(c in b1_text for c in drainage_cues), (
+                f"Drainage cue missing in: {b1_text}"
+            )
         elif tmpl.category == Category.WASTE:
-            assert any(c in b1_text for c in waste_cues), f"Waste cue missing in: {b1_text}"
+            assert any(c in b1_text for c in waste_cues), (
+                f"Waste cue missing in: {b1_text}"
+            )
         elif tmpl.category == Category.CLEAN_WATER:
-            assert any(c in b1_text for c in clean_water_cues), f"Clean water cue missing in: {b1_text}"
+            assert any(c in b1_text for c in clean_water_cues), (
+                f"Clean water cue missing in: {b1_text}"
+            )
 
         # No IDs or Category enum in bubble text
         assert f"sc-anchor-inject-{i:04d}" not in b1_text
@@ -1324,10 +1414,18 @@ def test_city12_load_trajectories_with_world_truth_metadata() -> None:
                         "source_message_id": "msg_city12_001",
                         "text": "juru parkir liar di pasar simpang lima sore hari meresahkan warga sekitar",
                         "offset_seconds": 0,
-                        "canonical_spans": [[0, 16, "OBJ"], [20, 39, "LOC"], [40, 49, "TIME"]],
+                        "canonical_spans": [
+                            [0, 16, "OBJ"],
+                            [20, 39, "LOC"],
+                            [40, 49, "TIME"],
+                        ],
                     }
                 ],
-                "observable_facts": ["juru parkir liar", "pasar simpang lima", "sore hari"],
+                "observable_facts": [
+                    "juru parkir liar",
+                    "pasar simpang lima",
+                    "sore hari",
+                ],
                 "hidden_facts": [],
                 "expected_action": {
                     "turn": 1,
@@ -1404,7 +1502,9 @@ def test_city12_load_trajectories_rejects_unsafe_top_level_extras() -> None:
 
     with tempfile.TemporaryDirectory() as td:
         file_path = Path(td) / "unsafe_top.jsonl"
-        file_path.write_text(json.dumps(raw_record_with_unsafe_top_level) + "\n", encoding="utf-8")
+        file_path.write_text(
+            json.dumps(raw_record_with_unsafe_top_level) + "\n", encoding="utf-8"
+        )
 
         with pytest.raises(ValidationError) as exc_info:
             load_trajectories_from_jsonl(file_path)
@@ -1441,7 +1541,9 @@ def test_city12_load_trajectories_rejects_unsafe_bubble_extras() -> None:
 
     with tempfile.TemporaryDirectory() as td:
         file_path = Path(td) / "unsafe_bubble.jsonl"
-        file_path.write_text(json.dumps(raw_record_with_unsafe_bubble) + "\n", encoding="utf-8")
+        file_path.write_text(
+            json.dumps(raw_record_with_unsafe_bubble) + "\n", encoding="utf-8"
+        )
 
         with pytest.raises(ValidationError) as exc_info:
             load_trajectories_from_jsonl(file_path)
@@ -1449,7 +1551,9 @@ def test_city12_load_trajectories_rejects_unsafe_bubble_extras() -> None:
         assert "extra_forbidden" in str(exc_info.value)
 
 
-def test_city12_load_trajectories_preserves_canonical_spans_when_nested_in_world_truth() -> None:
+def test_city12_load_trajectories_preserves_canonical_spans_when_nested_in_world_truth() -> (
+    None
+):
     raw_record = {
         "scenario_id": "city12_sc_nested_01",
         "family_id": "city12-fam-nested-01",
@@ -1491,7 +1595,3 @@ def test_city12_load_trajectories_preserves_canonical_spans_when_nested_in_world
         assert traj.world_truth["concept_id"] == 3
         assert traj.world_truth["risk_evidence_kind"] == "operational_disruption"
         assert traj.world_truth["style_family"] == "narrative_slang"
-
-
-
-

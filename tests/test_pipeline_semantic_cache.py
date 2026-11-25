@@ -11,6 +11,7 @@ from services.reliability.client import ReliableTicketClient
 from services.simulator.store import TicketSimulator
 
 
+@pytest.mark.research
 def test_pipeline_semantic_deduplication_avoids_duplicate_tickets() -> None:
     simulator = TicketSimulator()
     connector = OpenWAConnector()

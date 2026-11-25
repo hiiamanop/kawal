@@ -33,6 +33,8 @@ from services.dataset.splits import (
 )
 from services.ml.manifest import ArtifactManifest, compute_file_sha256
 
+pytestmark = pytest.mark.research
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GENERATOR_SCRIPT_PATH = REPO_ROOT / "scripts" / "generate_m3_independent_holdout.py"
 SOURCE_ARTIFACTS_DIR = REPO_ROOT / "artifacts" / "m3_synthetic"
@@ -81,10 +83,24 @@ def _invoke_generator(
 
     if gen_func is not None:
         kwarg_attempts = (
-            {"output_dir": output_dir, "source_dir": source_dir, "seed": seed, "count": count},
+            {
+                "output_dir": output_dir,
+                "source_dir": source_dir,
+                "seed": seed,
+                "count": count,
+            },
             {"output_dir": output_dir, "source_dir": source_dir, "seed": seed},
-            {"output_dir": output_dir, "source_artifacts_dir": source_dir, "seed": seed, "count": count},
-            {"output_dir": output_dir, "source_artifacts_dir": source_dir, "seed": seed},
+            {
+                "output_dir": output_dir,
+                "source_artifacts_dir": source_dir,
+                "seed": seed,
+                "count": count,
+            },
+            {
+                "output_dir": output_dir,
+                "source_artifacts_dir": source_dir,
+                "seed": seed,
+            },
             {"output_dir": output_dir, "source_dir": source_dir},
             {"output_dir": output_dir, "seed": seed, "count": count},
             {"output_dir": output_dir, "seed": seed},
@@ -105,12 +121,18 @@ def _invoke_generator(
 
     if hasattr(module, "main") and callable(module.main):
         try:
-            return module.main([
-                "--output-dir", str(output_dir),
-                "--source-dir", str(source_dir),
-                "--seed", str(seed),
-                "--count", str(count),
-            ])
+            return module.main(
+                [
+                    "--output-dir",
+                    str(output_dir),
+                    "--source-dir",
+                    str(source_dir),
+                    "--seed",
+                    str(seed),
+                    "--count",
+                    str(count),
+                ]
+            )
         except (TypeError, SystemExit):
             try:
                 return module.main()
@@ -161,9 +183,14 @@ def _assert_metadata_provenance(
         assert isinstance(t.category, Category), (
             f"Trajectory {idx} has invalid category {t.category}"
         )
-        assert t.split in (DatasetSplit.TEST, "test", DatasetSplit.DEV, "dev", DatasetSplit.TRAIN, "train"), (
-            f"Trajectory {idx} has invalid split {t.split}"
-        )
+        assert t.split in (
+            DatasetSplit.TEST,
+            "test",
+            DatasetSplit.DEV,
+            "dev",
+            DatasetSplit.TRAIN,
+            "train",
+        ), f"Trajectory {idx} has invalid split {t.split}"
         assert isinstance(t.world_truth, dict), (
             f"Trajectory {idx} world_truth is not a dict"
         )
@@ -223,9 +250,17 @@ def _assert_metadata_provenance(
         ]
         assert len(meta_lines) >= 1, f"metadata.jsonl in {output_dir} is empty"
         for meta in meta_lines:
-            assert meta.get("human_written") is not True, "metadata claims human_written"
-            assert meta.get("is_human_written") is not True, "metadata claims is_human_written"
-            assert meta.get("provenance") in ("synthetic_independent", "synthetic", None)
+            assert meta.get("human_written") is not True, (
+                "metadata claims human_written"
+            )
+            assert meta.get("is_human_written") is not True, (
+                "metadata claims is_human_written"
+            )
+            assert meta.get("provenance") in (
+                "synthetic_independent",
+                "synthetic",
+                None,
+            )
 
 
 def _assert_six_category_and_head_coverage(
@@ -285,7 +320,11 @@ def _assert_risk_semantic_grounding(
     med_growth_keywords = ("makin rusak", "semakin rusak")
     med_non_emergency_keywords = ("belum darurat", "belum sangat parah")
     high_urgency_keywords = ("bahaya", "mendesak", "segera ditangani")
-    urgent_emergency_keywords = ("sangat darurat", "darurat parah", "darurat sangat mendesak")
+    urgent_emergency_keywords = (
+        "sangat darurat",
+        "darurat parah",
+        "darurat sangat mendesak",
+    )
 
     for t in trajectories:
         risk = t.world_truth.get("risk")
@@ -296,9 +335,9 @@ def _assert_risk_semantic_grounding(
         all_text_lower = all_text.lower()
 
         # Bug regression check: static generic risk clause MUST NOT exist
-        assert "situasi di lokasi membutuhkan koordinasi petugas" not in all_text_lower, (
-            f"Static generic risk clause found in scenario {t.scenario_id}"
-        )
+        assert (
+            "situasi di lokasi membutuhkan koordinasi petugas" not in all_text_lower
+        ), f"Static generic risk clause found in scenario {t.scenario_id}"
 
         if risk == "LOW":
             assert any(k in all_text_lower for k in low_keywords), (
@@ -306,8 +345,16 @@ def _assert_risk_semantic_grounding(
             )
             assert not any(
                 k in all_text_lower
-                for k in ("sangat parah", "darurat sangat mendesak", "bahaya sekali", "makin rusak", "semakin rusak")
-            ), f"Contradictory risk evidence in LOW scenario {t.scenario_id}: {all_text}"
+                for k in (
+                    "sangat parah",
+                    "darurat sangat mendesak",
+                    "bahaya sekali",
+                    "makin rusak",
+                    "semakin rusak",
+                )
+            ), (
+                f"Contradictory risk evidence in LOW scenario {t.scenario_id}: {all_text}"
+            )
 
         elif risk == "MEDIUM":
             assert any(k in all_text_lower for k in med_growth_keywords), (
@@ -318,8 +365,15 @@ def _assert_risk_semantic_grounding(
             )
             assert not any(
                 k in all_text_lower
-                for k in ("tidak ada bahaya", "aman terkendali", "darurat sangat mendesak", "bahaya sekali")
-            ), f"Contradictory risk evidence in MEDIUM scenario {t.scenario_id}: {all_text}"
+                for k in (
+                    "tidak ada bahaya",
+                    "aman terkendali",
+                    "darurat sangat mendesak",
+                    "bahaya sekali",
+                )
+            ), (
+                f"Contradictory risk evidence in MEDIUM scenario {t.scenario_id}: {all_text}"
+            )
 
         elif risk == "HIGH":
             assert "sangat parah" in all_text_lower, (
@@ -330,8 +384,16 @@ def _assert_risk_semantic_grounding(
             )
             assert not any(
                 k in all_text_lower
-                for k in ("belum parah", "tidak ada bahaya", "tidak darurat", "darurat sangat mendesak", "bahaya sekali")
-            ), f"Contradictory risk evidence in HIGH scenario {t.scenario_id}: {all_text}"
+                for k in (
+                    "belum parah",
+                    "tidak ada bahaya",
+                    "tidak darurat",
+                    "darurat sangat mendesak",
+                    "bahaya sekali",
+                )
+            ), (
+                f"Contradictory risk evidence in HIGH scenario {t.scenario_id}: {all_text}"
+            )
 
         elif risk == "URGENT":
             assert any(k in all_text_lower for k in urgent_emergency_keywords), (
@@ -344,8 +406,11 @@ def _assert_risk_semantic_grounding(
                 f"URGENT immediate action timing ungrounded in scenario {t.scenario_id}: {all_text}"
             )
             assert not any(
-                k in all_text_lower for k in ("belum parah", "tidak mendesak", "tidak darurat")
-            ), f"Contradictory risk evidence in URGENT scenario {t.scenario_id}: {all_text}"
+                k in all_text_lower
+                for k in ("belum parah", "tidak mendesak", "tidak darurat")
+            ), (
+                f"Contradictory risk evidence in URGENT scenario {t.scenario_id}: {all_text}"
+            )
 
 
 def _assert_completeness_semantic_grounding(
@@ -366,9 +431,15 @@ def _assert_completeness_semantic_grounding(
                 f"SUFFICIENT scenario {t.scenario_id} has location_completeness '{t.location_completeness}'"
             )
             # Precise jurisdiction: street + RT/RW + kelurahan + kecamatan + city
-            assert "jalan " in all_text_lower, f"SUFFICIENT scenario {t.scenario_id} missing street"
-            assert "kelurahan " in all_text_lower, f"SUFFICIENT scenario {t.scenario_id} missing Kelurahan"
-            assert "kecamatan " in all_text_lower, f"SUFFICIENT scenario {t.scenario_id} missing Kecamatan"
+            assert "jalan " in all_text_lower, (
+                f"SUFFICIENT scenario {t.scenario_id} missing street"
+            )
+            assert "kelurahan " in all_text_lower, (
+                f"SUFFICIENT scenario {t.scenario_id} missing Kelurahan"
+            )
+            assert "kecamatan " in all_text_lower, (
+                f"SUFFICIENT scenario {t.scenario_id} missing Kecamatan"
+            )
             assert any(k in all_text_lower for k in ("kota ", "kabupaten ")), (
                 f"SUFFICIENT scenario {t.scenario_id} missing City"
             )
@@ -399,7 +470,9 @@ def _assert_completeness_semantic_grounding(
                     "hanya patokan",
                     "patokan lokasi hanya",
                 )
-            ), f"INCOMPLETE scenario {t.scenario_id} missing landmark-only statement: {all_text}"
+            ), (
+                f"INCOMPLETE scenario {t.scenario_id} missing landmark-only statement: {all_text}"
+            )
             assert any(
                 k in all_text_lower
                 for k in (
@@ -408,11 +481,17 @@ def _assert_completeness_semantic_grounding(
                     "belum ada nama jalan",
                     "belum tercantum rincian jalan",
                 )
-            ), f"INCOMPLETE scenario {t.scenario_id} missing jurisdiction omission statement: {all_text}"
-            assert t1.expected_action.allowed_actions == (DecisionMode.REQUEST_CLARIFICATION,)
+            ), (
+                f"INCOMPLETE scenario {t.scenario_id} missing jurisdiction omission statement: {all_text}"
+            )
+            assert t1.expected_action.allowed_actions == (
+                DecisionMode.REQUEST_CLARIFICATION,
+            )
             assert t1.expected_action.missing == ("jurisdiction",)
             if t2 is not None:
-                assert t2.expected_action.allowed_actions == (DecisionMode.REQUEST_CLARIFICATION,)
+                assert t2.expected_action.allowed_actions == (
+                    DecisionMode.REQUEST_CLARIFICATION,
+                )
                 assert t2.expected_action.missing == ("jurisdiction",)
 
         elif comp == "AMBIGUOUS":
@@ -429,7 +508,9 @@ def _assert_completeness_semantic_grounding(
                     "membingungkan",
                     "saling bertentangan",
                 )
-            ), f"AMBIGUOUS scenario {t.scenario_id} missing uncertainty wording: {all_text}"
+            ), (
+                f"AMBIGUOUS scenario {t.scenario_id} missing uncertainty wording: {all_text}"
+            )
             assert "antara" in all_text_lower and "atau" in all_text_lower, (
                 f"AMBIGUOUS scenario {t.scenario_id} missing conflicting landmark indicators (antara...atau): {all_text}"
             )
@@ -443,11 +524,17 @@ def _assert_completeness_semantic_grounding(
                     "mohon klarifikasi",
                     "memerlukan klarifikasi",
                 )
-            ), f"AMBIGUOUS scenario {t.scenario_id} missing explicit clarification wording: {all_text}"
-            assert t1.expected_action.allowed_actions == (DecisionMode.REQUEST_CLARIFICATION,)
+            ), (
+                f"AMBIGUOUS scenario {t.scenario_id} missing explicit clarification wording: {all_text}"
+            )
+            assert t1.expected_action.allowed_actions == (
+                DecisionMode.REQUEST_CLARIFICATION,
+            )
             assert t1.expected_action.missing == ("location_ambiguity",)
             if t2 is not None:
-                assert t2.expected_action.allowed_actions == (DecisionMode.REQUEST_CLARIFICATION,)
+                assert t2.expected_action.allowed_actions == (
+                    DecisionMode.REQUEST_CLARIFICATION,
+                )
                 assert t2.expected_action.missing == ("location_ambiguity",)
 
 
@@ -521,11 +608,19 @@ def _assert_canonical_obj_loc_time_strings(
                 text = b.text
                 text_lower = text.lower()
 
-                if COMPACT_OBJECT_PATTERNS.search(text) or DAMAGE_PATTERNS.search(text) or any(k in text_lower for k in common_obj_keywords):
+                if (
+                    COMPACT_OBJECT_PATTERNS.search(text)
+                    or DAMAGE_PATTERNS.search(text)
+                    or any(k in text_lower for k in common_obj_keywords)
+                ):
                     obj_matches += 1
-                if ADMIN_LOC_PATTERNS.search(text) or any(k in text_lower for k in common_loc_keywords):
+                if ADMIN_LOC_PATTERNS.search(text) or any(
+                    k in text_lower for k in common_loc_keywords
+                ):
                     loc_matches += 1
-                if TIME_PATTERNS.search(text) or any(k in text_lower for k in common_time_keywords):
+                if TIME_PATTERNS.search(text) or any(
+                    k in text_lower for k in common_time_keywords
+                ):
                     time_matches += 1
 
     assert obj_matches > 0, "No canonical OBJ strings detected in reporter bubbles"
@@ -542,7 +637,9 @@ def _assert_no_contamination(
     source_trajectories_file = source_dir / "trajectories.jsonl"
     if not source_trajectories_file.is_file():
         source_trajectories_file = source_dir / "train.jsonl"
-    assert source_trajectories_file.is_file(), f"Source trajectories file missing in {source_dir}"
+    assert source_trajectories_file.is_file(), (
+        f"Source trajectories file missing in {source_dir}"
+    )
 
     source_trajectories = load_trajectories_from_jsonl(source_trajectories_file)
 
@@ -552,10 +649,14 @@ def _assert_no_contamination(
     holdout_family_ids = {t.family_id for t in trajectories}
 
     id_overlap = source_scenario_ids & holdout_scenario_ids
-    assert len(id_overlap) == 0, f"Scenario ID contamination detected: {list(id_overlap)[:5]}"
+    assert len(id_overlap) == 0, (
+        f"Scenario ID contamination detected: {list(id_overlap)[:5]}"
+    )
 
     fam_overlap = source_family_ids & holdout_family_ids
-    assert len(fam_overlap) == 0, f"Family ID contamination detected: {list(fam_overlap)[:5]}"
+    assert len(fam_overlap) == 0, (
+        f"Family ID contamination detected: {list(fam_overlap)[:5]}"
+    )
 
     for t in trajectories:
         for turn in t.turns:
@@ -654,7 +755,9 @@ def _assert_sha_manifest_validity_and_determinism(
         manifest = ArtifactManifest.from_file(manifest_file)
         for key, item in manifest.artifacts.items():
             artifact_file = output_dir / item.path
-            assert artifact_file.is_file(), f"Artifact file '{artifact_file}' listed in manifest missing"
+            assert artifact_file.is_file(), (
+                f"Artifact file '{artifact_file}' listed in manifest missing"
+            )
             computed_sha = compute_file_sha256(artifact_file)
             assert computed_sha == item.sha256, (
                 f"SHA256 mismatch for {item.path}: expected {item.sha256}, got {computed_sha}"
@@ -670,7 +773,9 @@ def _assert_sha_manifest_validity_and_determinism(
             if len(parts) == 2:
                 expected_sha, fname = parts
                 fpath = output_dir / fname.strip()
-                assert fpath.is_file(), f"File {fpath} listed in sha256sums.txt does not exist"
+                assert fpath.is_file(), (
+                    f"File {fpath} listed in sha256sums.txt does not exist"
+                )
                 computed = compute_file_sha256(fpath)
                 assert computed == expected_sha, (
                     f"SHA256 mismatch for {fname}: expected {expected_sha}, got {computed}"
@@ -679,15 +784,21 @@ def _assert_sha_manifest_validity_and_determinism(
     output_dir_determinism = output_dir.parent / "determinism_check"
     output_dir_determinism.mkdir(parents=True, exist_ok=True)
 
-    _invoke_generator(module, output_dir=output_dir_determinism, source_dir=source_dir, seed=seed)
+    _invoke_generator(
+        module, output_dir=output_dir_determinism, source_dir=source_dir, seed=seed
+    )
 
     for item in output_dir.iterdir():
         if item.is_file() and not item.name.startswith("."):
             det_file = output_dir_determinism / item.name
-            assert det_file.is_file(), f"Deterministic re-run missing file '{item.name}'"
+            assert det_file.is_file(), (
+                f"Deterministic re-run missing file '{item.name}'"
+            )
             sha1 = compute_file_sha256(item)
             sha2 = compute_file_sha256(det_file)
-            assert sha1 == sha2, f"Determinism failure for file '{item.name}': {sha1} != {sha2}"
+            assert sha1 == sha2, (
+                f"Determinism failure for file '{item.name}': {sha1} != {sha2}"
+            )
 
 
 @pytest.fixture(scope="module")
@@ -714,7 +825,9 @@ def test_holdout_trajectory_count(generated_holdout: dict[str, Any]) -> None:
     _assert_trajectory_count(generated_holdout["trajectories"])
 
 
-def test_holdout_schema_and_metadata_provenance(generated_holdout: dict[str, Any]) -> None:
+def test_holdout_schema_and_metadata_provenance(
+    generated_holdout: dict[str, Any],
+) -> None:
     _assert_metadata_provenance(
         generated_holdout["trajectories"],
         generated_holdout["output_dir"],
@@ -742,7 +855,9 @@ def test_holdout_sha_manifest_and_hashes(generated_holdout: dict[str, Any]) -> N
     manifest = ArtifactManifest.from_file(manifest_file)
     for key, item in manifest.artifacts.items():
         artifact_file = output_dir / item.path
-        assert artifact_file.is_file(), f"Artifact file '{artifact_file}' listed in manifest missing"
+        assert artifact_file.is_file(), (
+            f"Artifact file '{artifact_file}' listed in manifest missing"
+        )
         computed_sha = compute_file_sha256(artifact_file)
         assert computed_sha == item.sha256, (
             f"SHA256 mismatch for {item.path}: expected {item.sha256}, got {computed_sha}"
@@ -758,7 +873,9 @@ def test_holdout_sha_manifest_and_hashes(generated_holdout: dict[str, Any]) -> N
         if len(parts) == 2:
             expected_sha, fname = parts
             fpath = output_dir / fname.strip()
-            assert fpath.is_file(), f"File {fpath} listed in sha256sums.txt does not exist"
+            assert fpath.is_file(), (
+                f"File {fpath} listed in sha256sums.txt does not exist"
+            )
             computed = compute_file_sha256(fpath)
             assert computed == expected_sha, (
                 f"SHA256 mismatch for {fname}: expected {expected_sha}, got {computed}"
@@ -771,15 +888,24 @@ def test_holdout_determinism(generated_holdout: dict[str, Any]) -> None:
     output_dir_determinism = output_dir.parent / "determinism_modular_check"
     output_dir_determinism.mkdir(parents=True, exist_ok=True)
 
-    _invoke_generator(module, output_dir=output_dir_determinism, source_dir=SOURCE_ARTIFACTS_DIR, seed=42)
+    _invoke_generator(
+        module,
+        output_dir=output_dir_determinism,
+        source_dir=SOURCE_ARTIFACTS_DIR,
+        seed=42,
+    )
 
     for item in output_dir.iterdir():
         if item.is_file() and not item.name.startswith("."):
             det_file = output_dir_determinism / item.name
-            assert det_file.is_file(), f"Deterministic re-run missing file '{item.name}'"
+            assert det_file.is_file(), (
+                f"Deterministic re-run missing file '{item.name}'"
+            )
             sha1 = compute_file_sha256(item)
             sha2 = compute_file_sha256(det_file)
-            assert sha1 == sha2, f"Determinism failure for file '{item.name}': {sha1} != {sha2}"
+            assert sha1 == sha2, (
+                f"Determinism failure for file '{item.name}': {sha1} != {sha2}"
+            )
 
 
 def test_holdout_no_source_contamination(generated_holdout: dict[str, Any]) -> None:
@@ -790,14 +916,18 @@ def test_holdout_risk_semantic_grounding(generated_holdout: dict[str, Any]) -> N
     _assert_risk_semantic_grounding(generated_holdout["trajectories"])
 
 
-def test_holdout_completeness_semantic_grounding(generated_holdout: dict[str, Any]) -> None:
+def test_holdout_completeness_semantic_grounding(
+    generated_holdout: dict[str, Any],
+) -> None:
     _assert_completeness_semantic_grounding(generated_holdout["trajectories"])
 
 
 def test_committed_artifact_label_text_alignment() -> None:
     holdout_dir = REPO_ROOT / "artifacts" / "m3_independent_holdout"
     trajectories = _load_holdout_trajectories(holdout_dir)
-    assert len(trajectories) == 300, f"Expected 300 holdout trajectories, got {len(trajectories)}"
+    assert len(trajectories) == 300, (
+        f"Expected 300 holdout trajectories, got {len(trajectories)}"
+    )
     _assert_risk_semantic_grounding(trajectories)
     _assert_completeness_semantic_grounding(trajectories)
 

@@ -63,7 +63,9 @@ def test_exact_match_lookup(memory_engine: SemanticCacheEngine) -> None:
     assert result.matched_entry.hit_count == 1
 
 
-def test_semantic_reuse_without_active_ticket(memory_engine: SemanticCacheEngine) -> None:
+def test_semantic_reuse_without_active_ticket(
+    memory_engine: SemanticCacheEngine,
+) -> None:
     memory_engine.record_case(
         tenant_id="tenant-1",
         case_id="case-102",
@@ -91,7 +93,9 @@ def test_semantic_reuse_without_active_ticket(memory_engine: SemanticCacheEngine
     assert result.suggested_action == "REUSE_ANALYSIS"
 
 
-def test_duplicate_incident_requires_location_overlap(memory_engine: SemanticCacheEngine) -> None:
+def test_duplicate_incident_requires_location_overlap(
+    memory_engine: SemanticCacheEngine,
+) -> None:
     memory_engine.record_case(
         tenant_id="tenant-1",
         case_id="case-103",
@@ -159,6 +163,7 @@ def test_tenant_isolation(memory_engine: SemanticCacheEngine) -> None:
     assert result.hit is False
 
 
+@pytest.mark.research
 def test_indobert_semantic_similarity_real_model() -> None:
     embedder = IndoBertEmbedder.get_instance()
     store = InMemoryCacheStore()
@@ -196,7 +201,10 @@ def test_indobert_semantic_similarity_real_model() -> None:
 
 def test_postgres_cache_store_mock() -> None:
     from unittest.mock import MagicMock
-    from services.intelligence.semantic_cache import KnowledgeBankEntry, PostgresCacheStore
+    from services.intelligence.semantic_cache import (
+        KnowledgeBankEntry,
+        PostgresCacheStore,
+    )
 
     mock_conn = MagicMock()
     mock_cur = MagicMock()
@@ -221,7 +229,10 @@ def test_postgres_cache_store_mock() -> None:
 
 
 def test_postgres_cache_store_resilience() -> None:
-    from services.intelligence.semantic_cache import KnowledgeBankEntry, PostgresCacheStore
+    from services.intelligence.semantic_cache import (
+        KnowledgeBankEntry,
+        PostgresCacheStore,
+    )
 
     def failing_conn():
         raise RuntimeError("Database connection failure")
