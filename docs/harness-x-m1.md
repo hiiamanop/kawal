@@ -98,12 +98,22 @@ Agent-Reach is an external, read-only CLI. Install it using the official
 instructions from the upstream repository; do not install the unrelated PyPI
 package named `agent-reach`.
 
-The X channel is experimental and requires a human login:
+The X channel is experimental and requires a human login for search:
 
 ```bash
 agent-reach channels
 agent-reach twitter search "jalan rusak bandung" --limit 5
 ```
+
+If search returns `NEED_LOGIN`, a public post can still be captured through the
+read-only web backend without a session:
+
+```bash
+agent-reach read "https://x.com/<account>/status/<id>"
+```
+
+The committed milestone fixture was captured with this public read path. Live
+search remains a separate smoke test until an X session is available.
 
 Then run the harness directly against the live source:
 

@@ -37,12 +37,13 @@ class BudgetTracker:
         return estimate_usd <= self.remaining_usd + 1e-12
 
     def record(self, role: str, usage: AgentUsage) -> None:
-        if self._spent_usd + usage.cost_usd > self._max_cost_usd + 1e-12:
-            raise BudgetExceededError(
-                f"Cost {usage.cost_usd:.6f} would exceed budget {self._max_cost_usd:.6f}"
-            )
         self._spent_usd += usage.cost_usd
         self._usages.append((role, usage))
+        if self._spent_usd > self._max_cost_usd + 1e-12:
+            raise BudgetExceededError(
+                f"Cost {usage.cost_usd:.6f} pushed spend to {self._spent_usd:.6f}, "
+                f"above budget {self._max_cost_usd:.6f}"
+            )
 
     def report(
         self,

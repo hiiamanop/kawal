@@ -432,6 +432,7 @@ Other categories and cities remain in the design but are not tested in this mile
 1. Install Agent-Reach.
 2. Log in to X.
 3. Run `agent-reach twitter search "jalan rusak bandung" --limit 5`.
+   If search requires a logged-in X session, use `agent-reach read <public X post URL>` instead and record that search remains login-gated.
 4. Save one result as a fixture.
 5. Run the harness with `AgentReachXSource`.
 6. Record the result and cost.
@@ -450,7 +451,7 @@ If live search fails, the milestone is blocked until a real X post is captured. 
 6. Replaying twice does not create duplicate cases.
 7. Automated tests cover the main path, conflict path, and budget path.
 8. No calls to WhatsApp, Threads, government systems, or citizen-reply services.
-9. `AgentReachXSource` performs one live X search and saves the result as the committed fixture. This is required for milestone completion.
+9. One real X post is captured through Agent-Reach (search or public URL read) and saved as the committed fixture. Live search may remain login-gated; the public read path is acceptable for the fixture.
 
 ---
 
@@ -462,7 +463,7 @@ If live search fails, the milestone is blocked until a real X post is captured. 
 
 ### 15.2 First fixture provenance
 
-**Decision: Option B (real capture).** The committed fixture must be one real post captured live from X through Agent-Reach. Human login is a hard dependency. A synthetic fixture may be used only in unit tests, never as the milestone fixture.
+**Decision: Option B (real capture).** The committed fixture must be one real post captured from X through Agent-Reach. A search may be login-gated; a public URL read through Agent-Reach is an acceptable capture path. A synthetic fixture may be used only in unit tests, never as the milestone fixture.
 
 ---
 

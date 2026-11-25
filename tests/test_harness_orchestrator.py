@@ -132,6 +132,25 @@ def test_budget_exhaustion_before_triage_has_no_case() -> None:
     assert run.cost.budget_status == "EXCEEDED"
 
 
+def test_actual_cost_overrun_is_recorded_and_stops() -> None:
+    triage = PricedStubAgent(
+        role="triage",
+        output=TriageOutput(
+            is_complaint=True,
+            category=Category.ROAD,
+            risk=RiskLevel.MEDIUM,
+            confidence=0.9,
+        ).model_dump(mode="json"),
+        estimate_usd=0.0,
+        cost_usd=0.02,
+    )
+    run = _orchestrator(triage=triage, max_cost_usd=0.01).run(_post())
+    assert run.status == "BUDGET_EXCEEDED"
+    assert run.case is None
+    assert run.cost.total_cost_usd == 0.02
+    assert run.cost.budget_status == "EXCEEDED"
+
+
 def test_empty_post_fails_with_trace() -> None:
     run = _orchestrator().run(_post("   "))
     assert run.status == "FAILED"
