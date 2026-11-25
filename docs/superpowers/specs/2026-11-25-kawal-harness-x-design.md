@@ -224,6 +224,7 @@ Implementations:
 class Agent(Protocol):
     agent_id: str
     role: str
+    def estimate_cost(self, task: AgentTask) -> float: ...
     def run(self, task: AgentTask) -> AgentResult: ...
 ```
 
@@ -231,19 +232,17 @@ class Agent(Protocol):
 
 - `role`
 - `source_text` and allowed `source_media`
-- `context` (allowed categories, authority directory, policy)
-- `input_schema`, `output_schema`
+- `context` (allowed categories, extraction data for the verifier, policy context)
 - `deadline_ms`
 - `budget_remaining_usd`
 
-No agent receives full case state, credentials, or another agent's private reasoning.
+No agent receives full case state, credentials, or another agent's private reasoning. The orchestrator validates each output against the canonical schema after the call.
 
 Implementations:
 
-- `ReplayAgent` reads a recorded `AgentResult` from `fixtures/agent_outputs/`, including recorded usage. Used by deterministic replay.
-- `LiveAgent` calls a provider adapter. Used only with `--live-agents` or a live smoke test.
-
-Both satisfy the same contract. The orchestrator does not know which one is active.
+- `RuleTriageAgent`, `RuleExtractionAgent`, `RuleVerifierAgent`, and `RuleArbiterAgent` are deterministic rule-based implementations. They are the milestone 1 default and keep replay tests independent of a model provider.
+- `PricedStubAgent` is a test double with explicit estimated and actual cost.
+- LLM-backed implementations can satisfy the same contract later. The orchestrator does not know which implementation is active.
 
 ### 8.3 RunSink
 
