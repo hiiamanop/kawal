@@ -15,15 +15,47 @@ artifacts, or generated thesis reports. The script also unsets
 lane into an integration or live-model run. GitHub Actions uses the same script
 for the `test` job.
 
-## Research and integration suite
+Last local result after M5.2–M5.5:
 
-```bash
-pytest -q -m "research or integration"
+```text
+611 passed, 43 skipped, 83 deselected
 ```
 
-This lane requires local infrastructure and/or generated research artifacts.
-It is currently not green in a clean checkout and is intentionally excluded
-from the PR gate until those artifacts and baseline failures are addressed.
+## Research and integration lane
+
+```bash
+bash scripts/research_ci.sh
+```
+
+This runs research and integration tests while deselecting the explicit
+blockers in [`tests/quarantine.txt`](../tests/quarantine.txt). It unsets the
+OpenRouter key because these tests must stay offline. Last local result:
+
+```text
+52 passed, 2 skipped, 29 quarantined
+```
+
+To see the full, unquarantined lane and its current failures:
+
+```bash
+python -m pytest -q -m "research or integration"
+```
+
+### Quarantine groups
+
+| Group | Tests | Blocker |
+|---|---:|---|
+| Dashboard / concurrency | 2 | PostgreSQL is not running on `127.0.0.1:5432` or `:54322` |
+| M3 dataset export | 16 | Missing `artifacts/m3_synthetic`; generator also fails split anti-leak and category-coverage checks |
+| M3 dataset generator | 4 | Real generator defects: category coverage, family diversity, lexicon anchors, cross-seed leakage |
+| M3 independent holdout | 4 | Missing `artifacts/m3_independent_holdout`; coverage and contamination checks also fail |
+| Semantic cache | 2 | IndoBERT artifact is missing, so the deterministic fallback cannot meet real-model thresholds |
+| Thesis tables | 1 | Missing `artifacts/thesis_evaluation_report.json` |
+
+The quarantine is not a fix. It keeps the research lane honest and runnable
+while the blockers stay visible. Remove a line from `tests/quarantine.txt` only
+after that test passes in a clean checkout and its blocker is resolved. Do not
+add core-lane tests to the quarantine; core tests must stay green.
 
 ## Markers
 
@@ -32,4 +64,5 @@ from the PR gate until those artifacts and baseline failures are addressed.
   thesis reports.
 
 When adding a test that needs one of those dependencies, mark it explicitly
-instead of letting it fail in the core CI lane.
+instead of letting it fail in the core CI lane. If it is blocked by a known
+missing artifact or defect, add it to `tests/quarantine.txt` with a reason.

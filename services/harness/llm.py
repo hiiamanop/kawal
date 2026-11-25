@@ -19,6 +19,12 @@ from contracts.harness import (
 )
 from contracts.models import Category, RiskLevel
 from services.harness.ports import AgentTask
+from services.harness.security import (
+    SECURITY_PREAMBLE,
+    contains_pii,
+    contains_prompt_injection,
+    untrusted_block,
+)
 from services.llm_config import (
     openrouter_api_key,
     openrouter_base_url,
@@ -180,17 +186,6 @@ class OpenRouterChatClient:
         )
 
 
-_PII_PATTERNS = (
-    re.compile(r"\b\d{16}\b"),
-    re.compile(r"(?:\+62|62|0)8\d{7,12}\b"),
-    re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b"),
-)
-
-
-def contains_pii(text: str) -> bool:
-    return any(pattern.search(text) for pattern in _PII_PATTERNS)
-
-
 def _extract_json(text: str) -> dict[str, Any] | None:
     cleaned = re.sub(r"^```(?:json)?\s*", "", text.strip(), flags=re.MULTILINE)
     cleaned = re.sub(r"\s*```$", "", cleaned, flags=re.MULTILINE)
@@ -283,6 +278,14 @@ def _normalize_arbitration(data: dict[str, Any]) -> dict[str, Any]:
 class LLMAgent:
     """Agent backed by a chat client; the orchestrator sees only AgentResult."""
 
+    _RETRYABLE_CLIENT_ERRORS = frozenset(
+        {
+            "OPENROUTER_EMPTY_RESPONSE",
+            "OPENROUTER_INVALID_RESPONSE",
+            "OPENROUTER_UNAVAILABLE",
+        }
+    )
+
     def __init__(
         self,
         *,
@@ -295,9 +298,12 @@ class LLMAgent:
         output_normalizer: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
         max_input_tokens: int = 2000,
         max_output_tokens: int = 800,
-        prompt_version: str = "llm-v1",
+        prompt_version: str = "llm-v2",
         block_pii: bool = True,
+        max_attempts: int = 2,
     ) -> None:
+        if max_attempts < 1:
+            raise ValueError("max_attempts must be at least 1")
         self.agent_id = agent_id
         self.role = role
         self._client = client
@@ -309,79 +315,168 @@ class LLMAgent:
         self._max_output_tokens = max_output_tokens
         self._prompt_version = prompt_version
         self._block_pii = block_pii
+        self._max_attempts = max_attempts
 
     def estimate_cost(self, task: AgentTask) -> float:
         del task
-        return self._client.estimate_cost(
-            self._max_input_tokens, self._max_output_tokens
+        return (
+            self._client.estimate_cost(self._max_input_tokens, self._max_output_tokens)
+            * self._max_attempts
         )
 
     def run(self, task: AgentTask) -> AgentResult:
         if self._block_pii and contains_pii(task.source_text):
-            return self._unavailable("PII_EGRESS_BLOCKED", latency_ms=0.0)
+            return self._blocked("PII_EGRESS_BLOCKED")
 
-        started = time.perf_counter()
-        try:
-            response = self._client.complete(
-                self._system_prompt,
-                self._user_prompt_builder(task),
-                max_tokens=self._max_output_tokens,
-                timeout_seconds=30.0,
-            )
-        except ChatClientError as exc:
-            return self._unavailable(
-                exc.code, latency_ms=(time.perf_counter() - started) * 1000.0
-            )
-        except Exception as exc:
-            return self._unavailable(
-                type(exc).__name__,
-                latency_ms=(time.perf_counter() - started) * 1000.0,
-            )
+        base_prompt = self._user_prompt_builder(task)
+        if self._block_pii and contains_pii(base_prompt):
+            return self._blocked("PII_EGRESS_BLOCKED")
+        if contains_prompt_injection(task.source_text) or contains_prompt_injection(
+            base_prompt
+        ):
+            return self._blocked("PROMPT_INJECTION_BLOCKED")
 
-        usage = AgentUsage(
-            model=response.model,
-            provider=response.provider,
-            input_tokens=response.usage.input_tokens,
-            output_tokens=response.usage.output_tokens,
-            cost_usd=response.usage.cost_usd,
-            cost_source=response.usage.cost_source,
-            latency_ms=response.latency_ms,
-        )
-        parsed = _extract_json(response.content)
-        if parsed is None:
+        total_input_tokens = 0
+        total_output_tokens = 0
+        total_cost_usd = 0.0
+        total_latency_ms = 0.0
+        cost_sources: list[str] = []
+        model = self._client.model_id
+        provider = self._client.provider
+        prompt = base_prompt
+        last_error = "LLM_RETRY_EXHAUSTED"
+        last_status: Literal["INVALID", "UNAVAILABLE"] = "UNAVAILABLE"
+        attempts = 0
+
+        for attempt in range(1, self._max_attempts + 1):
+            attempts = attempt
+            started = time.perf_counter()
+            try:
+                response = self._client.complete(
+                    self._system_prompt,
+                    prompt,
+                    max_tokens=self._max_output_tokens,
+                    timeout_seconds=30.0,
+                )
+            except ChatClientError as exc:
+                total_latency_ms += (time.perf_counter() - started) * 1000.0
+                last_error = exc.code
+                last_status = "INVALID" if exc.code == "INVALID_JSON" else "UNAVAILABLE"
+                if (
+                    exc.code not in self._RETRYABLE_CLIENT_ERRORS
+                    or attempt >= self._max_attempts
+                ):
+                    break
+                prompt = self._retry_prompt(base_prompt, exc.code)
+                continue
+            except Exception as exc:
+                total_latency_ms += (time.perf_counter() - started) * 1000.0
+                last_error = type(exc).__name__
+                last_status = "UNAVAILABLE"
+                break
+
+            model = response.model
+            provider = response.provider
+            total_input_tokens += response.usage.input_tokens
+            total_output_tokens += response.usage.output_tokens
+            total_cost_usd += response.usage.cost_usd
+            total_latency_ms += response.latency_ms
+            cost_sources.append(response.usage.cost_source)
+
+            parsed = _extract_json(response.content)
+            if parsed is None:
+                last_error = "INVALID_JSON"
+                last_status = "INVALID"
+                if attempt >= self._max_attempts:
+                    break
+                prompt = self._retry_prompt(base_prompt, last_error)
+                continue
+
+            try:
+                if self._output_normalizer is not None:
+                    parsed = self._output_normalizer(parsed)
+                output = self._output_model.model_validate(parsed)
+            except Exception:
+                last_error = "INVALID_SCHEMA"
+                last_status = "INVALID"
+                if attempt >= self._max_attempts:
+                    break
+                prompt = self._retry_prompt(base_prompt, last_error)
+                continue
+
             return AgentResult(
                 agent_id=self.agent_id,
                 role=self.role,
-                status="INVALID",
-                output=None,
-                usage=usage,
+                status="OK",
+                output=output.model_dump(mode="json"),
+                usage=self._usage(
+                    model=model,
+                    provider=provider,
+                    input_tokens=total_input_tokens,
+                    output_tokens=total_output_tokens,
+                    cost_usd=total_cost_usd,
+                    cost_sources=cost_sources,
+                    latency_ms=total_latency_ms,
+                ),
                 prompt_version=self._prompt_version,
-                error="INVALID_JSON",
+                attempts=attempts,
             )
-        try:
-            if self._output_normalizer is not None:
-                parsed = self._output_normalizer(parsed)
-            output = self._output_model.model_validate(parsed)
-        except Exception:
-            return AgentResult(
-                agent_id=self.agent_id,
-                role=self.role,
-                status="INVALID",
-                output=None,
-                usage=usage,
-                prompt_version=self._prompt_version,
-                error="INVALID_SCHEMA",
-            )
+
         return AgentResult(
             agent_id=self.agent_id,
             role=self.role,
-            status="OK",
-            output=output.model_dump(mode="json"),
-            usage=usage,
+            status=last_status,
+            output=None,
+            usage=self._usage(
+                model=model,
+                provider=provider,
+                input_tokens=total_input_tokens,
+                output_tokens=total_output_tokens,
+                cost_usd=total_cost_usd,
+                cost_sources=cost_sources,
+                latency_ms=total_latency_ms,
+            ),
             prompt_version=self._prompt_version,
+            attempts=attempts,
+            error=last_error,
         )
 
-    def _unavailable(self, error: str, *, latency_ms: float) -> AgentResult:
+    @staticmethod
+    def _retry_prompt(base_prompt: str, error_code: str) -> str:
+        return (
+            f"{base_prompt}\n\n"
+            f"The previous response was rejected with error code {error_code}. "
+            "Return one corrected JSON object only, with every required key. "
+            "Do not include markdown or commentary."
+        )
+
+    @staticmethod
+    def _usage(
+        *,
+        model: str,
+        provider: str,
+        input_tokens: int,
+        output_tokens: int,
+        cost_usd: float,
+        cost_sources: list[str],
+        latency_ms: float,
+    ) -> AgentUsage:
+        cost_source: Literal["provider", "estimated"] = (
+            "provider"
+            if cost_sources and all(source == "provider" for source in cost_sources)
+            else "estimated"
+        )
+        return AgentUsage(
+            model=model,
+            provider=provider,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cost_usd=cost_usd,
+            cost_source=cost_source,
+            latency_ms=latency_ms,
+        )
+
+    def _blocked(self, error: str) -> AgentResult:
         return AgentResult(
             agent_id=self.agent_id,
             role=self.role,
@@ -392,9 +487,10 @@ class LLMAgent:
                 provider=self._client.provider,
                 cost_usd=0.0,
                 cost_source="estimated",
-                latency_ms=latency_ms,
+                latency_ms=0.0,
             ),
             prompt_version=self._prompt_version,
+            attempts=0,
             error=error,
         )
 
@@ -416,14 +512,17 @@ class LLMTriageAgent(LLMAgent):
             "(array of short strings). Include every key, even when reason_codes is "
             f"empty. category must be one of: {_category_values()}. "
             f"risk must be one of: {_risk_values()}. "
-            "No markdown, no extra keys, no explanation outside the JSON."
+            "No markdown, no extra keys, no explanation outside the JSON. "
+            f"{SECURITY_PREAMBLE}"
         )
         super().__init__(
             agent_id="llm-triage-v1",
             role="triage",
             client=client,
             system_prompt=system_prompt,
-            user_prompt_builder=lambda task: task.source_text,
+            user_prompt_builder=lambda task: untrusted_block(
+                "source_post", task.source_text
+            ),
             output_model=TriageOutput,
             output_normalizer=_normalize_triage,
             **kwargs,
@@ -441,15 +540,17 @@ class LLMVerifierAgent(LLMAgent):
             "(array of short strings), confidence (number 0..1). Include every key; "
             "use an empty issues array when there are no issues. "
             f"category must be one of: {_category_values()}. "
-            "Do not assume another agent's answer. No markdown, no extra keys."
+            "Do not assume another agent's answer. No markdown, no extra keys. "
+            f"{SECURITY_PREAMBLE}"
         )
 
         def build_user_prompt(task: AgentTask) -> str:
             extraction = task.context.get("extraction")
+            extraction_json = json.dumps(extraction, ensure_ascii=False, sort_keys=True)
             return (
-                f"Source post:\n{task.source_text}\n\n"
+                f"Source post:\n{untrusted_block('source_post', task.source_text)}\n\n"
                 "Extraction to verify:\n"
-                f"{json.dumps(extraction, ensure_ascii=False, sort_keys=True)}"
+                f"{untrusted_block('extraction', extraction_json)}"
             )
 
         super().__init__(
@@ -473,14 +574,17 @@ class LLMExtractionAgent(LLMAgent):
             "(array of exact substrings copied from the source), confidence (number "
             "0..1). Include every key; use null when a field is absent and an empty "
             "array when there are no evidence spans. Never invent a location or an "
-            "object that is not supported by the text. No markdown, no extra keys."
+            "object that is not supported by the text. No markdown, no extra keys. "
+            f"{SECURITY_PREAMBLE}"
         )
         super().__init__(
             agent_id="llm-extraction-v1",
             role="extraction",
             client=client,
             system_prompt=system_prompt,
-            user_prompt_builder=lambda task: task.source_text,
+            user_prompt_builder=lambda task: untrusted_block(
+                "source_post", task.source_text
+            ),
             output_model=ExtractionOutput,
             output_normalizer=_normalize_extraction,
             **kwargs,
@@ -496,16 +600,22 @@ class LLMArbiterAgent(LLMAgent):
             "(number 0..1). Include every key. "
             f"category must be one of: {_category_values()}. "
             "You explain the conflict; you do not authorize automatic acceptance. "
-            "No markdown, no extra keys."
+            f"No markdown, no extra keys. {SECURITY_PREAMBLE}"
         )
 
         def build_user_prompt(task: AgentTask) -> str:
+            triage_json = json.dumps(
+                task.context.get("triage"), ensure_ascii=False, sort_keys=True
+            )
+            verification_json = json.dumps(
+                task.context.get("verification"), ensure_ascii=False, sort_keys=True
+            )
             return (
-                f"Source post:\n{task.source_text}\n\n"
+                f"Source post:\n{untrusted_block('source_post', task.source_text)}\n\n"
                 "Triage output:\n"
-                f"{json.dumps(task.context.get('triage'), ensure_ascii=False, sort_keys=True)}\n\n"
+                f"{untrusted_block('triage', triage_json)}\n\n"
                 "Verification output:\n"
-                f"{json.dumps(task.context.get('verification'), ensure_ascii=False, sort_keys=True)}"
+                f"{untrusted_block('verification', verification_json)}"
             )
 
         super().__init__(

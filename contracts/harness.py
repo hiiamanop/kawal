@@ -93,6 +93,7 @@ class AgentResult(BaseModel):
     output: dict[str, Any] | None = None
     usage: AgentUsage
     prompt_version: str = Field(min_length=1)
+    attempts: int = Field(default=1, ge=0)
     error: str | None = None
 
 

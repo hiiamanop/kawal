@@ -343,6 +343,7 @@ class HarnessOrchestrator:
             provider=result.usage.provider,
             cost_usd=result.usage.cost_usd,
             latency_ms=result.usage.latency_ms,
+            attempts=result.attempts,
             input_hash=_hash_text(post.text),
             output_hash=_hash_output(result.output),
         )
