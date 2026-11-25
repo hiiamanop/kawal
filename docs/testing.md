@@ -9,7 +9,10 @@ bash scripts/ci.sh
 ```
 
 This runs tests that do not require PostgreSQL, Redpanda, trained model
-artifacts, or generated thesis reports. GitHub Actions uses the same script
+artifacts, or generated thesis reports. The script also unsets
+`KAWAL_TEST_DATABASE_URL`, `OPENROUTER_API_KEY`, and
+`KAWAL_OPENROUTER_API_KEY` so a local `.env` cannot accidentally turn the core
+lane into an integration or live-model run. GitHub Actions uses the same script
 for the `test` job.
 
 ## Research and integration suite

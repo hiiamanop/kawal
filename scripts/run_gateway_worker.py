@@ -8,12 +8,6 @@ from pathlib import Path
 import sys
 import time
 
-try:
-    import dotenv
-    dotenv.load_dotenv()
-except ImportError:
-    pass
-
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from infra.db import TransactionRunner
@@ -34,7 +28,16 @@ logging.basicConfig(
 logger = logging.getLogger("gateway-worker")
 
 
+def load_environment() -> None:
+    try:
+        import dotenv
+    except ImportError:
+        return
+    dotenv.load_dotenv()
+
+
 def main() -> int:
+    load_environment()
     parser = argparse.ArgumentParser(description="KAWAL Tool Gateway Worker CLI")
     parser.add_argument(
         "--group-id",
@@ -43,7 +46,10 @@ def main() -> int:
     )
     parser.add_argument(
         "--bootstrap-servers",
-        default=os.getenv("KAWAL_REDPANDA_BOOTSTRAP", os.getenv("REDPANDA_BOOTSTRAP_SERVERS", "127.0.0.1:19092")),
+        default=os.getenv(
+            "KAWAL_REDPANDA_BOOTSTRAP",
+            os.getenv("REDPANDA_BOOTSTRAP_SERVERS", "127.0.0.1:19092"),
+        ),
         help="Redpanda bootstrap servers",
     )
     parser.add_argument(
@@ -80,7 +86,8 @@ def main() -> int:
     )
     parser.add_argument(
         "--openrouter-url",
-        default=os.getenv("KAWAL_OPENROUTER_BASE_URL") or os.getenv("OPENROUTER_BASE_URL"),
+        default=os.getenv("KAWAL_OPENROUTER_BASE_URL")
+        or os.getenv("OPENROUTER_BASE_URL"),
         help="OpenRouter API base URL",
     )
     parser.add_argument(
@@ -115,7 +122,11 @@ def main() -> int:
     )
 
     ticket_client = ReliableTicketClient(simulator=TicketSimulator())
-    if os.getenv("KAWAL_OPENWA_BASE_URL") and os.getenv("KAWAL_OPENWA_API_KEY") and os.getenv("KAWAL_OPENWA_SESSION_ID"):
+    if (
+        os.getenv("KAWAL_OPENWA_BASE_URL")
+        and os.getenv("KAWAL_OPENWA_API_KEY")
+        and os.getenv("KAWAL_OPENWA_SESSION_ID")
+    ):
         logger.info("Initializing live OpenWAConnector with HTTP transport...")
         messaging_connector = OpenWAConnector(
             account_id=os.getenv("KAWAL_OPENWA_ACCOUNT_ID", "research"),
@@ -149,10 +160,16 @@ def main() -> int:
         t_count = worker.consume_ticket_once(max_records=args.batch_size)
         m_count = worker.consume_message_once(max_records=args.batch_size)
         e_count = worker.consume_escalation_once(max_records=args.batch_size)
-        print(f"Processed {t_count} ticket, {m_count} message, {e_count} escalation command(s).")
+        print(
+            f"Processed {t_count} ticket, {m_count} message, {e_count} escalation command(s)."
+        )
         return 0
 
-    logger.info("Starting ToolGatewayWorker loop on %s with group %s...", bootstrap, args.group_id)
+    logger.info(
+        "Starting ToolGatewayWorker loop on %s with group %s...",
+        bootstrap,
+        args.group_id,
+    )
     try:
         while True:
             t_count = worker.consume_ticket_once(max_records=args.batch_size)
@@ -161,7 +178,12 @@ def main() -> int:
             if t_count == 0 and m_count == 0 and e_count == 0:
                 time.sleep(args.poll_interval)
             else:
-                logger.info("Processed %d ticket, %d message, and %d escalation command(s)", t_count, m_count, e_count)
+                logger.info(
+                    "Processed %d ticket, %d message, and %d escalation command(s)",
+                    t_count,
+                    m_count,
+                    e_count,
+                )
     except KeyboardInterrupt:
         logger.info("Stopping ToolGatewayWorker on interrupt.")
         return 0

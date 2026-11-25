@@ -17,12 +17,6 @@ from pathlib import Path
 import sys
 import time
 
-try:
-    import dotenv
-    dotenv.load_dotenv()
-except ImportError:
-    pass
-
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from services.intake.social_reach import (
@@ -60,11 +54,25 @@ def ensure_schema(database_url: str) -> None:
     logger.info("Applied %s", MIGRATION.name)
 
 
+def load_environment() -> None:
+    try:
+        import dotenv
+    except ImportError:
+        return
+    dotenv.load_dotenv()
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description="KAWAL Agent Reach social-media collector")
+    load_environment()
+    parser = argparse.ArgumentParser(
+        description="KAWAL Agent Reach social-media collector"
+    )
     parser.add_argument(
         "--database-url",
-        default=os.getenv("KAWAL_DATABASE_URL", "postgresql://postgres:postgres@127.0.0.1:5432/postgres"),
+        default=os.getenv(
+            "KAWAL_DATABASE_URL",
+            "postgresql://postgres:postgres@127.0.0.1:5432/postgres",
+        ),
         help="PostgreSQL DSN used to persist collected posts",
     )
     parser.add_argument(
@@ -79,7 +87,9 @@ def main() -> int:
         default=None,
         help="Search query; repeat for multiple queries (default: KAWAL_SOCIAL_QUERIES)",
     )
-    parser.add_argument("--limit", type=int, default=10, help="Max items per query/channel")
+    parser.add_argument(
+        "--limit", type=int, default=10, help="Max items per query/channel"
+    )
     parser.add_argument(
         "--interval-seconds",
         type=float,
@@ -97,7 +107,9 @@ def main() -> int:
         default=float(os.getenv("KAWAL_AGENT_REACH_TIMEOUT_SECONDS", "60")),
         help="Timeout per agent-reach invocation",
     )
-    parser.add_argument("--dry-run", action="store_true", help="Print posts without persisting")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print posts without persisting"
+    )
     args = parser.parse_args()
 
     channels = parse_channels(args.channels)
@@ -118,7 +130,9 @@ def main() -> int:
     while True:
         started = time.time()
         try:
-            result = client.collect(queries=queries, channels=channels, limit=args.limit)
+            result = client.collect(
+                queries=queries, channels=channels, limit=args.limit
+            )
             logger.info(
                 "Collected %d post(s) from %d channel(s) in %.1fs",
                 len(result.posts),
@@ -129,7 +143,14 @@ def main() -> int:
                 logger.warning("Agent Reach source failed: %s", error)
 
             if args.dry_run:
-                print(json.dumps([post.model_dump() for post in result.posts], indent=2, ensure_ascii=False, default=str))
+                print(
+                    json.dumps(
+                        [post.model_dump() for post in result.posts],
+                        indent=2,
+                        ensure_ascii=False,
+                        default=str,
+                    )
+                )
             elif store is not None and result.posts:
                 written = store.upsert_many(result.posts)
                 logger.info("Persisted %d post(s) into social_media_posts", written)

@@ -17,7 +17,13 @@ from services.harness.agents import (
     RuleVerifierAgent,
 )
 from services.harness.compare import HarnessComparisonRunner
-from services.harness.llm import LLMTriageAgent, LLMVerifierAgent, OpenRouterChatClient
+from services.harness.llm import (
+    LLMArbiterAgent,
+    LLMExtractionAgent,
+    LLMTriageAgent,
+    LLMVerifierAgent,
+    OpenRouterChatClient,
+)
 from services.harness.orchestrator import HarnessOrchestrator
 from services.harness.sources import ReplayXSource, SourceError
 from services.llm_config import openrouter_api_key
@@ -37,6 +43,21 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--input-price-per-million", type=float, default=0.0)
     parser.add_argument("--output-price-per-million", type=float, default=0.0)
     parser.add_argument("--comparison-id", default=None)
+    parser.add_argument(
+        "--llm-extraction",
+        action="store_true",
+        help="Use LLMExtractionAgent instead of the rule extractor",
+    )
+    parser.add_argument(
+        "--llm-arbiter",
+        action="store_true",
+        help="Use LLMArbiterAgent instead of the rule arbiter",
+    )
+    parser.add_argument(
+        "--no-reasoning",
+        action="store_true",
+        help="Disable model reasoning (useful for reasoning models that emit no content)",
+    )
     return parser
 
 
@@ -66,12 +87,15 @@ def main(argv: list[str] | None = None) -> int:
         model_id=args.model,
         input_price_per_million=args.input_price_per_million,
         output_price_per_million=args.output_price_per_million,
+        reasoning_enabled=False if args.no_reasoning else None,
     )
     llm_orchestrator = HarnessOrchestrator(
         triage=LLMTriageAgent(client),
-        extraction=RuleExtractionAgent(),
+        extraction=(
+            LLMExtractionAgent(client) if args.llm_extraction else RuleExtractionAgent()
+        ),
         verifier=LLMVerifierAgent(client),
-        arbiter=RuleArbiterAgent(),
+        arbiter=LLMArbiterAgent(client) if args.llm_arbiter else RuleArbiterAgent(),
         max_cost_usd=args.max_cost_usd,
     )
     report = HarnessComparisonRunner(args.out, rule_orchestrator, llm_orchestrator).run(

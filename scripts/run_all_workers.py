@@ -12,17 +12,19 @@ import threading
 import time
 from typing import Mapping
 
-try:
-    import dotenv
-    dotenv.load_dotenv()
-except ImportError:
-    pass
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] [supervisor] %(message)s",
 )
 logger = logging.getLogger("supervisor")
+
+
+def load_environment() -> None:
+    try:
+        import dotenv
+    except ImportError:
+        return
+    dotenv.load_dotenv()
 
 
 def stream_pipe(pipe, prefix: str) -> None:
@@ -88,7 +90,9 @@ def build_worker_commands(
             "--poll-interval",
             "0.5",
             "--openrouter-model",
-            os.getenv("KAWAL_OPENROUTER_MODEL") or os.getenv("OPENROUTER_MODEL") or "google/gemini-2.5-flash",
+            os.getenv("KAWAL_OPENROUTER_MODEL")
+            or os.getenv("OPENROUTER_MODEL")
+            or "google/gemini-2.5-flash",
         ],
     }
 
@@ -102,7 +106,9 @@ def build_worker_commands(
 
 
 class WorkerSupervisor:
-    def __init__(self, commands: dict[str, list[str]], env: dict[str, str] | None = None) -> None:
+    def __init__(
+        self, commands: dict[str, list[str]], env: dict[str, str] | None = None
+    ) -> None:
         self._commands = commands
         self._env = env or os.environ.copy()
         self._processes: dict[str, subprocess.Popen] = {}
@@ -146,7 +152,11 @@ class WorkerSupervisor:
                 if ret is not None:
                     if self._stopping:
                         return 0
-                    logger.warning("Service [%s] exited with code %d. Auto-restarting...", name, ret)
+                    logger.warning(
+                        "Service [%s] exited with code %d. Auto-restarting...",
+                        name,
+                        ret,
+                    )
                     time.sleep(1.0)
                     self._start_service(name, self._commands[name])
             time.sleep(poll_interval)
@@ -171,15 +181,23 @@ class WorkerSupervisor:
             try:
                 proc.wait(timeout=remaining)
             except subprocess.TimeoutExpired:
-                logger.warning("Service [%s] did not terminate in time; killing SIGKILL", name)
+                logger.warning(
+                    "Service [%s] did not terminate in time; killing SIGKILL", name
+                )
                 proc.kill()
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="KAWAL Unified Background Workers Supervisor")
+    load_environment()
+    parser = argparse.ArgumentParser(
+        description="KAWAL Unified Background Workers Supervisor"
+    )
     parser.add_argument(
         "--database-url",
-        default=os.getenv("KAWAL_DATABASE_URL", "postgresql://postgres:postgres@127.0.0.1:5432/postgres"),
+        default=os.getenv(
+            "KAWAL_DATABASE_URL",
+            "postgresql://postgres:postgres@127.0.0.1:5432/postgres",
+        ),
         help="PostgreSQL DSN",
     )
     parser.add_argument(

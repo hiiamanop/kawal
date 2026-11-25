@@ -1,0 +1,92 @@
+{
+  "comparison_id": "m3-tencent-001",
+  "output_dir": "/tmp/kawal-m3-tencent/comparison-m3-tencent-001",
+  "total_posts": 6,
+  "agreement_count": 2,
+  "agreement_rate": 0.3333333333333333,
+  "rule_accepted": 3,
+  "llm_accepted": 4,
+  "rule_needs_review": 1,
+  "llm_needs_review": 2,
+  "rule_failed": 0,
+  "llm_failed": 0,
+  "rule_total_cost_usd": 0.0,
+  "llm_total_cost_usd": 0.000666433,
+  "rule_total_latency_ms": 0.29783799618599005,
+  "llm_total_latency_ms": 29054.07828999705,
+  "items": [
+    {
+      "post_id": "1807221515089506334",
+      "rule_status": "NEEDS_REVIEW",
+      "rule_category": "ROAD",
+      "llm_status": "COMPLETED",
+      "llm_category": "ROAD",
+      "agreement": false,
+      "rule_cost_usd": 0.0,
+      "llm_cost_usd": 0.000102888,
+      "rule_latency_ms": 0.07996199929038994,
+      "llm_latency_ms": 3035.882431999198
+    },
+    {
+      "post_id": "2076110894149652629",
+      "rule_status": "REJECTED",
+      "rule_category": "ROAD",
+      "llm_status": "NEEDS_REVIEW",
+      "llm_category": "ROAD",
+      "agreement": false,
+      "rule_cost_usd": 0.0,
+      "llm_cost_usd": 0.00013267649999999998,
+      "rule_latency_ms": 0.0540529999852879,
+      "llm_latency_ms": 5511.783384998125
+    },
+    {
+      "post_id": "931149896203169792",
+      "rule_status": "COMPLETED",
+      "rule_category": "DRAINAGE_FLOOD",
+      "llm_status": "COMPLETED",
+      "llm_category": "ROAD",
+      "agreement": false,
+      "rule_cost_usd": 0.0,
+      "llm_cost_usd": 8.14895e-05,
+      "rule_latency_ms": 0.043353998989914544,
+      "llm_latency_ms": 3509.7197869999945
+    },
+    {
+      "post_id": "2026159892885832085",
+      "rule_status": "COMPLETED",
+      "rule_category": "ROAD",
+      "llm_status": "COMPLETED",
+      "llm_category": "ROAD",
+      "agreement": true,
+      "rule_cost_usd": 0.0,
+      "llm_cost_usd": 0.00012383200000000002,
+      "rule_latency_ms": 0.04528499994194135,
+      "llm_latency_ms": 2824.248548999094
+    },
+    {
+      "post_id": "2125560260849193400",
+      "rule_status": "REJECTED",
+      "rule_category": "ROAD",
+      "llm_status": "NEEDS_REVIEW",
+      "llm_category": "DRAINAGE_FLOOD",
+      "agreement": false,
+      "rule_cost_usd": 0.0,
+      "llm_cost_usd": 0.000120619,
+      "rule_latency_ms": 0.03495699820632581,
+      "llm_latency_ms": 10202.103839999836
+    },
+    {
+      "post_id": "2116307635217838493",
+      "rule_status": "COMPLETED",
+      "rule_category": "DRAINAGE_FLOOD",
+      "llm_status": "COMPLETED",
+      "llm_category": "DRAINAGE_FLOOD",
+      "agreement": true,
+      "rule_cost_usd": 0.0,
+      "llm_cost_usd": 0.000104928,
+      "rule_latency_ms": 0.04022699977213051,
+      "llm_latency_ms": 3970.340297000803
+    }
+  ],
+  "created_at": "2026-11-25T14:11:14.259166Z"
+}

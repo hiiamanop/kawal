@@ -1,0 +1,17 @@
+{
+  "post": {
+    "post_id": "2125560260849193400",
+    "platform": "x",
+    "url": "https://x.com/i/status/2125560260849193400",
+    "author_handle": "nanariyy",
+    "text": "bandung ni ujannya gak berhenti berhenti deh..",
+    "media_urls": [],
+    "posted_at": "2026-11-25T12:00:31Z",
+    "collected_at": "2026-11-25T00:00:00+00:00",
+    "raw": {
+      "source": "agent-reach twitter search",
+      "query": "jalan rusak bandung",
+      "note": "Public X post used as a non-complaint control."
+    }
+  }
+}

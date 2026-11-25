@@ -17,6 +17,11 @@ The Verifier receives only the source post and extraction output. It never sees
 the Triage output. `ACCEPTED` still requires the Triage and Verifier decisions to
 agree; the Arbiter remains explanatory only.
 
+M3 adds optional `--llm-extraction` and `--llm-arbiter` flags so the LLM path can
+use `LLMExtractionAgent` and `LLMArbiterAgent` as well. See
+`docs/evaluations/2026-11-25-harness-x-m3-aggregate.md` for the six-post live
+result.
+
 ## Guardrails
 
 - A simple PII check blocks remote egress for 16-digit NIK values, Indonesian
@@ -43,6 +48,9 @@ python scripts/compare_harness_agents.py \
   --out runs/m2 \
   --comparison-id m2-001
 ```
+
+For reasoning models that consume the output budget without returning content
+(for example `tencent/hy4-flash`), add `--no-reasoning`.
 
 Prices are used for the pre-call budget estimate and for cost calculation when
 the provider does not return a cost. Use the current OpenRouter prices for the

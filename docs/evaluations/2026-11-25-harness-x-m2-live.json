@@ -1,0 +1,44 @@
+{
+  "comparison_id": "m2-live-001",
+  "output_dir": "/tmp/kawal-m2-live/comparison-m2-live-001",
+  "total_posts": 2,
+  "agreement_count": 1,
+  "agreement_rate": 0.5,
+  "rule_accepted": 2,
+  "llm_accepted": 2,
+  "rule_needs_review": 0,
+  "llm_needs_review": 0,
+  "rule_failed": 0,
+  "llm_failed": 0,
+  "rule_total_cost_usd": 0.0,
+  "llm_total_cost_usd": 0.0007687999999999999,
+  "rule_total_latency_ms": 0.14490399917121977,
+  "llm_total_latency_ms": 9087.703107999914,
+  "items": [
+    {
+      "post_id": "931149896203169792",
+      "rule_status": "COMPLETED",
+      "rule_category": "DRAINAGE_FLOOD",
+      "llm_status": "COMPLETED",
+      "llm_category": "ROAD",
+      "agreement": false,
+      "rule_cost_usd": 0.0,
+      "llm_cost_usd": 0.0003893,
+      "rule_latency_ms": 0.08068300121522043,
+      "llm_latency_ms": 5073.313677999977
+    },
+    {
+      "post_id": "2026159892885832085",
+      "rule_status": "COMPLETED",
+      "rule_category": "ROAD",
+      "llm_status": "COMPLETED",
+      "llm_category": "ROAD",
+      "agreement": true,
+      "rule_cost_usd": 0.0,
+      "llm_cost_usd": 0.00037949999999999995,
+      "rule_latency_ms": 0.06422099795599934,
+      "llm_latency_ms": 4014.3894299999374
+    }
+  ],
+  "created_at": "2026-11-25T13:47:15.591283Z"
+}
