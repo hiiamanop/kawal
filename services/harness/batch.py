@@ -26,6 +26,7 @@ class BatchItemSummary(BaseModel):
     category: str | None = None
     is_complaint: bool | None = None
     location_quality: str | None = None
+    source_intent: str | None = None
     cost_usd: float = Field(default=0.0, ge=0.0)
     latency_ms: float = Field(default=0.0, ge=0.0)
     error: str | None = None
@@ -151,6 +152,7 @@ class HarnessBatchRunner:
             category=case.triage.category.value if case is not None else None,
             is_complaint=case.triage.is_complaint if case is not None else None,
             location_quality=case.location_quality if case is not None else None,
+            source_intent=case.source_intent if case is not None else None,
             cost_usd=run.cost.total_cost_usd,
             latency_ms=run.cost.total_latency_ms,
         )

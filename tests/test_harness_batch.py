@@ -78,7 +78,7 @@ def test_batch_counts_and_writes_summary(tmp_path: Path) -> None:
 
 
 def test_batch_real_fixture_directory(tmp_path: Path) -> None:
-    posts = ReplayXSource(REAL_FIXTURES).fetch(limit=10)
+    posts = ReplayXSource(REAL_FIXTURES).fetch(limit=100)
     assert len(posts) >= 2
 
     report = HarnessBatchRunner(tmp_path, _orchestrator()).run(

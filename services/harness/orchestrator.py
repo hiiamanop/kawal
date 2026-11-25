@@ -18,6 +18,7 @@ from contracts.harness import (
 from services.harness.budget import BudgetExceededError, BudgetTracker
 from services.harness.location import assess_location
 from services.harness.ports import Agent, AgentTask
+from services.harness.source_intent import assess_source_intent
 from services.harness.trace import TraceRecorder
 
 
@@ -134,6 +135,13 @@ class HarnessOrchestrator:
             quality=location_assessment.quality,
             reason_codes=list(location_assessment.reason_codes),
         )
+        source_assessment = assess_source_intent(post.text, post.author_handle)
+        trace.add(
+            "source.assessed",
+            case_id=case_id,
+            intent=source_assessment.intent,
+            reason_codes=list(source_assessment.reason_codes),
+        )
 
         verifier_result, exceeded = self._call_agent(
             self._verifier,
@@ -192,7 +200,19 @@ class HarnessOrchestrator:
         )
         reason_codes: list[str] = []
 
-        if not agreed:
+        non_actionable_sources = {
+            "NEWS_REPORT",
+            "OPINION",
+            "QUESTION",
+            "ANNOUNCEMENT",
+        }
+        if source_assessment.intent in non_actionable_sources and triage.is_complaint:
+            reason_codes.extend(
+                ("SOURCE_NOT_ACTIONABLE", f"SOURCE_{source_assessment.intent}")
+            )
+            trust_decision = "REJECTED"
+            status = "REJECTED"
+        elif not agreed:
             reason_codes.append("TRIAGE_VERIFIER_DISAGREEMENT")
             if self._arbiter is not None:
                 arbiter_result, exceeded = self._call_agent(
@@ -251,6 +271,7 @@ class HarnessOrchestrator:
             verification=verification,
             arbitration=arbitration,
             location_quality=location_assessment.quality,
+            source_intent=source_assessment.intent,
             trust_decision=trust_decision,  # type: ignore[arg-type]
             status=status,  # type: ignore[arg-type]
             reason_codes=tuple(reason_codes),

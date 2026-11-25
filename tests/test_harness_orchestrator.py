@@ -190,3 +190,29 @@ def test_arbiter_does_not_flip_disagreement() -> None:
     assert run.case is not None
     assert run.case.status != "ACCEPTED"
     assert run.case.trust_decision == "NEEDS_REVIEW"
+
+
+def test_news_report_is_rejected_as_non_actionable() -> None:
+    run = _orchestrator().run(
+        _post(
+            "Perbaikan Tutup Jalan Utama Saguling KBB. Jalan rusak dan berlubang "
+            "memaksa warga mencari jalur alternatif; pengendara diuji adrenalin."
+        )
+    )
+    assert run.case is not None
+    assert run.case.source_intent == "NEWS_REPORT"
+    assert run.case.status == "REJECTED"
+    assert "SOURCE_NOT_ACTIONABLE" in run.case.reason_codes
+
+
+def test_opinion_is_rejected_as_non_actionable() -> None:
+    run = _orchestrator().run(
+        _post(
+            "Menurut saya, Bandung gada perubahan signifikan sama sekali. "
+            "Jalan rusak dibiarkan dan pembangunan tidak merata."
+        )
+    )
+    assert run.case is not None
+    assert run.case.source_intent == "OPINION"
+    assert run.case.status == "REJECTED"
+    assert "SOURCE_NOT_ACTIONABLE" in run.case.reason_codes
