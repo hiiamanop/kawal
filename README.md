@@ -12,7 +12,7 @@ not the current evaluation target.
 
 | Area | State |
 |---|---|
-| Core CI | `685 passed, 42 skipped, 85 deselected` |
+| Core CI | `686 passed, 42 skipped, 85 deselected` |
 | Research/integration lane | Green with an explicit quarantine of 29 known failures |
 | Harness X | M1 through M6 implemented |
 | WhatsApp pipeline | Experimental, still present, not the current focus |
