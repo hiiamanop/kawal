@@ -93,12 +93,20 @@ def score_cache_evaluation(
     eval_runs: list[HarnessRun],
     labels: LabelSet,
     *,
+    baseline_runs: list[HarnessRun] | None = None,
     namespace: str = "",
     analysis_version: str = "",
     threshold: float = 0.92,
 ) -> CacheEvaluationReport:
+    recorded_post_ids = {
+        run.post.post_id
+        for run in warmup_runs
+        if run.post is not None and run.cache is not None and run.cache.recorded
+    }
     cache_eligible = sum(
-        1 for run in warmup_runs if run.cache is not None and run.cache.recorded
+        1
+        for run in eval_runs
+        if run.post is not None and run.post.post_id in recorded_post_ids
     )
     exact_hits = 0
     semantic_hits = 0
@@ -129,7 +137,9 @@ def score_cache_evaluation(
             misses += 1
 
     total = len(eval_runs)
-    baseline = _score_mode(warmup_runs, labels)
+    baseline = _score_mode(
+        baseline_runs if baseline_runs is not None else warmup_runs, labels
+    )
     cached = _score_mode(eval_runs, labels)
     return CacheEvaluationReport(
         namespace=namespace,

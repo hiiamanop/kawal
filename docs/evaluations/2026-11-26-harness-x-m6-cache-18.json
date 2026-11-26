@@ -1,0 +1,39 @@
+{
+  "namespace": "m6-eval-18",
+  "analysis_version": "harness-x-m6-v1",
+  "threshold": 0.92,
+  "total_posts": 18,
+  "cache_eligible": 2,
+  "exact_hits": 2,
+  "semantic_hits": 0,
+  "rejected_hits": 0,
+  "misses": 16,
+  "overall_hit_rate": 0.1111111111111111,
+  "cache_eligible_hit_rate": 1.0,
+  "false_reuse": 0,
+  "false_reuse_rate": 0.0,
+  "baseline": {
+    "total": 18,
+    "accepted": 3,
+    "decision_correct": 17,
+    "decision_accuracy": 0.9444444444444444,
+    "false_accepts": 0,
+    "total_cost_usd": 0.001066474,
+    "total_latency_ms": 45889.70583999799,
+    "llm_calls": 36
+  },
+  "cached": {
+    "total": 18,
+    "accepted": 3,
+    "decision_correct": 17,
+    "decision_accuracy": 0.9444444444444444,
+    "false_accepts": 0,
+    "total_cost_usd": 0.0005092005,
+    "total_latency_ms": 39047.075134002625,
+    "llm_calls": 32
+  },
+  "llm_calls_saved": 4,
+  "cost_saved_usd": 0.0005572735,
+  "latency_saved_ms": 6842.6307059953615,
+  "created_at": "2026-11-26T00:29:34.705822Z"
+}

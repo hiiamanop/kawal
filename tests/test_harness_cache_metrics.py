@@ -53,11 +53,15 @@ def _warmup_run(*, cost: float, recorded: bool) -> HarnessRun:
 
 
 def _cache_run(
-    *, reused: bool, status: str = "COMPLETED", cost: float = 0.0
+    *,
+    reused: bool,
+    status: str = "COMPLETED",
+    cost: float = 0.0,
+    post_id: str = "cache-hit",
 ) -> HarnessRun:
     return HarnessRun(
         run_id="cache-eval",
-        post=_post("cache-hit"),
+        post=_post(post_id),
         status=status,  # type: ignore[arg-type]
         cost=CostReport(total_cost_usd=cost, total_latency_ms=1.0, calls=0),
         cache=CacheProvenance(
@@ -84,10 +88,21 @@ def test_cache_metrics_counts_hits_and_cost_saved() -> None:
     assert report.llm_calls_saved == 1
 
 
+def test_explicit_baseline_is_used_for_savings() -> None:
+    report = score_cache_evaluation(
+        [_warmup_run(cost=0.0, recorded=True)],
+        [_cache_run(reused=True)],
+        _labels(),
+        baseline_runs=[_warmup_run(cost=0.004, recorded=False)],
+    )
+    assert report.cost_saved_usd == pytest.approx(0.004)
+    assert report.llm_calls_saved == 1
+
+
 def test_overall_and_eligible_hit_rates_differ() -> None:
     report = score_cache_evaluation(
         [_warmup_run(cost=0.002, recorded=True)],
-        [_cache_run(reused=True), _cache_run(reused=False)],
+        [_cache_run(reused=True), _cache_run(reused=False, post_id="not-cacheable")],
         _labels(),
     )
     assert report.cache_eligible == 1

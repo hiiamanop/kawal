@@ -34,3 +34,12 @@
 - [x] M5.4: add cassette recording and replay <!-- id=32 priority=high done=2026-11-25 created=2026-11-25 -->
 - [x] M5.5: quarantine and document the research test suite <!-- id=33 priority=high done=2026-11-25 created=2026-11-25 -->
 - [x] M5.6: run tests and local CI before pushing <!-- id=34 priority=high done=2026-11-25 created=2026-11-25 -->
+- [x] M6.1: add pgvector migration and compose image <!-- id=35 priority=high done=2026-11-26 created=2026-11-26 -->
+- [x] M6.2: add embedder identity and fallback detection <!-- id=36 priority=high done=2026-11-26 created=2026-11-26 -->
+- [x] M6.3: add cache models and in-memory store <!-- id=37 priority=high done=2026-11-26 created=2026-11-26 -->
+- [x] M6.4: add cache engine record gates <!-- id=38 priority=high done=2026-11-26 created=2026-11-26 -->
+- [x] M6.5: add pgvector cache store <!-- id=39 priority=high done=2026-11-26 created=2026-11-26 -->
+- [x] M6.6: expose cache provenance in runs <!-- id=40 priority=high done=2026-11-26 created=2026-11-26 -->
+- [x] M6.7: add cache-first runner and guards <!-- id=41 priority=high done=2026-11-26 created=2026-11-26 -->
+- [x] M6.8: add cache metrics and evaluation CLI <!-- id=42 priority=high done=2026-11-26 created=2026-11-26 -->
+- [x] M6.9: evaluate, document, and run CI <!-- id=43 priority=high done=2026-11-26 created=2026-11-26 -->

@@ -240,6 +240,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     runner = CacheFirstRunner(inner=inner, cache=cache)
+    baseline_runs = [inner.run(post) for post in stream]
     pass_runs = []
     for _ in range(args.passes):
         pass_runs.append([runner.run(post) for post in stream])
@@ -250,6 +251,7 @@ def main(argv: list[str] | None = None) -> int:
         warmup_runs,
         eval_runs,
         labels,
+        baseline_runs=baseline_runs,
         namespace=args.cache_namespace,
         analysis_version=args.analysis_version,
         threshold=args.threshold,

@@ -336,6 +336,7 @@ class HarnessAnalysisCache:
                 reason_codes=case.reason_codes,
             ),
             record_guards={
+                "source_case_id": case.case_id,
                 "status": case.status,
                 "trust_decision": case.trust_decision,
                 "location_quality": case.location_quality,
