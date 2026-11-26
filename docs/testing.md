@@ -32,11 +32,12 @@ blockers in [`tests/quarantine.txt`](../tests/quarantine.txt). It unsets the
 OpenRouter key because these tests must stay offline. Last local result:
 
 ```text
-52 passed, 4 skipped, 29 quarantined
+71 passed, 8 skipped, 6 quarantined
 ```
 
-The third skip is the pgvector integration test when no test database is
-configured.
+The skips are missing prerequisites: PostgreSQL, generated M3 artifacts,
+thesis artifacts, and the pgvector integration database. The generator now
+passes the split and corpus anti-leak audits for the 720-scenario dataset.
 
 To see the full, unquarantined lane and its current failures:
 
@@ -48,12 +49,14 @@ python -m pytest -q -m "research or integration"
 
 | Group | Tests | Blocker |
 |---|---:|---|
-| Dashboard / concurrency | 2 | PostgreSQL is not running on `127.0.0.1:5432` or `:54322` |
-| M3 dataset export | 16 | Missing `artifacts/m3_synthetic`; generator also fails split anti-leak and category-coverage checks |
-| M3 dataset generator | 4 | Real generator defects: category coverage, family diversity, lexicon anchors, cross-seed leakage |
-| M3 independent holdout | 4 | Missing `artifacts/m3_independent_holdout`; coverage and contamination checks also fail |
-| Semantic cache | 2 | IndoBERT artifact is missing, so the deterministic fallback cannot meet real-model thresholds |
-| Thesis tables | 1 | Missing `artifacts/thesis_evaluation_report.json` |
+| Extended category diversity | 2 | Six extended categories have 3 families; the requirement is 12 |
+| Independent holdout coverage | 2 | The holdout generator covers 6 core categories, not all 12 |
+| Legacy semantic cache | 2 | Base IndoBERT similarity is 0.758, below the 0.85/0.88 thresholds |
+
+These are content/model gaps, not infrastructure failures. Remove a line from
+`tests/quarantine.txt` only after the underlying gap is fixed and the test passes
+in a clean checkout. Do not add core-lane tests to the quarantine; core tests
+must stay green.
 
 The quarantine is not a fix. It keeps the research lane honest and runnable
 while the blockers stay visible. Remove a line from `tests/quarantine.txt` only

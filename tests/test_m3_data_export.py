@@ -25,6 +25,32 @@ from services.ml.manifest import ArtifactManifest, compute_file_sha256
 
 pytestmark = pytest.mark.research
 
+M3_ARTIFACT_TESTS = {
+    "test_active_m3_synthetic_split_anti_leak_audit",
+    "test_stratified_category_coverage",
+    "test_multitask_heads_label_coverage_in_all_splits",
+    "test_dataset_manifest_multitask_head_coverage",
+    "test_synthetic_heldout_clear_labeling",
+    "test_dapt_corpus_quality_and_anti_leak",
+    "test_artifact_manifest_validation",
+    "test_sha256sums_file_matches_actual_files",
+    "test_integration_with_m3_components",
+    "test_exported_dataset_grounded_risk_and_ambiguous_evidence",
+    "test_exported_dataset_scale_and_family_diversity",
+    "test_exported_dataset_ner_evidence_density",
+    "test_exported_dataset_category_anchor_lexicon_integrity",
+    "test_exported_trajectories_category_anchor_composition",
+}
+
+
+@pytest.fixture(autouse=True)
+def require_m3_artifacts(request: pytest.FixtureRequest) -> None:
+    if (
+        request.node.name in M3_ARTIFACT_TESTS
+        and not Path("artifacts/m3_synthetic").is_dir()
+    ):
+        pytest.skip("artifacts/m3_synthetic is not generated")
+
 
 @pytest.fixture(autouse=True)
 def enforce_no_network(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -121,13 +147,13 @@ def test_active_m3_synthetic_split_anti_leak_audit() -> None:
     assert len(audit.cross_split_text_duplicates) == 0
     assert len(audit.family_overlap) == 0
 
-    assert audit.split_trajectories["train"] == 480
-    assert audit.split_trajectories["dev"] == 120
-    assert audit.split_trajectories["test"] == 120
+    assert audit.split_trajectories["train"] == 432
+    assert audit.split_trajectories["dev"] == 144
+    assert audit.split_trajectories["test"] == 144
 
-    assert audit.split_families["train"] == 48
-    assert audit.split_families["dev"] == 12
-    assert audit.split_families["test"] == 12
+    assert audit.split_families["train"] == 54
+    assert audit.split_families["dev"] == 18
+    assert audit.split_families["test"] == 18
 
 
 def test_stratified_category_coverage() -> None:
@@ -230,7 +256,7 @@ def test_synthetic_heldout_clear_labeling() -> None:
     assert compute_file_sha256(test_synth_file) == compute_file_sha256(test_file)
 
     test_trajectories = load_trajectories_from_jsonl(test_synth_file)
-    assert len(test_trajectories) == 120
+    assert len(test_trajectories) == 144
     for t in test_trajectories:
         assert t.split == DatasetSplit.TEST
         assert t.world_truth.get("synthetic_heldout") is True
@@ -247,7 +273,7 @@ def test_synthetic_heldout_clear_labeling() -> None:
     assert heldout.get("is_synthetic") is True
     assert heldout.get("label") == "SYNTHETIC_HELDOUT"
     assert heldout.get("file") == "test_synthetic.jsonl"
-    assert heldout.get("trajectories_count") == 120
+    assert heldout.get("trajectories_count") == 144
 
     manifest_path = dataset_dir / "manifest.json"
     manifest = ArtifactManifest.from_file(manifest_path)
@@ -325,7 +351,7 @@ def test_integration_with_m3_components() -> None:
     assert len(corpus) >= 1500
 
     train_trajs = load_or_generate_dataset(str(dataset_dir / "train.jsonl"), seed=42)
-    assert len(train_trajs) == 480
+    assert len(train_trajs) == 432
 
     ner_samples = extract_trajectory_ner_samples(train_trajs)
     assert len(ner_samples) > 0

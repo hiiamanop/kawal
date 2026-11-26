@@ -62,8 +62,18 @@ def test_admin_portal_renders_html() -> None:
     assert "Filter Dinas" in response.text
 
 
+def _require_database() -> None:
+    psycopg = pytest.importorskip("psycopg")
+    try:
+        with psycopg.connect(DATABASE_URL, connect_timeout=1):
+            pass
+    except Exception as exc:
+        pytest.skip(f"PostgreSQL is not available: {type(exc).__name__}")
+
+
 @pytest.mark.integration
 def test_ticket_detail_and_update_lifecycle() -> None:
+    _require_database()
     from uuid import uuid4
 
     app = create_dashboard_app(database_url=DATABASE_URL)

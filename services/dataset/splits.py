@@ -40,7 +40,8 @@ def assign_split_by_family(
 
 
 def build_stratified_family_split_map(
-    family_to_category: dict[str, Category | str] | Sequence[tuple[str, Category | str]],
+    family_to_category: dict[str, Category | str]
+    | Sequence[tuple[str, Category | str]],
     seed: int = 42,
     train_ratio: float = 0.7,
     dev_ratio: float = 0.15,
@@ -52,7 +53,9 @@ def build_stratified_family_split_map(
     if train_ratio + dev_ratio >= 1.0:
         raise ValueError("train_ratio + dev_ratio must be less than 1.0")
 
-    if isinstance(family_to_category, Sequence) and not isinstance(family_to_category, dict):
+    if isinstance(family_to_category, Sequence) and not isinstance(
+        family_to_category, dict
+    ):
         mapping = dict(family_to_category)
     else:
         mapping = dict(family_to_category)
@@ -67,6 +70,7 @@ def build_stratified_family_split_map(
     result_map: dict[str, DatasetSplit] = {}
 
     for cat_key, families in sorted(cat_to_families.items()):
+
         def _sort_key(f: str) -> tuple[str, str]:
             token = f"{seed}:{cat_key}:{f}".encode("utf-8")
             return (hashlib.sha256(token).hexdigest(), f)
@@ -112,7 +116,8 @@ def build_stratified_family_split_map(
 
 
 def partition_stratified_family_splits(
-    family_to_category: dict[str, Category | str] | Sequence[tuple[str, Category | str]],
+    family_to_category: dict[str, Category | str]
+    | Sequence[tuple[str, Category | str]],
     seed: int = 42,
     train_ratio: float = 0.7,
     dev_ratio: float = 0.15,
@@ -142,7 +147,11 @@ def partition_families_by_split(
     family_to_category: dict[str, Category | str] | None = None,
 ) -> dict[DatasetSplit, tuple[str, ...]]:
     if family_to_category is not None:
-        sub_map = {f: family_to_category[f] for f in sorted(set(family_ids)) if f in family_to_category}
+        sub_map = {
+            f: family_to_category[f]
+            for f in sorted(set(family_ids))
+            if f in family_to_category
+        }
         if len(sub_map) == len(set(family_ids)):
             return partition_stratified_family_splits(
                 sub_map,
@@ -185,7 +194,11 @@ def build_family_split_map(
     family_to_category: dict[str, Category | str] | None = None,
 ) -> dict[str, DatasetSplit]:
     if family_to_category is not None:
-        sub_map = {f: family_to_category[f] for f in sorted(set(family_ids)) if f in family_to_category}
+        sub_map = {
+            f: family_to_category[f]
+            for f in sorted(set(family_ids))
+            if f in family_to_category
+        }
         if len(sub_map) == len(set(family_ids)):
             return build_stratified_family_split_map(
                 sub_map,
@@ -208,53 +221,328 @@ def build_family_split_map(
 COMMON_LANGUAGE_TOKENS: frozenset[str] = frozenset(
     {
         # Grammatical particles / stop words
-        "dan", "di", "ke", "dari", "yang", "yg", "ini", "itu", "ada", "bisa", "bs",
-        "sudah", "udh", "belum", "blm", "tidak", "tak", "gak", "saat", "pada", "untuk",
-        "utk", "dengan", "dg", "oleh", "akan", "kami", "saya", "sy", "kita", "kamu",
-        "anda", "dia", "mereka", "karena", "krn", "agar", "supaya", "tetapi", "tapi",
-        "namun", "atau", "seperti", "sebagai", "dalam", "luar", "atas", "bawah",
-        "juga", "hanya", "saja", "lagi", "pun", "tentang", "mengenai", "terkait",
-        "sehubungan", "hal", "adapun", "berikut", "yaitu", "bahwa", "bhwa",
+        "dan",
+        "di",
+        "ke",
+        "dari",
+        "yang",
+        "yg",
+        "ini",
+        "itu",
+        "ada",
+        "bisa",
+        "bs",
+        "sudah",
+        "udh",
+        "belum",
+        "blm",
+        "tidak",
+        "tak",
+        "gak",
+        "saat",
+        "pada",
+        "untuk",
+        "utk",
+        "dengan",
+        "dg",
+        "oleh",
+        "akan",
+        "kami",
+        "saya",
+        "sy",
+        "kita",
+        "kamu",
+        "anda",
+        "dia",
+        "mereka",
+        "karena",
+        "krn",
+        "agar",
+        "supaya",
+        "tetapi",
+        "tapi",
+        "namun",
+        "atau",
+        "seperti",
+        "sebagai",
+        "dalam",
+        "luar",
+        "atas",
+        "bawah",
+        "juga",
+        "hanya",
+        "saja",
+        "lagi",
+        "pun",
+        "tentang",
+        "mengenai",
+        "terkait",
+        "sehubungan",
+        "hal",
+        "adapun",
+        "berikut",
+        "yaitu",
+        "bahwa",
+        "bhwa",
         # Politeness & greetings
-        "mohon", "mhn", "tolong", "tlg", "yth", "terima", "trm", "kasih", "ksh",
-        "makasih", "mks", "halo", "selamat", "slmt", "pak", "bu", "bapak", "bpk",
-        "ibu", "ib", "min", "admin", "mas", "mbak",
+        "mohon",
+        "mhn",
+        "tolong",
+        "tlg",
+        "yth",
+        "terima",
+        "trm",
+        "kasih",
+        "ksh",
+        "makasih",
+        "mks",
+        "halo",
+        "selamat",
+        "slmt",
+        "pak",
+        "bu",
+        "bapak",
+        "bpk",
+        "ibu",
+        "ib",
+        "min",
+        "admin",
+        "mas",
+        "mbak",
         # Location & administrative connectors
-        "titik", "ttk", "patokan", "patokannya", "lokasi", "lks", "tempat", "tmpt",
-        "posisi", "wilayah", "wil", "area", "daerah", "alamat", "berada", "brd",
-        "depan", "dpn", "belakang", "blkg", "dekat", "dkt", "samping", "spg",
-        "antara", "sekitar", "sktr", "persis", "seberang", "gedung", "rumah",
-        "kantor", "posko", "kompleks", "perumahan", "lingkungan", "warga", "rt", "rw",
-        "kelurahan", "kecamatan", "kota", "kabupaten", "provinsi", "desa", "gang",
+        "titik",
+        "ttk",
+        "patokan",
+        "patokannya",
+        "lokasi",
+        "lks",
+        "tempat",
+        "tmpt",
+        "posisi",
+        "wilayah",
+        "wil",
+        "area",
+        "daerah",
+        "alamat",
+        "berada",
+        "brd",
+        "depan",
+        "dpn",
+        "belakang",
+        "blkg",
+        "dekat",
+        "dkt",
+        "samping",
+        "spg",
+        "antara",
+        "sekitar",
+        "sktr",
+        "persis",
+        "seberang",
+        "pintu",
+        "gedung",
+        "rumah",
+        "kantor",
+        "posko",
+        "kompleks",
+        "perumahan",
+        "lingkungan",
+        "warga",
+        "rt",
+        "rw",
+        "barat",
+        "timur",
+        "tengah",
+        "utara",
+        "selatan",
+        "kelurahan",
+        "kecamatan",
+        "kota",
+        "kabupaten",
+        "provinsi",
+        "desa",
+        "gang",
         # Reporting / procedural
-        "lapor", "lpr", "laporkan", "laporan", "bantuan", "petugas", "unit", "dinas",
-        "pemda", "pemkot", "pihak", "keterangan", "ket", "informasi", "info",
-         "administrasi", "adm", "administrasinya", "masyarakat", "publik",
-         "jalan", "aspal", "lubang", "bolong", "got", "parit", "selokan", "air",
-         "pipa", "bocor", "mati", "kotor", "keruh", "sampah", "tumpukan", "bau",
-         "busuk", "lalat", "ktp", "kk", "berkas", "antre", "antrean", "calo",
-         "puskesmas", "rsud", "sakit", "dokter", "poli", "obat", "pasien", "bpjs",
-         "rujukan", "nakes", "macet", "lampu", "trotoar", "marka", "genangan", "banjir",
-         "bener", "beneran", "bener2", "udah", "ga", "gk", "tdk", "bngt", "bgtu", "bgtan",
-         "dpan", "sebrang", "sbrng", "pas", "pasca", "pasang", "waktu", "wkt", "jam",
-         "jm", "kemaren", "td", "tadi", "malem", "deket", "bantuin", "prmsi", "tlong",
-         "infokan", "infonya", "aduan", "keluhan", "komplain", "saran", "masukan", "tanggapan",
-         "respon", "responnya", "tindaklanjuti", "solusinya", "solusiny", "tolonglah",
-         "dll",
-         # Urgency & descriptive connectors
-
-        "kondisi", "knds", "keadaan", "situasi", "sangat", "bgt", "banget", "amat",
-        "lebih", "paling", "sekali", "parah", "prh", "darurat", "drrt", "bahaya",
-        "bhya", "mendesak", "segera", "sgr", "cepat", "cpt", "rusak", "rsk",
-        "perbaikan", "penanganan", "tangani", "ditangani", "tindak", "ditindaklanjuti",
-        "bantu", "dibantu", "kirim", "krm", "keterlaluan", "makin", "semakin",
+        "lapor",
+        "lpr",
+        "laporkan",
+        "laporan",
+        "bantuan",
+        "petugas",
+        "unit",
+        "dinas",
+        "pemda",
+        "pemkot",
+        "pihak",
+        "keterangan",
+        "ket",
+        "informasi",
+        "info",
+        "administrasi",
+        "adm",
+        "administrasinya",
+        "masyarakat",
+        "publik",
+        "jalan",
+        "aspal",
+        "lubang",
+        "bolong",
+        "got",
+        "parit",
+        "selokan",
+        "air",
+        "pipa",
+        "bocor",
+        "mati",
+        "kotor",
+        "keruh",
+        "sampah",
+        "tumpukan",
+        "bau",
+        "busuk",
+        "lalat",
+        "ktp",
+        "kk",
+        "berkas",
+        "antre",
+        "antrean",
+        "calo",
+        "puskesmas",
+        "rsud",
+        "sakit",
+        "dokter",
+        "poli",
+        "obat",
+        "pasien",
+        "bpjs",
+        "rujukan",
+        "nakes",
+        "macet",
+        "lampu",
+        "trotoar",
+        "marka",
+        "genangan",
+        "banjir",
+        "bener",
+        "beneran",
+        "bener2",
+        "udah",
+        "ga",
+        "gk",
+        "tdk",
+        "bngt",
+        "bgtu",
+        "bgtan",
+        "dpan",
+        "sebrang",
+        "sbrng",
+        "pas",
+        "pasca",
+        "pasang",
+        "waktu",
+        "wkt",
+        "jam",
+        "jm",
+        "kemaren",
+        "td",
+        "tadi",
+        "malem",
+        "deket",
+        "bantuin",
+        "prmsi",
+        "tlong",
+        "infokan",
+        "infonya",
+        "aduan",
+        "keluhan",
+        "komplain",
+        "saran",
+        "masukan",
+        "tanggapan",
+        "respon",
+        "responnya",
+        "tindaklanjuti",
+        "solusinya",
+        "solusiny",
+        "tolonglah",
+        "pungutan",
+        "liar",
+        "dll",
+        # Urgency & descriptive connectors
+        "kondisi",
+        "knds",
+        "keadaan",
+        "situasi",
+        "sangat",
+        "bgt",
+        "banget",
+        "amat",
+        "lebih",
+        "paling",
+        "sekali",
+        "parah",
+        "prh",
+        "darurat",
+        "drrt",
+        "bahaya",
+        "bhya",
+        "mendesak",
+        "segera",
+        "sgr",
+        "cepat",
+        "cpt",
+        "rusak",
+        "rsk",
+        "perbaikan",
+        "penanganan",
+        "tangani",
+        "ditangani",
+        "tindak",
+        "ditindaklanjuti",
+        "bantu",
+        "dibantu",
+        "kirim",
+        "krm",
+        "keterlaluan",
+        "makin",
+        "semakin",
         # Time & interrogative
-        "hari", "hr", "kemarin", "kmrn", "sekarang", "skrg", "besok", "bsk",
-        "pagi", "pg", "siang", "sg", "sore", "sr", "malam", "mlm",
-        "bagaimana", "gmn", "kenapa", "knp", "mengapa",
+        "hari",
+        "hr",
+        "kemarin",
+        "kmrn",
+        "sekarang",
+        "skrg",
+        "besok",
+        "bsk",
+        "pagi",
+        "pg",
+        "siang",
+        "sg",
+        "sore",
+        "sr",
+        "malam",
+        "mlm",
+        "bagaimana",
+        "gmn",
+        "kenapa",
+        "knp",
+        "mengapa",
         # Major administrative cities
-        "bandung", "jakarta", "surabaya", "bogor", "depok", "bekasi", "tangerang",
-        "madiun", "malang", "batam", "tuban", "tasikmalaya", "parepare", "tenggarong",
+        "bandung",
+        "jakarta",
+        "surabaya",
+        "bogor",
+        "depok",
+        "bekasi",
+        "tangerang",
+        "madiun",
+        "malang",
+        "batam",
+        "tuban",
+        "tasikmalaya",
+        "parepare",
+        "tenggarong",
     }
 )
 
@@ -301,8 +589,12 @@ def _is_common_language_ngram(ngram: tuple[str, ...]) -> bool:
 
 _CATEGORY_LABEL_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\b(category|kategori)\s*[:=]\s*[a-zA-Z_]+\b", re.IGNORECASE),
-    re.compile(r"\b(drainage_flood|clean_water|civil_admin|health_service)\b", re.IGNORECASE),
-    re.compile(r"\b(drainage flood|clean water|civil admin|health service)\b", re.IGNORECASE),
+    re.compile(
+        r"\b(drainage_flood|clean_water|civil_admin|health_service)\b", re.IGNORECASE
+    ),
+    re.compile(
+        r"\b(drainage flood|clean water|civil admin|health service)\b", re.IGNORECASE
+    ),
     re.compile(r"\b(ROAD|WASTE)\b"),
     re.compile(r"\bCategory\.[A-Z_]+\b"),
 )
@@ -319,18 +611,24 @@ def _check_bubble_identifier_leakages(
     text_lower = text.lower()
 
     if len(scenario_id) >= 3:
-        pattern = rf"(?<![a-zA-Z0-9_\-]){re.escape(scenario_id.lower())}(?![a-zA-Z0-9_\-])"
+        pattern = (
+            rf"(?<![a-zA-Z0-9_\-]){re.escape(scenario_id.lower())}(?![a-zA-Z0-9_\-])"
+        )
         if re.search(pattern, text_lower):
             leaks.append(f"scenario_id '{scenario_id}'")
 
     if len(family_id) >= 3:
-        pattern = rf"(?<![a-zA-Z0-9_\-]){re.escape(family_id.lower())}(?![a-zA-Z0-9_\-])"
+        pattern = (
+            rf"(?<![a-zA-Z0-9_\-]){re.escape(family_id.lower())}(?![a-zA-Z0-9_\-])"
+        )
         if re.search(pattern, text_lower):
             leaks.append(f"family_id '{family_id}'")
 
     for known_fam in all_families:
         if known_fam != family_id and len(known_fam) >= 5:
-            pattern = rf"(?<![a-zA-Z0-9_\-]){re.escape(known_fam.lower())}(?![a-zA-Z0-9_\-])"
+            pattern = (
+                rf"(?<![a-zA-Z0-9_\-]){re.escape(known_fam.lower())}(?![a-zA-Z0-9_\-])"
+            )
             if re.search(pattern, text_lower):
                 leaks.append(f"cross family_id '{known_fam}'")
 
@@ -343,7 +641,12 @@ def _check_bubble_identifier_leakages(
         k_str = str(k).lower()
         v_str = str(v).lower()
 
-        if "_" in k_str or k_str in ("infra_type", "waste_type", "flood_depth_cm", "claim_certainty"):
+        if "_" in k_str or k_str in (
+            "infra_type",
+            "waste_type",
+            "flood_depth_cm",
+            "claim_certainty",
+        ):
             pattern = rf"(?<![a-zA-Z0-9_\-]){re.escape(k_str)}(?![a-zA-Z0-9_\-])"
             if re.search(pattern, text_lower):
                 leaks.append(f"world truth key '{k}'")
@@ -391,14 +694,18 @@ def audit_family_splits(
         if isinstance(traj, ComplaintTrajectory):
             scenario_id = traj.scenario_id
             family_id = traj.family_id
-            split_str = str(traj.split.value if hasattr(traj.split, "value") else traj.split)
+            split_str = str(
+                traj.split.value if hasattr(traj.split, "value") else traj.split
+            )
             world_truth = traj.world_truth
             turns_data = traj.turns
         else:
             scenario_id = str(traj.get("scenario_id", "unknown"))
             family_id = str(traj.get("family_id", "unknown"))
             split_val = traj.get("split", "unknown")
-            split_str = str(split_val.value if hasattr(split_val, "value") else split_val)
+            split_str = str(
+                split_val.value if hasattr(split_val, "value") else split_val
+            )
             world_truth = traj.get("world_truth", {})
             turns_data = traj.get("turns", [])
 
@@ -423,16 +730,17 @@ def audit_family_splits(
                 actions = expected_action.get("allowed_actions", ())
                 missing = expected_action.get("missing", ())
 
-            action_names = [
-                a.value if hasattr(a, "value") else str(a) for a in actions
-            ]
+            action_names = [a.value if hasattr(a, "value") else str(a) for a in actions]
             if DecisionMode.EXECUTE.value in action_names and len(missing) > 0:
                 v = (
                     f"Scenario {scenario_id} turn {turn_idx + 1}: "
                     f"EXECUTE specified but missing fields {missing} is non-empty"
                 )
                 violations.append(v)
-            if DecisionMode.REQUEST_CLARIFICATION.value in action_names and len(missing) == 0:
+            if (
+                DecisionMode.REQUEST_CLARIFICATION.value in action_names
+                and len(missing) == 0
+            ):
                 v = (
                     f"Scenario {scenario_id} turn {turn_idx + 1}: "
                     "REQUEST_CLARIFICATION specified but missing fields is empty"
@@ -507,7 +815,9 @@ def audit_family_splits(
                     continue
 
                 hf_tokens = _extract_text_tokens(hf_lower)
-                identifier_tokens = {t for t in hf_tokens if any(c.isdigit() for c in t) or len(t) >= 6}
+                identifier_tokens = {
+                    t for t in hf_tokens if any(c.isdigit() for c in t) or len(t) >= 6
+                }
                 leaked_identifiers = identifier_tokens & turn_tokens
                 if leaked_identifiers:
                     leak_msg = (

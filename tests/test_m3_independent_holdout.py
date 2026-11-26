@@ -803,6 +803,8 @@ def _assert_sha_manifest_validity_and_determinism(
 
 @pytest.fixture(scope="module")
 def generated_holdout(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
+    if not SOURCE_ARTIFACTS_DIR.is_dir():
+        pytest.skip("artifacts/m3_synthetic is not generated")
     holdout_dir = tmp_path_factory.mktemp("m3_independent_holdout_fixture")
     module = _load_generator_module()
     result = _invoke_generator(
@@ -924,6 +926,8 @@ def test_holdout_completeness_semantic_grounding(
 
 def test_committed_artifact_label_text_alignment() -> None:
     holdout_dir = REPO_ROOT / "artifacts" / "m3_independent_holdout"
+    if not holdout_dir.is_dir():
+        pytest.skip("artifacts/m3_independent_holdout is not generated")
     trajectories = _load_holdout_trajectories(holdout_dir)
     assert len(trajectories) == 300, (
         f"Expected 300 holdout trajectories, got {len(trajectories)}"
@@ -933,6 +937,8 @@ def test_committed_artifact_label_text_alignment() -> None:
 
 
 def test_m3_independent_holdout_pipeline(tmp_path: Path) -> None:
+    if not SOURCE_ARTIFACTS_DIR.is_dir():
+        pytest.skip("artifacts/m3_synthetic is not generated")
     generator_module = _load_generator_module()
 
     holdout_out_dir = tmp_path / "holdout_run"

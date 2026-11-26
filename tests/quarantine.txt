@@ -1,48 +1,22 @@
 # Research-lane quarantine.
 #
-# Each entry is a test that is currently blocked by missing local artifacts,
-# unavailable infrastructure, or a known generator defect. The core CI lane
-# already excludes research/integration tests; this list lets the research lane
-# run the green remainder without hiding the blocker.
+# These are the remaining tests with a real content or model gap. Missing
+# prerequisites (Postgres, M3 artifacts, thesis artifacts) are now skipped by
+# the tests themselves instead of being quarantined here.
 #
-# Remove an entry only after the test passes in a clean checkout and the reason
-# below is no longer true.
+# Remove an entry only after the underlying gap is fixed.
 
-# Requires a running PostgreSQL instance on 127.0.0.1:5432.
-tests/test_dashboard.py::test_ticket_detail_and_update_lifecycle
-
-# Requires a running PostgreSQL instance on 127.0.0.1:54322.
-tests/test_full_concurrency_e2e.py::test_full_concurrency_e2e_pipeline
-
-# M3 dataset generation currently fails split anti-leak and category-coverage
-# checks; these are real generator defects, not missing artifacts.
-tests/test_m3_data_export.py::test_no_network_dataset_generation
-tests/test_m3_data_export.py::test_active_m3_synthetic_split_anti_leak_audit
-tests/test_m3_data_export.py::test_stratified_category_coverage
-tests/test_m3_data_export.py::test_multitask_heads_label_coverage_in_all_splits
-tests/test_m3_data_export.py::test_dataset_manifest_multitask_head_coverage
-tests/test_m3_data_export.py::test_synthetic_heldout_clear_labeling
-tests/test_m3_data_export.py::test_dapt_corpus_quality_and_anti_leak
-tests/test_m3_data_export.py::test_artifact_manifest_validation
-tests/test_m3_data_export.py::test_sha256sums_file_matches_actual_files
-tests/test_m3_data_export.py::test_integration_with_m3_components
-tests/test_m3_data_export.py::test_cli_execution_and_help
-tests/test_m3_data_export.py::test_exported_dataset_grounded_risk_and_ambiguous_evidence
+# Six extended categories currently have only three independent families; the
+# dataset requirement is twelve per category.
 tests/test_m3_data_export.py::test_exported_dataset_scale_and_family_diversity
-tests/test_m3_data_export.py::test_exported_dataset_ner_evidence_density
-tests/test_m3_data_export.py::test_exported_dataset_category_anchor_lexicon_integrity
-tests/test_m3_data_export.py::test_exported_trajectories_category_anchor_composition
-tests/test_m3_dataset.py::test_multitask_head_coverage_across_dataset_splits
 tests/test_m3_dataset.py::test_family_diversity_per_category_at_least_12
-tests/test_m3_dataset.py::test_semantic_category_anchor_lexicons_no_enum_leaks
-tests/test_m3_dataset.py::test_dataset_generation_preserves_zero_leakage_across_seeds
+
+# The independent holdout generator covers the six core categories, while the
+# test expects all twelve.
 tests/test_m3_independent_holdout.py::test_holdout_coverage_all_labels
-tests/test_m3_independent_holdout.py::test_holdout_no_source_contamination
-tests/test_m3_independent_holdout.py::test_committed_artifact_label_text_alignment
 tests/test_m3_independent_holdout.py::test_m3_independent_holdout_pipeline
 
-# Requires a trained IndoBERT artifact; falls back to the deterministic
-# embedder and cannot meet the real-model similarity thresholds.
+# Base IndoBERT reaches similarity 0.758 on the legacy pair, below the 0.85/0.88
+# duplicate thresholds. A domain-adapted sentence encoder is still needed.
 tests/test_pipeline_semantic_cache.py::test_pipeline_semantic_deduplication_avoids_duplicate_tickets
 tests/test_semantic_cache.py::test_indobert_semantic_similarity_real_model
-tests/test_thesis_tables.py::test_generate_thesis_tables_content
