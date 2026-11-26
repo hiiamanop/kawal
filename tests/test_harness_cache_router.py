@@ -303,7 +303,7 @@ def test_non_complaint_fixtures_are_never_reused() -> None:
         if labels.labels.get(post.post_id) is not None
         and not labels.labels[post.post_id].is_complaint
     ]
-    assert len(non_complaints) == 19
+    assert len(non_complaints) == 21
     runner = _runner(RecordingInner(status="REJECTED"), cache)
     for post in non_complaints:
         run = runner.run(post)

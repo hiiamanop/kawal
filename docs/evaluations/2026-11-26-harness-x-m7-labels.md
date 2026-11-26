@@ -7,9 +7,9 @@ blocked, and what should not be claimed.
 
 ## Dataset state
 
-- 27 recorded X fixtures.
+- 29 recorded X fixtures.
 - 8 labeled complaints: 3 `COMPLETED`, 5 `NEEDS_REVIEW`.
-- 19 non-complaints, all `REJECTED`.
+- 21 non-complaints, all `REJECTED`.
 - Categories: 7 `ROAD`, 1 `DRAINAGE_FLOOD`.
 
 The set is small and class-imbalanced. It is not a representative sample of X
@@ -20,7 +20,7 @@ traffic.
 Every label now carries a `source_type`:
 
 - `CITIZEN_COMPLAINT`: 7
-- `NEWS_REPORT`: 9
+- `NEWS_REPORT`: 11
 - `OPINION`: 2
 - `QUESTION`: 2
 - `ANNOUNCEMENT`: 4
@@ -34,8 +34,9 @@ recorded annotation, not that both are correct.
 
 Source-intent cues were extended for real phrases from the new posts:
 `tewas terperosok`, `satpol pp`, `ditata`, `penataan trotoar`,
-`benerin atuh`, `diabaikan`, `pungli merajalela`, and
-`warga minta pemerintah`.
+`benerin atuh`, `diabaikan`, `pungli merajalela`,
+`warga minta pemerintah`, `reporter:`, `editor:`, `protes warga`, and
+`turun tangan`.
 
 ## M7b public snapshot expansion
 
@@ -69,6 +70,10 @@ was used for a second batch of four posts:
   Cihideung-Gombong, Bandung Barat.
 - `2122292838826398059` — news report about a fallen tree damaging a car at
   Jalan Gelap Nyawang, Bandung.
+- `2061727987591245863` — news report about a waste pile at TPS Cijambe
+  spilling onto the road.
+- `2054402389671543238` — news report about a waste protest and cleanup in
+  Ngamprah, Bandung Barat.
 
 The fixtures record the live-search source and the syndication verification. The
 two long posts use the full text returned by live search; the syndication
@@ -83,15 +88,15 @@ with `agent-reach login twitter` restores access without importing cookies
 again.
 
 The new labels were assigned by the same project that wrote the classifier. A
-second reviewer still needs to confirm the nine additions before they are
+second reviewer still needs to confirm the eleven additions before they are
 treated as independent human ground truth.
 
 ## Validation
 
 - Every existing label validates with `source_type`.
-- The source-intent heuristic matches all 27 labeled fixtures.
-- A rule-only batch on the 27 fixtures produced 3 accepted, 3 needs-review, and
-  21 rejected cases with no failures.
+- The source-intent heuristic matches all 29 labeled fixtures.
+- A rule-only batch on the 29 fixtures produced 3 accepted, 3 needs-review, and
+  23 rejected cases with no failures.
 - `score_harness_comparison.py` reports source-intent accuracy.
 - The core suite covers label coverage and source-type presence.
 

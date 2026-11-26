@@ -269,6 +269,26 @@
       ],
       "notes": "News report about a fallen tree damaging a car at Jalan Gelap Nyawang, Bandung.",
       "source_type": "NEWS_REPORT"
+    },
+    "2061727987591245863": {
+      "is_complaint": false,
+      "category": null,
+      "location_quality": "SPECIFIC",
+      "acceptable_statuses": [
+        "REJECTED"
+      ],
+      "notes": "News report about a waste pile at TPS Cijambe, Kota Bandung, spilling onto the road.",
+      "source_type": "NEWS_REPORT"
+    },
+    "2054402389671543238": {
+      "is_complaint": false,
+      "category": null,
+      "location_quality": "SPECIFIC",
+      "acceptable_statuses": [
+        "REJECTED"
+      ],
+      "notes": "News report about a waste protest and cleanup in Ngamprah, Bandung Barat.",
+      "source_type": "NEWS_REPORT"
     }
   }
 }
