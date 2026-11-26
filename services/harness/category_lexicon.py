@@ -149,8 +149,10 @@ def match_category(text: str) -> tuple[Category | None, bool]:
     if not scores:
         return None, False
 
+    ranked = sorted(scores.values(), reverse=True)
     best = max(scores, key=lambda category: scores[category])
-    return best, len(scores) > 1
+    ambiguous = len(ranked) > 1 and ranked[1] >= 0.60 * ranked[0]
+    return best, ambiguous
 
 
 def match_object(text: str) -> tuple[str | None, Category | None]:

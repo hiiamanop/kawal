@@ -30,7 +30,7 @@ def test_match_category_covers_all_categories(text: str, expected: Category) -> 
 
 
 def test_match_category_flags_ambiguity() -> None:
-    category, ambiguous = match_category("Pungli parkir liar di trotoar yang rusak.")
+    category, ambiguous = match_category("Pungli parkir liar di trotoar yang rusak dan jalan berlubang.")
     assert category in {Category.PUBLIC_ORDER, Category.ROAD}
     assert ambiguous is True
 
