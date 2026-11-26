@@ -27,19 +27,20 @@ Last local result after M6:
 bash scripts/research_ci.sh
 ```
 
-This runs research and integration tests while deselecting the explicit
-blockers in [`tests/quarantine.txt`](../tests/quarantine.txt). It unsets the
+This runs research and integration tests while deselecting explicit blockers
+listed in [`tests/quarantine.txt`](../tests/quarantine.txt). It unsets the
 OpenRouter key because these tests must stay offline. Last local result:
 
 ```text
-75 passed, 8 skipped, 2 quarantined
+78 passed, 8 skipped, 0 quarantined
 ```
 
 The skips are missing prerequisites: PostgreSQL, generated M3 artifacts,
-thesis artifacts, and the pgvector integration database. The generator now
-passes the split and corpus anti-leak audits for the 720-scenario dataset.
+thesis artifacts, and the pgvector integration database. The generator covers
+all 12 categories with 12 families each (144 families; 96/24/24 across
+train/dev/test) and passes the split and corpus anti-leak audits.
 
-To see the full, unquarantined lane and its current failures:
+To run the full lane without quarantine filtering:
 
 ```bash
 python -m pytest -q -m "research or integration"
@@ -47,19 +48,9 @@ python -m pytest -q -m "research or integration"
 
 ### Quarantine groups
 
-| Group | Tests | Blocker |
-|---|---:|---|
-| Extended category diversity | 2 | Six extended categories have 3 families; the requirement is 12 |
-
-These are content/model gaps, not infrastructure failures. Remove a line from
-`tests/quarantine.txt` only after the underlying gap is fixed and the test passes
-in a clean checkout. Do not add core-lane tests to the quarantine; core tests
-must stay green.
-
-The quarantine is not a fix. It keeps the research lane honest and runnable
-while the blockers stay visible. Remove a line from `tests/quarantine.txt` only
-after that test passes in a clean checkout and its blocker is resolved. Do not
-add core-lane tests to the quarantine; core tests must stay green.
+There are no quarantined tests. `tests/quarantine.txt` stays as a guard list for
+real content or model gaps. Do not add core-lane tests to it; core tests must
+stay green.
 
 ## M6 cache integration
 

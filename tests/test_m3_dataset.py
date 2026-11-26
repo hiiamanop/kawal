@@ -1231,6 +1231,45 @@ def test_family_diversity_per_category_at_least_12() -> None:
         )
 
 
+def test_family_anchors_are_unique_across_all_templates() -> None:
+    """Every family must own a distinct 3-5 gram anchor to prevent cross-split leaks."""
+    import re
+
+    from scripts.generate_m3_dataset import (
+        ALL_SCENARIO_TEMPLATES,
+        CATEGORY_ANCHOR_LEXICONS,
+    )
+    from services.dataset.splits import _is_common_language_ngram
+
+    def ngrams(text: str) -> set[tuple[str, ...]]:
+        tokens = re.findall(r"[a-zA-Z0-9_\-]+", text.lower())
+        result: set[tuple[str, ...]] = set()
+        for size in (3, 4, 5):
+            for index in range(len(tokens) - size + 1):
+                candidate = tuple(tokens[index : index + size])
+                if not _is_common_language_ngram(candidate):
+                    result.add(candidate)
+        return result
+
+    anchor_owners: dict[tuple[str, ...], set[str]] = {}
+    for template in ALL_SCENARIO_TEMPLATES:
+        anchors = CATEGORY_ANCHOR_LEXICONS[template.category]["anchors"]
+        matched = sorted(
+            (anchor for anchor in anchors if anchor.lower() in template.issue.lower()),
+            key=len,
+            reverse=True,
+        )
+        assert matched, f"No category anchor in {template.family_id}: {template.issue}"
+
+        for gram in ngrams(matched[0]):
+            anchor_owners.setdefault(gram, set()).add(template.family_id)
+
+    collisions = {
+        gram: owners for gram, owners in anchor_owners.items() if len(owners) > 1
+    }
+    assert not collisions, f"Shared family anchor n-grams: {collisions}"
+
+
 def test_semantic_category_anchor_lexicons_no_enum_leaks() -> None:
     """Verify that category anchor lexicons are respected without direct enum or ID leaks."""
     from scripts.generate_m3_dataset import (

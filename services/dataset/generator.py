@@ -264,7 +264,7 @@ DEFAULT_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         family_id="order-illegal-parking-extortion",
         category=Category.PUBLIC_ORDER,
         issue="parkir liar trotoar memeras pengendara motor dan mengancam kekerasan fisik",
-        landmark="deretan ruko pasar simpang lima",
+        landmark="ruko pasar simpang lima",
         jurisdiction="Kelurahan Mugassari, Kecamatan Semarang Selatan",
         city="Kota Semarang",
         urgency="HIGH",
@@ -301,7 +301,7 @@ DEFAULT_TEMPLATES: tuple[ScenarioTemplate, ...] = (
     ScenarioTemplate(
         family_id="transport-traffic-light-failure",
         category=Category.TRANSPORTATION,
-        issue="lampu pengatur lalu lintas padam di persimpangan padat memicu macet",
+        issue="lampu lalu lintas mati di persimpangan padat memicu macet",
         landmark="perempatan tugu jam pahlawan",
         jurisdiction="Kelurahan Pandean, Kecamatan Taman",
         city="Kota Madiun",

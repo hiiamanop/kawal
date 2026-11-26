@@ -13,7 +13,7 @@ not the current evaluation target.
 | Area | State |
 |---|---|
 | Core CI | `687 passed, 42 skipped, 85 deselected` |
-| Research/integration lane | Green with 2 explicit content gaps quarantined |
+| Research/integration lane | Green, no quarantine |
 | Harness X | M1 through M6 implemented |
 | WhatsApp pipeline | Experimental, still present, not the current focus |
 | Production readiness | Not production-ready |
@@ -224,21 +224,20 @@ Core, offline lane:
 bash scripts/ci.sh
 ```
 
-Research and integration lane with the documented quarantine:
+Research and integration lane:
 
 ```bash
 bash scripts/research_ci.sh
 ```
 
-The full, unquarantined research lane currently has 2 known failures:
+The full research lane passes with no quarantine entries:
 
 ```bash
 pytest -q -m "research or integration"
 ```
 
-The blockers are listed in [tests/quarantine.txt](tests/quarantine.txt). They
-cover extended-category family diversity. Missing Postgres, M3, and thesis artifacts
-now produce skips instead of failures.
+[tests/quarantine.txt](tests/quarantine.txt) is empty. Missing Postgres, M3, and
+thesis artifacts produce skips instead of failures.
 
 ## Legacy WhatsApp pipeline
 
