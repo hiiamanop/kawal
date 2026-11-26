@@ -1,0 +1,424 @@
+{
+  "scenarios": 5,
+  "thresholds": [
+    {
+      "threshold": 0.8,
+      "total": 5,
+      "true_positive": 2,
+      "false_positive": 0,
+      "false_negative": 0,
+      "true_negative": 3,
+      "precision": 1.0,
+      "recall": 1.0,
+      "accuracy": 1.0,
+      "results": [
+        {
+          "scenario_id": "road-kopo-paraphrase",
+          "expected_reuse": true,
+          "actual_reuse": true,
+          "seed_stored": true,
+          "match_type": "SEMANTIC",
+          "similarity": 0.8597773313522339,
+          "decision": "COMPLETED",
+          "inner_called": false,
+          "passed": true,
+          "reason_codes": [
+            "CACHE_SEMANTIC"
+          ]
+        },
+        {
+          "scenario_id": "road-cihampelas-paraphrase",
+          "expected_reuse": true,
+          "actual_reuse": true,
+          "seed_stored": true,
+          "match_type": "SEMANTIC",
+          "similarity": 0.9696657657623291,
+          "decision": "COMPLETED",
+          "inner_called": false,
+          "passed": true,
+          "reason_codes": [
+            "CACHE_SEMANTIC"
+          ]
+        },
+        {
+          "scenario_id": "road-kopo-different-location",
+          "expected_reuse": false,
+          "actual_reuse": false,
+          "seed_stored": true,
+          "match_type": "SEMANTIC",
+          "similarity": 0.8158652782440186,
+          "decision": "REJECTED",
+          "inner_called": true,
+          "passed": true,
+          "reason_codes": [
+            "CACHE_SEMANTIC",
+            "CACHE_LOCATION_MISMATCH"
+          ]
+        },
+        {
+          "scenario_id": "road-kopo-waste-query",
+          "expected_reuse": false,
+          "actual_reuse": false,
+          "seed_stored": true,
+          "match_type": "NONE",
+          "similarity": 0.0,
+          "decision": "REJECTED",
+          "inner_called": true,
+          "passed": true,
+          "reason_codes": [
+            "CACHE_MISS"
+          ]
+        },
+        {
+          "scenario_id": "road-kopo-opinion",
+          "expected_reuse": false,
+          "actual_reuse": false,
+          "seed_stored": true,
+          "match_type": "SEMANTIC",
+          "similarity": 0.8456187844276428,
+          "decision": "REJECTED",
+          "inner_called": true,
+          "passed": true,
+          "reason_codes": [
+            "CACHE_SEMANTIC",
+            "CACHE_NON_ACTIONABLE_SOURCE"
+          ]
+        }
+      ]
+    },
+    {
+      "threshold": 0.85,
+      "total": 5,
+      "true_positive": 2,
+      "false_positive": 0,
+      "false_negative": 0,
+      "true_negative": 3,
+      "precision": 1.0,
+      "recall": 1.0,
+      "accuracy": 1.0,
+      "results": [
+        {
+          "scenario_id": "road-kopo-paraphrase",
+          "expected_reuse": true,
+          "actual_reuse": true,
+          "seed_stored": true,
+          "match_type": "SEMANTIC",
+          "similarity": 0.8597773313522339,
+          "decision": "COMPLETED",
+          "inner_called": false,
+          "passed": true,
+          "reason_codes": [
+            "CACHE_SEMANTIC"
+          ]
+        },
+        {
+          "scenario_id": "road-cihampelas-paraphrase",
+          "expected_reuse": true,
+          "actual_reuse": true,
+          "seed_stored": true,
+          "match_type": "SEMANTIC",
+          "similarity": 0.9696657657623291,
+          "decision": "COMPLETED",
+          "inner_called": false,
+          "passed": true,
+          "reason_codes": [
+            "CACHE_SEMANTIC"
+          ]
+        },
+        {
+          "scenario_id": "road-kopo-different-location",
+          "expected_reuse": false,
+          "actual_reuse": false,
+          "seed_stored": true,
+          "match_type": "NONE",
+          "similarity": 0.0,
+          "decision": "REJECTED",
+          "inner_called": true,
+          "passed": true,
+          "reason_codes": [
+            "CACHE_MISS"
+          ]
+        },
+        {
+          "scenario_id": "road-kopo-waste-query",
+          "expected_reuse": false,
+          "actual_reuse": false,
+          "seed_stored": true,
+          "match_type": "NONE",
+          "similarity": 0.0,
+          "decision": "REJECTED",
+          "inner_called": true,
+          "passed": true,
+          "reason_codes": [
+            "CACHE_MISS"
+          ]
+        },
+        {
+          "scenario_id": "road-kopo-opinion",
+          "expected_reuse": false,
+          "actual_reuse": false,
+          "seed_stored": true,
+          "match_type": "NONE",
+          "similarity": 0.0,
+          "decision": "REJECTED",
+          "inner_called": true,
+          "passed": true,
+          "reason_codes": [
+            "CACHE_MISS"
+          ]
+        }
+      ]
+    },
+    {
+      "threshold": 0.9,
+      "total": 5,
+      "true_positive": 1,
+      "false_positive": 0,
+      "false_negative": 1,
+      "true_negative": 3,
+      "precision": 1.0,
+      "recall": 0.5,
+      "accuracy": 0.8,
+      "results": [
+        {
+          "scenario_id": "road-kopo-paraphrase",
+          "expected_reuse": true,
+          "actual_reuse": false,
+          "seed_stored": true,
+          "match_type": "NONE",
+          "similarity": 0.0,
+          "decision": "REJECTED",
+          "inner_called": true,
+          "passed": false,
+          "reason_codes": [
+            "CACHE_MISS"
+          ]
+        },
+        {
+          "scenario_id": "road-cihampelas-paraphrase",
+          "expected_reuse": true,
+          "actual_reuse": true,
+          "seed_stored": true,
+          "match_type": "SEMANTIC",
+          "similarity": 0.9696657657623291,
+          "decision": "COMPLETED",
+          "inner_called": false,
+          "passed": true,
+          "reason_codes": [
+            "CACHE_SEMANTIC"
+          ]
+        },
+        {
+          "scenario_id": "road-kopo-different-location",
+          "expected_reuse": false,
+          "actual_reuse": false,
+          "seed_stored": true,
+          "match_type": "NONE",
+          "similarity": 0.0,
+          "decision": "REJECTED",
+          "inner_called": true,
+          "passed": true,
+          "reason_codes": [
+            "CACHE_MISS"
+          ]
+        },
+        {
+          "scenario_id": "road-kopo-waste-query",
+          "expected_reuse": false,
+          "actual_reuse": false,
+          "seed_stored": true,
+          "match_type": "NONE",
+          "similarity": 0.0,
+          "decision": "REJECTED",
+          "inner_called": true,
+          "passed": true,
+          "reason_codes": [
+            "CACHE_MISS"
+          ]
+        },
+        {
+          "scenario_id": "road-kopo-opinion",
+          "expected_reuse": false,
+          "actual_reuse": false,
+          "seed_stored": true,
+          "match_type": "NONE",
+          "similarity": 0.0,
+          "decision": "REJECTED",
+          "inner_called": true,
+          "passed": true,
+          "reason_codes": [
+            "CACHE_MISS"
+          ]
+        }
+      ]
+    },
+    {
+      "threshold": 0.92,
+      "total": 5,
+      "true_positive": 1,
+      "false_positive": 0,
+      "false_negative": 1,
+      "true_negative": 3,
+      "precision": 1.0,
+      "recall": 0.5,
+      "accuracy": 0.8,
+      "results": [
+        {
+          "scenario_id": "road-kopo-paraphrase",
+          "expected_reuse": true,
+          "actual_reuse": false,
+          "seed_stored": true,
+          "match_type": "NONE",
+          "similarity": 0.0,
+          "decision": "REJECTED",
+          "inner_called": true,
+          "passed": false,
+          "reason_codes": [
+            "CACHE_MISS"
+          ]
+        },
+        {
+          "scenario_id": "road-cihampelas-paraphrase",
+          "expected_reuse": true,
+          "actual_reuse": true,
+          "seed_stored": true,
+          "match_type": "SEMANTIC",
+          "similarity": 0.9696657657623291,
+          "decision": "COMPLETED",
+          "inner_called": false,
+          "passed": true,
+          "reason_codes": [
+            "CACHE_SEMANTIC"
+          ]
+        },
+        {
+          "scenario_id": "road-kopo-different-location",
+          "expected_reuse": false,
+          "actual_reuse": false,
+          "seed_stored": true,
+          "match_type": "NONE",
+          "similarity": 0.0,
+          "decision": "REJECTED",
+          "inner_called": true,
+          "passed": true,
+          "reason_codes": [
+            "CACHE_MISS"
+          ]
+        },
+        {
+          "scenario_id": "road-kopo-waste-query",
+          "expected_reuse": false,
+          "actual_reuse": false,
+          "seed_stored": true,
+          "match_type": "NONE",
+          "similarity": 0.0,
+          "decision": "REJECTED",
+          "inner_called": true,
+          "passed": true,
+          "reason_codes": [
+            "CACHE_MISS"
+          ]
+        },
+        {
+          "scenario_id": "road-kopo-opinion",
+          "expected_reuse": false,
+          "actual_reuse": false,
+          "seed_stored": true,
+          "match_type": "NONE",
+          "similarity": 0.0,
+          "decision": "REJECTED",
+          "inner_called": true,
+          "passed": true,
+          "reason_codes": [
+            "CACHE_MISS"
+          ]
+        }
+      ]
+    },
+    {
+      "threshold": 0.95,
+      "total": 5,
+      "true_positive": 1,
+      "false_positive": 0,
+      "false_negative": 1,
+      "true_negative": 3,
+      "precision": 1.0,
+      "recall": 0.5,
+      "accuracy": 0.8,
+      "results": [
+        {
+          "scenario_id": "road-kopo-paraphrase",
+          "expected_reuse": true,
+          "actual_reuse": false,
+          "seed_stored": true,
+          "match_type": "NONE",
+          "similarity": 0.0,
+          "decision": "REJECTED",
+          "inner_called": true,
+          "passed": false,
+          "reason_codes": [
+            "CACHE_MISS"
+          ]
+        },
+        {
+          "scenario_id": "road-cihampelas-paraphrase",
+          "expected_reuse": true,
+          "actual_reuse": true,
+          "seed_stored": true,
+          "match_type": "SEMANTIC",
+          "similarity": 0.9696657657623291,
+          "decision": "COMPLETED",
+          "inner_called": false,
+          "passed": true,
+          "reason_codes": [
+            "CACHE_SEMANTIC"
+          ]
+        },
+        {
+          "scenario_id": "road-kopo-different-location",
+          "expected_reuse": false,
+          "actual_reuse": false,
+          "seed_stored": true,
+          "match_type": "NONE",
+          "similarity": 0.0,
+          "decision": "REJECTED",
+          "inner_called": true,
+          "passed": true,
+          "reason_codes": [
+            "CACHE_MISS"
+          ]
+        },
+        {
+          "scenario_id": "road-kopo-waste-query",
+          "expected_reuse": false,
+          "actual_reuse": false,
+          "seed_stored": true,
+          "match_type": "NONE",
+          "similarity": 0.0,
+          "decision": "REJECTED",
+          "inner_called": true,
+          "passed": true,
+          "reason_codes": [
+            "CACHE_MISS"
+          ]
+        },
+        {
+          "scenario_id": "road-kopo-opinion",
+          "expected_reuse": false,
+          "actual_reuse": false,
+          "seed_stored": true,
+          "match_type": "NONE",
+          "similarity": 0.0,
+          "decision": "REJECTED",
+          "inner_called": true,
+          "passed": true,
+          "reason_codes": [
+            "CACHE_MISS"
+          ]
+        }
+      ]
+    }
+  ],
+  "best_threshold": 0.85,
+  "created_at": "2026-11-26T01:43:14.347240Z"
+}

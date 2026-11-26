@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import NamedTuple, Protocol, Sequence
+from typing import NamedTuple, Sequence
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict
@@ -26,7 +26,7 @@ from services.harness.agents import (
 )
 from services.harness.cache import CacheEntry, HarnessAnalysisCache
 from services.harness.location import assess_location
-from services.harness.ports import Agent, AgentResult, AgentTask
+from services.harness.ports import Agent, AgentResult, AgentTask, RunOrchestrator
 from services.harness.source_intent import (
     assess_source_intent,
     has_non_actionable_cue,
@@ -117,10 +117,6 @@ class _PrefilterResult(NamedTuple):
     extraction: ExtractionOutput
     verification: VerificationOutput
     latency_ms: float
-
-
-class RunOrchestrator(Protocol):
-    def run(self, post: SocialPost, run_id: str | None = None) -> HarnessRun: ...
 
 
 class CacheFirstRunner:

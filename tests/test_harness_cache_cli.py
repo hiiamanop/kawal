@@ -5,6 +5,8 @@ from pathlib import Path
 
 from datetime import datetime, timezone
 
+import pytest
+
 from contracts.harness import SocialPost
 from scripts.evaluate_harness_cache import _build_stream, main
 from services.harness.metrics import FixtureLabel, LabelSet
@@ -30,6 +32,12 @@ def _write_labels(path: Path) -> None:
         ),
         encoding="utf-8",
     )
+
+
+def test_cache_cli_requires_explicit_analysis_version(tmp_path: Path) -> None:
+    with pytest.raises(SystemExit) as exc:
+        main(["--fixture", str(FIXTURE), "--out", str(tmp_path)])
+    assert exc.value.code == 2
 
 
 def test_cache_cli_rule_two_passes(tmp_path: Path, capsys: object) -> None:

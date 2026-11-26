@@ -29,5 +29,9 @@ class Agent(Protocol):
     def run(self, task: AgentTask) -> AgentResult: ...
 
 
+class RunOrchestrator(Protocol):
+    def run(self, post: SocialPost, run_id: str | None = None) -> HarnessRun: ...
+
+
 class RunSink(Protocol):
     def write(self, run: HarnessRun) -> RunReceipt: ...

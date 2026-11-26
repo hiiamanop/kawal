@@ -39,7 +39,7 @@ Production store: `harness_case_cache` in PostgreSQL with pgvector.
 
 The migration is `infra/migrations/014_m6_harness_semantic_cache.sql`, mirrored
 to `supabase/migrations/20261126000000_m6_harness_semantic_cache.sql`.
-Compose uses `pgvector/pgvector:pg16`.
+Compose uses `docker.io/pgvector/pgvector:pg16`.
 
 The table stores:
 
@@ -165,7 +165,9 @@ python scripts/evaluate_harness_cache.py \
   --inner llm
 ```
 
-`--inner rule` runs offline and needs no API key. `--inner llm` supports the
+`--analysis-version` is required so a changed model, prompt, or policy cannot
+silently reuse an old cache entry. `--inner rule` runs offline and needs no API
+key. `--inner llm` supports the
 shared cassette flags from `scripts/harness_llm_cli.py`. The cache evaluation
 runs a baseline, warmup, and evaluation pass, so a cassette with one response
 per prompt can be exhausted. Use live calls or a cassette that contains repeated
@@ -221,14 +223,46 @@ The 18-post number is intentionally small: only accepted, rule-consistent cases
 are cacheable. The duplicate stream measures the savings when repeats actually
 exist while still exercising non-complaint posts.
 
+## Semantic calibration
+
+`fixtures/x_cache_scenarios.json` contains five near-duplicate scenarios:
+two positive paraphrases and three negative cases covering different location,
+different category, and opinion wording.
+
+Run the threshold sweep with a local IndoBERT artifact:
+
+```bash
+python scripts/evaluate_cache_scenarios.py \
+  --fixture fixtures/x_cache_scenarios.json \
+  --embedder indobert \
+  --embedder-path artifacts/indobert-base-p1 \
+  --thresholds 0.80,0.85,0.90,0.92,0.95 \
+  --out runs/m6-scenarios
+```
+
+With `indobenchmark/indobert-base-p1`:
+
+- threshold 0.80 and 0.85: precision 1.0, recall 1.0;
+- threshold 0.90 and above: precision 1.0, recall 0.5;
+- the missed positive was the Kopo paraphrase with similarity 0.860.
+
+The scenario set is small and uses a base IndoBERT model, not the trained DAPT
+artifact. Treat 0.85 as the starting point for this base model, not as a
+production default. Recalibrate against the real DAPT artifact and a larger
+near-duplicate set before lowering the default 0.92.
+
 ## Limits
 
 - Live evaluation used exact matching because the deterministic fallback
   disables semantic matching. Semantic routing is covered by tests with the
   fallback explicitly enabled.
-- Semantic thresholds are not calibrated against a large real near-duplicate
-  set.
-- Postgres integration is marked `integration` and is not part of core CI.
+- Semantic thresholds are calibrated only on five synthetic scenarios with a
+  base IndoBERT model. The trained DAPT artifact and a larger real
+  near-duplicate set still need calibration.
+- Postgres integration is marked `integration` and is not part of core CI. It
+  was run locally against compose: the round-trip test and the HNSW planner
+  check passed, and a `--inner rule` smoke run produced 3 exact hits with zero
+  false reuse.
 - Cache entries are treated as immutable during lookup. Re-recording the same
   cache key upserts a fresh analysis; stale entries are invalidated by version.
 - The cache does not replace deterministic location or source-intent guards.

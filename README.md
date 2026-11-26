@@ -12,7 +12,7 @@ not the current evaluation target.
 
 | Area | State |
 |---|---|
-| Core CI | `672 passed, 43 skipped, 84 deselected` |
+| Core CI | `686 passed, 42 skipped, 85 deselected` |
 | Research/integration lane | Green with an explicit quarantine of 29 known failures |
 | Harness X | M1 through M6 implemented |
 | WhatsApp pipeline | Experimental, still present, not the current focus |
@@ -69,7 +69,9 @@ fails, the full pipeline runs.
 
 The live 18-post evaluation produced 2 exact hits, 0 false reuse, and reduced LLM
 calls from 36 to 32. A duplicate stream that keeps the 15 non-complaints produced
-6 exact hits out of 24 posts and reduced LLM calls from 48 to 36. See
+6 exact hits out of 24 posts and reduced LLM calls from 48 to 36. A five-scenario
+sweep with base IndoBERT found threshold 0.85 gives perfect precision and recall;
+the default 0.92 missed one paraphrase. See
 [docs/evaluations/2026-11-26-harness-x-m6-cache.md](docs/evaluations/2026-11-26-harness-x-m6-cache.md).
 
 ## Repository layout
@@ -199,7 +201,7 @@ python scripts/evaluate_harness_cache.py \
 
 Use `--inner llm` for the live LLM path. Use `--cache-store postgres` with
 `--cache-dsn` for pgvector. The compose Postgres image is
-`pgvector/pgvector:pg16`; run migration
+`docker.io/pgvector/pgvector:pg16`; run migration
 `infra/migrations/014_m6_harness_semantic_cache.sql` before a Postgres evaluation.
 
 Live X collection through Agent-Reach is optional:

@@ -121,6 +121,49 @@ def test_in_memory_reset_only_removes_matching_namespace_and_version() -> None:
     assert store.count == 1
 
 
+def test_in_memory_namespace_and_embedding_model_are_isolated() -> None:
+    store = InMemoryHarnessCacheStore()
+    store.save(_entry(namespace="harness-x", text_hash="a" * 64))
+    assert (
+        store.find_exact("harness-x", "v1", "deterministic-hash-768-v1", "a" * 64)
+        is not None
+    )
+    assert (
+        store.find_exact("other", "v1", "deterministic-hash-768-v1", "a" * 64) is None
+    )
+    query = CacheQuery(
+        namespace="other",
+        analysis_version="v1",
+        embedding_model="deterministic-hash-768-v1",
+        embedding=tuple([1.0] + [0.0] * 767),
+        category=Category.ROAD,
+        source_intent="CITIZEN_COMPLAINT",
+        min_similarity=0.9,
+        limit=5,
+    )
+    assert store.find_similar(query) == []
+    query = query.model_copy(update={"namespace": "harness-x"})
+    assert store.find_similar(query)
+    query = query.model_copy(update={"embedding_model": "other-model"})
+    assert store.find_similar(query) == []
+
+
+def test_in_memory_below_threshold_is_a_miss() -> None:
+    store = InMemoryHarnessCacheStore()
+    store.save(_entry())
+    query = CacheQuery(
+        namespace="harness-x",
+        analysis_version="v1",
+        embedding_model="deterministic-hash-768-v1",
+        embedding=tuple([0.0, 1.0] + [0.0] * 766),
+        category=Category.ROAD,
+        source_intent="CITIZEN_COMPLAINT",
+        min_similarity=0.9,
+        limit=5,
+    )
+    assert store.find_similar(query) == []
+
+
 def test_cache_entry_has_no_full_post_body_field() -> None:
     entry = _entry()
     dumped = entry.model_dump()

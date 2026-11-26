@@ -121,10 +121,19 @@ def test_record_rejects_rule_category_disagreement() -> None:
     assert "CACHE_RULE_DISAGREEMENT" in result.reason_codes
 
 
-def test_record_rejects_pii() -> None:
+@pytest.mark.parametrize(
+    "text",
+    [
+        "NIK 3273010101010001, jalan rusak di Kopo",
+        "Telepon 081234567890, jalan rusak di Kopo",
+        "Email warga@example.com, jalan rusak di Kopo",
+        "NPWP 09.123.456.7-890.000, jalan rusak di Kopo",
+    ],
+)
+def test_record_rejects_pii(text: str) -> None:
     cache = _cache()
     result = cache.record(
-        case=_case(text="NIK 3273010101010001, jalan rusak di Kopo"),
+        case=_case(text=text),
         rule_triage=_rule_outputs().triage,
         rule_verification=_rule_outputs().verification,
         run_id="run-1",

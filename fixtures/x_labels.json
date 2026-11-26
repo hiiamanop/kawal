@@ -7,7 +7,8 @@
       "acceptable_statuses": [
         "NEEDS_REVIEW"
       ],
-      "notes": "Road complaint in Sundanese; no specific street or administrative area."
+      "notes": "Road complaint in Sundanese; no specific street or administrative area.",
+      "source_type": "CITIZEN_COMPLAINT"
     },
     "2076110894149652629": {
       "is_complaint": true,
@@ -16,7 +17,8 @@
       "acceptable_statuses": [
         "NEEDS_REVIEW"
       ],
-      "notes": "Accident report at a named road; whether it is an actionable complaint is ambiguous."
+      "notes": "Accident report at a named road; whether it is an actionable complaint is ambiguous.",
+      "source_type": "UNKNOWN"
     },
     "931149896203169792": {
       "is_complaint": true,
@@ -25,7 +27,8 @@
       "acceptable_statuses": [
         "COMPLETED"
       ],
-      "notes": "Road damage near Stasiun Bandung; flooding is described as an effect."
+      "notes": "Road damage near Stasiun Bandung; flooding is described as an effect.",
+      "source_type": "CITIZEN_COMPLAINT"
     },
     "2026159892885832085": {
       "is_complaint": true,
@@ -34,7 +37,8 @@
       "acceptable_statuses": [
         "COMPLETED"
       ],
-      "notes": "Potholes on Jl. Gatot Subroto Bandung with a specific road name."
+      "notes": "Potholes on Jl. Gatot Subroto Bandung with a specific road name.",
+      "source_type": "CITIZEN_COMPLAINT"
     },
     "2125560260849193400": {
       "is_complaint": false,
@@ -43,7 +47,8 @@
       "acceptable_statuses": [
         "REJECTED"
       ],
-      "notes": "Weather remark with no public-service complaint."
+      "notes": "Weather remark with no public-service complaint.",
+      "source_type": "UNKNOWN"
     },
     "2116307635217838493": {
       "is_complaint": true,
@@ -52,7 +57,8 @@
       "acceptable_statuses": [
         "COMPLETED"
       ],
-      "notes": "Flood location at Jalan Cihampelas; specific landmark."
+      "notes": "Flood location at Jalan Cihampelas; specific landmark.",
+      "source_type": "CITIZEN_COMPLAINT"
     },
     "2122148769735360583": {
       "is_complaint": false,
@@ -61,7 +67,8 @@
       "acceptable_statuses": [
         "REJECTED"
       ],
-      "notes": "News report about a road repair and an alternative route; not a citizen request."
+      "notes": "News report about a road repair and an alternative route; not a citizen request.",
+      "source_type": "NEWS_REPORT"
     },
     "2121239507798499782": {
       "is_complaint": false,
@@ -70,7 +77,8 @@
       "acceptable_statuses": [
         "REJECTED"
       ],
-      "notes": "News report about storm damage in Batujajar; not a citizen complaint."
+      "notes": "News report about storm damage in Batujajar; not a citizen complaint.",
+      "source_type": "NEWS_REPORT"
     },
     "2121593107276030456": {
       "is_complaint": false,
@@ -79,7 +87,8 @@
       "acceptable_statuses": [
         "REJECTED"
       ],
-      "notes": "Police news report about storm damage in Pasirjambu."
+      "notes": "Police news report about storm damage in Pasirjambu.",
+      "source_type": "NEWS_REPORT"
     },
     "2119723067408879971": {
       "is_complaint": false,
@@ -88,7 +97,8 @@
       "acceptable_statuses": [
         "REJECTED"
       ],
-      "notes": "News report about a Damri garage fire."
+      "notes": "News report about a Damri garage fire.",
+      "source_type": "NEWS_REPORT"
     },
     "2115038297194217895": {
       "is_complaint": false,
@@ -97,7 +107,8 @@
       "acceptable_statuses": [
         "REJECTED"
       ],
-      "notes": "BMKG warning about flood potential; not a complaint."
+      "notes": "BMKG warning about flood potential; not a complaint.",
+      "source_type": "ANNOUNCEMENT"
     },
     "2067932765530775666": {
       "is_complaint": false,
@@ -106,7 +117,8 @@
       "acceptable_statuses": [
         "REJECTED"
       ],
-      "notes": "Power outage schedule from a radio account."
+      "notes": "Power outage schedule from a radio account.",
+      "source_type": "ANNOUNCEMENT"
     },
     "1998677956323848429": {
       "is_complaint": false,
@@ -115,7 +127,8 @@
       "acceptable_statuses": [
         "REJECTED"
       ],
-      "notes": "Opinion about Bandung elevation data and government assessment."
+      "notes": "Opinion about Bandung elevation data and government assessment.",
+      "source_type": "OPINION"
     },
     "1513890410447441930": {
       "is_complaint": false,
@@ -124,7 +137,8 @@
       "acceptable_statuses": [
         "REJECTED"
       ],
-      "notes": "Traffic photo and commentary about Nagreg; not a citizen complaint."
+      "notes": "Traffic photo and commentary about Nagreg; not a citizen complaint.",
+      "source_type": "NEWS_REPORT"
     },
     "2099144598069424348": {
       "is_complaint": false,
@@ -133,7 +147,8 @@
       "acceptable_statuses": [
         "REJECTED"
       ],
-      "notes": "Opinion about Bandung/KBP development."
+      "notes": "Opinion about Bandung/KBP development.",
+      "source_type": "OPINION"
     },
     "1864479143263367405": {
       "is_complaint": false,
@@ -142,7 +157,8 @@
       "acceptable_statuses": [
         "REJECTED"
       ],
-      "notes": "Question about motorcycle parking at IKEA KBP."
+      "notes": "Question about motorcycle parking at IKEA KBP.",
+      "source_type": "QUESTION"
     },
     "1879519855952511237": {
       "is_complaint": false,
@@ -151,7 +167,8 @@
       "acceptable_statuses": [
         "REJECTED"
       ],
-      "notes": "Question about public transport from Padalarang to IKEA KBP."
+      "notes": "Question about public transport from Padalarang to IKEA KBP.",
+      "source_type": "QUESTION"
     },
     "2123836905657921737": {
       "is_complaint": false,
@@ -160,7 +177,8 @@
       "acceptable_statuses": [
         "REJECTED"
       ],
-      "notes": "Earthquake information bulletin; not a complaint."
+      "notes": "Earthquake information bulletin; not a complaint.",
+      "source_type": "ANNOUNCEMENT"
     }
   }
 }

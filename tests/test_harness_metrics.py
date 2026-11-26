@@ -50,6 +50,7 @@ def _labels() -> LabelSet:
                     "category": "ROAD",
                     "location_quality": "SPECIFIC",
                     "acceptable_statuses": ["COMPLETED"],
+                    "source_type": "CITIZEN_COMPLAINT",
                     "notes": "",
                 },
                 "metric-rejected": {
@@ -57,6 +58,7 @@ def _labels() -> LabelSet:
                     "category": None,
                     "location_quality": "MISSING",
                     "acceptable_statuses": ["REJECTED"],
+                    "source_type": "UNKNOWN",
                     "notes": "",
                 },
             }
@@ -68,7 +70,7 @@ def _comparison(tmp_path: Path) -> object:
     posts = [
         _post(
             "metric-accepted",
-            "Min, jalan di Jl. Kopo Bandung rusak parah, ada lubang besar.",
+            "Min, jalan di Jl. Kopo Bandung rusak parah, ada lubang besar. Tolong segera diperbaiki.",
         ),
         _post("metric-rejected", "Selamat pagi min"),
     ]
@@ -86,6 +88,7 @@ def test_score_comparison_rewards_correct_decisions(tmp_path: Path) -> None:
     assert metrics.rule.complaint_recall == 1.0
     assert metrics.rule.category_accuracy == 1.0
     assert metrics.rule.location_accuracy == 1.0
+    assert metrics.rule.source_intent_accuracy == 1.0
     assert metrics.rule.false_accepts == 0
 
 
@@ -111,3 +114,17 @@ def test_labels_cover_all_real_fixtures() -> None:
     posts = ReplayXSource(FIXTURES).fetch(limit=100)
     labels = load_labels(LABELS)
     assert {post.post_id for post in posts} == set(labels.labels)
+
+
+def test_all_labels_have_source_type() -> None:
+    labels = load_labels(LABELS)
+    assert all(label.source_type is not None for label in labels.labels.values())
+    source_types = {label.source_type for label in labels.labels.values()}
+    assert source_types == {
+        "CITIZEN_COMPLAINT",
+        "NEWS_REPORT",
+        "OPINION",
+        "QUESTION",
+        "ANNOUNCEMENT",
+        "UNKNOWN",
+    }

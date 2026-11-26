@@ -49,7 +49,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--out", default="runs/m6", help="Output directory")
     parser.add_argument("--limit", type=int, default=50, help="Maximum posts")
-    parser.add_argument("--analysis-version", default="harness-x-m6-v1")
+    parser.add_argument("--analysis-version", required=True)
     parser.add_argument(
         "--cache-store", choices=("memory", "postgres"), default="memory"
     )
@@ -77,6 +77,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--embedder",
         choices=("deterministic", "indobert"),
         default="deterministic",
+    )
+    parser.add_argument(
+        "--embedder-path",
+        default=None,
+        help="Local IndoBERT artifact directory with config.json",
     )
     parser.add_argument(
         "--allow-fallback-semantic",
@@ -184,6 +189,7 @@ def _render_markdown(report: CacheEvaluationReport) -> str:
         "| Metric | Baseline | Cached |",
         "|---|---:|---:|",
         f"| Accepted | {report.baseline.accepted} | {report.cached.accepted} |",
+        f"| Accepted precision | {report.baseline.accepted_precision:.3f} | {report.cached.accepted_precision:.3f} |",
         f"| Decision accuracy | {report.baseline.decision_accuracy:.3f} | {report.cached.decision_accuracy:.3f} |",
         f"| False accepts | {report.baseline.false_accepts} | {report.cached.false_accepts} |",
         f"| LLM calls | {report.baseline.llm_calls} | {report.cached.llm_calls} |",
@@ -220,11 +226,12 @@ def main(argv: list[str] | None = None) -> int:
         print("No posts found for the requested evaluation", file=sys.stderr)
         return 2
 
-    embedder = (
-        DeterministicFallbackEmbedder(dim=768)
-        if args.embedder == "deterministic"
-        else IndoBertEmbedder.get_instance()
-    )
+    if args.embedder == "deterministic":
+        embedder = DeterministicFallbackEmbedder(dim=768)
+    elif args.embedder_path:
+        embedder = IndoBertEmbedder(model_path=args.embedder_path)
+    else:
+        embedder = IndoBertEmbedder.get_instance()
     try:
         store = _build_store(args)
     except (ValueError, ImportError) as exc:

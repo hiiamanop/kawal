@@ -19,7 +19,10 @@ from services.harness.cache import (
     compute_cache_key,
     compute_text_hash,
 )
-from services.harness.cache_store import PgVectorHarnessCacheStore
+from services.harness.cache_store import (
+    PgVectorHarnessCacheStore,
+    _vector_literal,
+)
 
 
 pytestmark = pytest.mark.integration
@@ -100,3 +103,26 @@ def test_pgvector_cache_round_trip() -> None:
         assert results[0].entry.cache_key == entry.cache_key
     finally:
         assert store.reset(namespace, "v1") == 1
+
+
+def test_pgvector_planner_uses_hnsw_index() -> None:
+    dsn = os.getenv("KAWAL_TEST_DATABASE_URL")
+    if not dsn:
+        pytest.skip("KAWAL_TEST_DATABASE_URL is not set")
+    psycopg = pytest.importorskip("psycopg")
+    vector = _vector_literal(tuple([1.0] + [0.0] * 767))
+
+    with psycopg.connect(dsn) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SET enable_seqscan = off")
+            cur.execute(
+                """
+                EXPLAIN SELECT cache_key
+                FROM harness_case_cache
+                ORDER BY embedding <=> %s::vector
+                LIMIT 5
+                """,
+                (vector,),
+            )
+            plan = "\n".join(str(row[0]) for row in cur.fetchall())
+    assert "ix_harness_cache_hnsw" in plan

@@ -100,11 +100,15 @@ full pipeline and are not reused.
 
 ## Limitations
 
-- Semantic matching was not exercised live because the deterministic fallback
-  disables it. Unit tests exercise the semantic path with the fallback
-  explicitly enabled, but a real IndoBERT threshold calibration is still needed.
-- The Postgres/pgvector integration test is marked `integration` and was not run
-  in this evaluation.
+- The live 18-post and duplicate-stream runs used exact matching with the
+  deterministic fallback.
+- A separate five-scenario sweep with `indobenchmark/indobert-base-p1` found
+  threshold 0.85 gives precision 1.0 and recall 1.0; threshold 0.92 gives
+  precision 1.0 and recall 0.5. This is a small synthetic set and the model is
+  base IndoBERT, not the trained DAPT artifact.
+- The Postgres/pgvector path was validated separately: the integration test,
+  HNSW planner check, and a `--inner rule` smoke run passed. The LLM evaluation
+  above used the in-memory store.
 - The dataset is small and class-imbalanced.
 - Live LLM decisions can vary between independent passes on non-cacheable posts.
 - Evidence spans and embeddings are sensitive local data even though the full
@@ -116,3 +120,5 @@ full pipeline and are not reused.
 - `2026-11-26-harness-x-m6-cache-18.md`
 - `2026-11-26-harness-x-m6-cache-duplicate.json`
 - `2026-11-26-harness-x-m6-cache-duplicate.md`
+- `2026-11-26-harness-x-m6-semantic-calibration.json`
+- `2026-11-26-harness-x-m6-semantic-calibration.md`

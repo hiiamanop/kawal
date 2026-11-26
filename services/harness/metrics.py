@@ -7,7 +7,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from contracts.harness import LocationQuality
+from contracts.harness import LocationQuality, SourceIntent
 from contracts.models import Category
 from services.harness.compare import ComparisonItem, ComparisonReport
 
@@ -19,6 +19,7 @@ class FixtureLabel(BaseModel):
     category: Category | None = None
     location_quality: LocationQuality
     acceptable_statuses: tuple[str, ...] = Field(min_length=1)
+    source_type: SourceIntent | None = None
     notes: str = ""
 
 
@@ -51,6 +52,9 @@ class ModeMetrics(BaseModel):
     location_correct: int = Field(ge=0)
     location_evaluated: int = Field(ge=0)
     location_accuracy: float = Field(ge=0.0, le=1.0)
+    source_intent_correct: int = Field(ge=0)
+    source_intent_evaluated: int = Field(ge=0)
+    source_intent_accuracy: float = Field(ge=0.0, le=1.0)
     review_rate: float = Field(ge=0.0, le=1.0)
     false_accepts: int = Field(ge=0)
     false_rejects: int = Field(ge=0)
@@ -88,6 +92,8 @@ def _score_mode(
     accepted_true = 0
     location_correct = 0
     location_evaluated = 0
+    source_intent_correct = 0
+    source_intent_evaluated = 0
     review_count = 0
     false_accepts = 0
     false_rejects = 0
@@ -99,12 +105,14 @@ def _score_mode(
             category = item.rule_category
             is_complaint = item.rule_is_complaint
             location_quality = item.rule_location_quality
+            source_intent = item.rule_source_intent
             cost = item.rule_cost_usd
         else:
             status = item.llm_status
             category = item.llm_category
             is_complaint = item.llm_is_complaint
             location_quality = item.llm_location_quality
+            source_intent = item.llm_source_intent
             cost = item.llm_cost_usd
 
         total_cost += cost
@@ -141,6 +149,11 @@ def _score_mode(
             if location_quality == label.location_quality:
                 location_correct += 1
 
+        if label.source_type is not None and source_intent is not None:
+            source_intent_evaluated += 1
+            if source_intent == label.source_type:
+                source_intent_correct += 1
+
     total = len(items)
     precision = true_positives / predicted_complaints if predicted_complaints else 0.0
     recall = true_positives / actual_complaints if actual_complaints else 0.0
@@ -168,6 +181,11 @@ def _score_mode(
         location_evaluated=location_evaluated,
         location_accuracy=(location_correct / location_evaluated)
         if location_evaluated
+        else 0.0,
+        source_intent_correct=source_intent_correct,
+        source_intent_evaluated=source_intent_evaluated,
+        source_intent_accuracy=(source_intent_correct / source_intent_evaluated)
+        if source_intent_evaluated
         else 0.0,
         review_rate=(review_count / total) if total else 0.0,
         false_accepts=false_accepts,

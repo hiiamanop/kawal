@@ -89,15 +89,18 @@ class IndoBertEmbedder(TextEmbedder):
     _instance: IndoBertEmbedder | None = None
 
     def __init__(self, model_path: str | Path | None = None) -> None:
-        cand_paths = [
-            Path(model_path).resolve() if model_path else None,
-            Path("artifacts/hifi-v3-dapt").resolve(),
-            Path("artifacts/city12-v4-multitask").resolve(),
-        ]
+        if model_path is not None:
+            cand_paths = [Path(model_path).resolve()]
+        else:
+            cand_paths = [
+                Path("artifacts/hifi-v3-dapt").resolve(),
+                Path("artifacts/city12-v4-multitask").resolve(),
+                Path("artifacts/indobert-base-p1").resolve(),
+            ]
         chosen_path: Path | None = None
-        for p in cand_paths:
-            if p is not None and (p / "config.json").is_file():
-                chosen_path = p
+        for candidate in cand_paths:
+            if candidate is not None and (candidate / "config.json").is_file():
+                chosen_path = candidate
                 break
 
         if chosen_path is None:
