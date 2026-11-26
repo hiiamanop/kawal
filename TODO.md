@@ -48,5 +48,6 @@
 - [x] M6.1c: strengthen PII, isolation, and batch protocol tests <!-- id=46 priority=high done=2026-11-26 created=2026-11-26 -->
 - [x] M6.1d: run pgvector integration against compose and document <!-- id=47 priority=high done=2026-11-26 created=2026-11-26 -->
 - [x] M6.2: calibrate semantic cache with real IndoBERT and near-duplicates <!-- id=48 priority=medium done=2026-11-26 created=2026-11-26 -->
-- [•] M7: expand X dataset and label quality <!-- id=49 priority=medium created=2026-11-26 -->
+- [x] M7: add source-type labels and document X expansion blocker <!-- id=49 priority=medium done=2026-11-26 created=2026-11-26 -->
 - [ ] Research: fix quarantined M3 and infrastructure tests <!-- id=50 priority=low created=2026-11-26 -->
+- [ ] M7b: capture more real X posts when X search/tweets is healthy <!-- id=51 priority=medium created=2026-11-26 -->
