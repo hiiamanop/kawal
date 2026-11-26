@@ -11,7 +11,7 @@ from uuid import uuid4
 from pydantic import BaseModel, ConfigDict, Field
 
 from contracts.harness import HarnessRun, SocialPost
-from services.harness.orchestrator import HarnessOrchestrator
+from services.harness.ports import RunOrchestrator
 from services.harness.sinks import FileRunSink
 
 
@@ -67,7 +67,7 @@ class HarnessBatchRunner:
     def __init__(
         self,
         root: str | Path,
-        orchestrator: HarnessOrchestrator,
+        orchestrator: RunOrchestrator,
         fixture_out: str | Path | None = None,
     ) -> None:
         self._root = Path(root)
