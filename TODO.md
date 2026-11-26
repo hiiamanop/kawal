@@ -61,6 +61,6 @@
 - [x] UI: implement FastAPI monitor API and replace legacy dashboard backend <!-- id=59 priority=high done=2026-11-26 created=2026-11-26 -->
 - [x] UI: build ChatGPT-style console shell, feed, detail panel, and composer <!-- id=60 priority=high done=2026-11-26 created=2026-11-26 -->
 - [x] UI: add monitor tests, remove legacy dashboard tests, and update docs <!-- id=61 priority=high done=2026-11-26 created=2026-11-26 -->
-- [•] UI: run core/research CI and open PR <!-- id=62 priority=high created=2026-11-26 -->
+- [x] UI: run core/research CI and open PR <!-- id=62 priority=high done=2026-11-26 created=2026-11-26 -->
 - [ ] M7c: second-review new labels and add category-balanced complaints <!-- id=63 priority=medium created=2026-11-26 -->
 - [x] Harness: extend rule triage, extraction, and verifier to all 12 complaint categories <!-- id=64 priority=high done=2026-11-26 created=2026-11-26 -->
