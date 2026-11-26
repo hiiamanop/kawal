@@ -10,6 +10,7 @@ __pycache__/
 HF_HOME/
 *.onnx
 artifacts/
+runs/
 OpenWA/
 openwa_qr.png
 

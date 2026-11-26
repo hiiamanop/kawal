@@ -14,7 +14,7 @@ not the current evaluation target.
 |---|---|
 | Core CI | `719 passed, 42 skipped, 86 deselected` |
 | Research/integration lane | Green, no quarantine |
-| Harness X | M1 through M6 implemented |
+| Harness X | M1 through M8 implemented; monitor console added |
 | WhatsApp pipeline | Experimental, still present, not the current focus |
 | Production readiness | Not production-ready |
 
@@ -74,6 +74,20 @@ sweep with base IndoBERT using CLS pooling found thresholds 0.80 through 0.92
 give perfect precision and recall; 0.95 lost one paraphrase. See
 [docs/evaluations/2026-11-26-harness-x-m6-cache.md](docs/evaluations/2026-11-26-harness-x-m6-cache.md).
 
+## Monitor console
+
+The harness monitor console replaces the legacy WhatsApp dashboard. It is a
+local FastAPI + SQLite UI for scanning X complaints, inspecting trust decisions,
+and preparing department forwarding drafts.
+
+```bash
+python scripts/run_monitor.py --port 8088
+```
+
+It binds to `127.0.0.1` by default. Forwarding is human-in-the-loop: the console
+creates local Markdown/JSON drafts and never sends them automatically. Live scans
+need an authenticated Agent Reach X session; replay scans use committed fixtures.
+
 ## Repository layout
 
 ```text
@@ -87,7 +101,7 @@ kawal/
 ├── services/intelligence/  embedders and legacy semantic cache
 ├── services/core/          legacy WhatsApp decision pipeline
 ├── services/intake/        legacy WhatsApp intake and assembly
-├── services/dashboard/     legacy inspector dashboard
+├── services/monitor/       harness monitor console and local store
 ├── tests/                  core, research, and integration tests
 ├── docker-compose.yml      PostgreSQL/pgvector, Redpanda, OPA, simulator
 └── requirements*.txt       runtime, dev, ML, and simulator dependencies
@@ -241,14 +255,16 @@ thesis artifacts produce skips instead of failures.
 
 ## Legacy WhatsApp pipeline
 
-The worker scripts, compose services, and dashboard for the earlier pipeline are
-still present for local experiments:
+The worker scripts and compose services for the earlier pipeline are still
+present for local experiments:
 
 ```bash
 docker compose up -d postgres redpanda opa ticket-simulator
 python scripts/run_all_workers.py
-python scripts/run_dashboard.py --port 8088
 ```
+
+The legacy dashboard routes, including `/track` and `/api/tickets`, were removed
+when the monitor console replaced that UI.
 
 This path is not covered by the core CI gate and has not been verified as a
 working end-to-end service in this checkout. Do not treat it as production

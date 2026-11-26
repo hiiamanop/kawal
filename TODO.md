@@ -55,7 +55,7 @@
 - [x] M8c: evaluate a domain-adapted sentence encoder for legacy semantic cache <!-- id=53 priority=medium done=2026-11-26 created=2026-11-26 -->
 - [x] M8b: add nine curated families per extended category <!-- id=54 priority=medium done=2026-11-26 created=2026-11-26 -->
 - [x] UI: finalize monitor console design and get approval <!-- id=55 priority=high done=2026-11-26 created=2026-11-26 -->
-- [ ] UI: implement monitor models, SQLite store, and audit log <!-- id=56 priority=high created=2026-11-26 -->
+- [•] UI: implement monitor models, SQLite store, and audit log <!-- id=56 priority=high created=2026-11-26 -->
 - [ ] UI: implement live/replay scan service with dedupe and error states <!-- id=57 priority=high created=2026-11-26 -->
 - [ ] UI: implement viral scoring, department routing, status workflow, and forwarding packet <!-- id=58 priority=high created=2026-11-26 -->
 - [ ] UI: implement FastAPI monitor API and replace legacy dashboard backend <!-- id=59 priority=high created=2026-11-26 -->
@@ -63,4 +63,4 @@
 - [ ] UI: add monitor tests, remove legacy dashboard tests, and update docs <!-- id=61 priority=high created=2026-11-26 -->
 - [ ] UI: run core/research CI and open PR <!-- id=62 priority=high created=2026-11-26 -->
 - [ ] M7c: second-review new labels and add category-balanced complaints <!-- id=63 priority=medium created=2026-11-26 -->
-- [•] Harness: extend rule triage, extraction, and verifier to all 12 complaint categories <!-- id=64 priority=high created=2026-11-26 -->
+- [x] Harness: extend rule triage, extraction, and verifier to all 12 complaint categories <!-- id=64 priority=high done=2026-11-26 created=2026-11-26 -->
