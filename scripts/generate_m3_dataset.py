@@ -18,6 +18,7 @@ if str(repo_root) not in sys.path:
     sys.path.insert(0, str(repo_root))
 
 from contracts.models import (
+    CanonicalSpan,
     Category,
     ComplaintTrajectory,
     DatasetSplit,
@@ -34,6 +35,7 @@ from scripts import (
     set_deterministic_seed,
 )
 from scripts.train_dapt import validate_corpus_text
+from scripts.train_ner import _extract_spans_for_text
 from services.dataset.generator import (
     DEFAULT_TEMPLATES,
     ScenarioTemplate,
@@ -46,7 +48,11 @@ from services.dataset.splits import (
     audit_family_splits,
     build_family_split_map,
 )
-from services.ml.manifest import ArtifactManifest, ArtifactManifestItem, compute_file_sha256
+from services.ml.manifest import (
+    ArtifactManifest,
+    ArtifactManifestItem,
+    compute_file_sha256,
+)
 
 CATEGORY_ANCHOR_LEXICONS: dict[Category, dict[str, tuple[str, ...]]] = {
     Category.ROAD: {
@@ -204,6 +210,7 @@ CATEGORY_ANCHOR_LEXICONS: dict[Category, dict[str, tuple[str, ...]]] = {
             "armada angkutan umum",
             "jalur sepeda diserobot",
             "penyeberangan jalan zebra cross",
+            "lampu pengatur lalu lintas padam",
         ),
         "forbidden_terms": (),
     },
@@ -215,6 +222,7 @@ CATEGORY_ANCHOR_LEXICONS: dict[Category, dict[str, tuple[str, ...]]] = {
             "evakuasi pohon tumbang",
             "kebocoran tabung gas",
             "instalasi kabel listrik percik api",
+            "evakuasi hewan terjebak",
         ),
         "forbidden_terms": (),
     },
@@ -237,6 +245,7 @@ CATEGORY_ANCHOR_LEXICONS: dict[Category, dict[str, tuple[str, ...]]] = {
             "fasilitas laboratorium sekolah",
             "buku pelajaran sekolah",
             "atap plafon kelas ambrol",
+            "toilet sekolah rusak",
         ),
         "forbidden_terms": (),
     },
@@ -248,6 +257,7 @@ CATEGORY_ANCHOR_LEXICONS: dict[Category, dict[str, tuple[str, ...]]] = {
             "kumuh kawasan permukiman",
             "pohon peneduh taman rapuh",
             "bangku taman rusak patah",
+            "lift rumah susun mati",
         ),
         "forbidden_terms": (),
     },
@@ -353,7 +363,11 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Tamansari, Kecamatan Bandung Wetan",
         city="Kota Bandung",
         urgency="HIGH",
-        world_truth={"category": "ROAD", "risk": "HIGH", "infra_type": "EXPANSION_JOINT"},
+        world_truth={
+            "category": "ROAD",
+            "risk": "HIGH",
+            "infra_type": "EXPANSION_JOINT",
+        },
     ),
     ScenarioTemplate(
         family_id="road-fallen-traffic-sign",
@@ -363,7 +377,11 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Enggal, Kecamatan Enggal",
         city="Kota Bandar Lampung",
         urgency="MEDIUM",
-        world_truth={"category": "ROAD", "risk": "MEDIUM", "infra_type": "TRAFFIC_SIGN"},
+        world_truth={
+            "category": "ROAD",
+            "risk": "MEDIUM",
+            "infra_type": "TRAFFIC_SIGN",
+        },
     ),
     ScenarioTemplate(
         family_id="road-landslide-shoulder-collapse",
@@ -373,9 +391,12 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Sentul, Kecamatan Babakan Madang",
         city="Kabupaten Bogor",
         urgency="URGENT",
-        world_truth={"category": "ROAD", "risk": "URGENT", "infra_type": "ROAD_SHOULDER"},
+        world_truth={
+            "category": "ROAD",
+            "risk": "URGENT",
+            "infra_type": "ROAD_SHOULDER",
+        },
     ),
-
     # DRAINAGE_FLOOD (9 templates -> total 12 with DEFAULT_TEMPLATES)
     ScenarioTemplate(
         family_id="drainage-broken-watergate",
@@ -385,7 +406,11 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Ancol, Kecamatan Pademangan",
         city="Jakarta Utara",
         urgency="URGENT",
-        world_truth={"category": "DRAINAGE_FLOOD", "risk": "URGENT", "flood_depth_cm": 50},
+        world_truth={
+            "category": "DRAINAGE_FLOOD",
+            "risk": "URGENT",
+            "flood_depth_cm": 50,
+        },
     ),
     ScenarioTemplate(
         family_id="drainage-retention-basin-silted",
@@ -395,17 +420,25 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Loji, Kecamatan Bogor Barat",
         city="Kota Bogor",
         urgency="MEDIUM",
-        world_truth={"category": "DRAINAGE_FLOOD", "risk": "MEDIUM", "flood_depth_cm": 25},
+        world_truth={
+            "category": "DRAINAGE_FLOOD",
+            "risk": "MEDIUM",
+            "flood_depth_cm": 25,
+        },
     ),
     ScenarioTemplate(
         family_id="drainage-culvert-subsidence",
         category=Category.DRAINAGE_FLOOD,
         issue="beton gorong-gorong saluran ambles memicu genangan air hujan deras",
         landmark="sekitar lintasan rel kereta kramat",
-        jurisdiction="Kelurahan Tanah Tinggi, Kecamatan Johar Baru",
+        jurisdiction="Kelurahan Kemayoran, Kecamatan Kemayoran",
         city="Jakarta Pusat",
         urgency="HIGH",
-        world_truth={"category": "DRAINAGE_FLOOD", "risk": "HIGH", "flood_depth_cm": 35},
+        world_truth={
+            "category": "DRAINAGE_FLOOD",
+            "risk": "HIGH",
+            "flood_depth_cm": 35,
+        },
     ),
     ScenarioTemplate(
         family_id="drainage-levee-breach-settlement",
@@ -415,7 +448,11 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Panggungrejo, Kecamatan Panggungrejo",
         city="Kota Pasuruan",
         urgency="URGENT",
-        world_truth={"category": "DRAINAGE_FLOOD", "risk": "URGENT", "flood_depth_cm": 90},
+        world_truth={
+            "category": "DRAINAGE_FLOOD",
+            "risk": "URGENT",
+            "flood_depth_cm": 90,
+        },
     ),
     ScenarioTemplate(
         family_id="drainage-sump-pump-failure",
@@ -425,7 +462,11 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Penjaringan, Kecamatan Penjaringan",
         city="Jakarta Utara",
         urgency="HIGH",
-        world_truth={"category": "DRAINAGE_FLOOD", "risk": "HIGH", "flood_depth_cm": 45},
+        world_truth={
+            "category": "DRAINAGE_FLOOD",
+            "risk": "HIGH",
+            "flood_depth_cm": 45,
+        },
     ),
     ScenarioTemplate(
         family_id="drainage-silt-clogged-ditch",
@@ -435,7 +476,11 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Tegalrejo, Kecamatan Tegalrejo",
         city="Kota Yogyakarta",
         urgency="MEDIUM",
-        world_truth={"category": "DRAINAGE_FLOOD", "risk": "MEDIUM", "flood_depth_cm": 15},
+        world_truth={
+            "category": "DRAINAGE_FLOOD",
+            "risk": "MEDIUM",
+            "flood_depth_cm": 15,
+        },
     ),
     ScenarioTemplate(
         family_id="drainage-inspection-chamber-collapsed",
@@ -445,7 +490,11 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Candirenggo, Kecamatan Singosari",
         city="Kabupaten Malang",
         urgency="HIGH",
-        world_truth={"category": "DRAINAGE_FLOOD", "risk": "HIGH", "flood_depth_cm": 30},
+        world_truth={
+            "category": "DRAINAGE_FLOOD",
+            "risk": "HIGH",
+            "flood_depth_cm": 30,
+        },
     ),
     ScenarioTemplate(
         family_id="drainage-retaining-wall-cracked",
@@ -455,7 +504,11 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Baratajaya, Kecamatan Gubeng",
         city="Kota Surabaya",
         urgency="HIGH",
-        world_truth={"category": "DRAINAGE_FLOOD", "risk": "HIGH", "flood_depth_cm": 25},
+        world_truth={
+            "category": "DRAINAGE_FLOOD",
+            "risk": "HIGH",
+            "flood_depth_cm": 25,
+        },
     ),
     ScenarioTemplate(
         family_id="drainage-tidal-backwater-inundation",
@@ -465,9 +518,12 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Tanjung Emas, Kecamatan Semarang Utara",
         city="Kota Semarang",
         urgency="URGENT",
-        world_truth={"category": "DRAINAGE_FLOOD", "risk": "URGENT", "flood_depth_cm": 60},
+        world_truth={
+            "category": "DRAINAGE_FLOOD",
+            "risk": "URGENT",
+            "flood_depth_cm": 60,
+        },
     ),
-
     # WASTE (9 templates -> total 12 with DEFAULT_TEMPLATES)
     ScenarioTemplate(
         family_id="waste-medical-waste-dump",
@@ -507,7 +563,11 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Kedung Cowek, Kecamatan Kenjeran",
         city="Kota Surabaya",
         urgency="HIGH",
-        world_truth={"category": "WASTE", "risk": "HIGH", "waste_type": "SLAUGHTERHOUSE"},
+        world_truth={
+            "category": "WASTE",
+            "risk": "HIGH",
+            "waste_type": "SLAUGHTERHOUSE",
+        },
     ),
     ScenarioTemplate(
         family_id="waste-commercial-electronic-dumping",
@@ -527,14 +587,18 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Rorotan, Kecamatan Cilincing",
         city="Jakarta Utara",
         urgency="URGENT",
-        world_truth={"category": "WASTE", "risk": "URGENT", "waste_type": "HAZARDOUS_SPILL"},
+        world_truth={
+            "category": "WASTE",
+            "risk": "URGENT",
+            "waste_type": "HAZARDOUS_SPILL",
+        },
     ),
     ScenarioTemplate(
         family_id="waste-broken-communal-dumpster",
         category=Category.WASTE,
         issue="wadah bak sampah seng penampungan warga berlubang hancur melimpah",
         landmark="gardu ronda rukun tetangga buah batu",
-        jurisdiction="Kelurahan Cijagra, Kecamatan Lengkong",
+        jurisdiction="Kelurahan Turangga, Kecamatan Lengkong",
         city="Kota Bandung",
         urgency="MEDIUM",
         world_truth={"category": "WASTE", "risk": "MEDIUM", "waste_type": "BROKEN_BIN"},
@@ -547,7 +611,11 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Payo Selincah, Kecamatan Paal Merah",
         city="Kota Jambi",
         urgency="MEDIUM",
-        world_truth={"category": "WASTE", "risk": "MEDIUM", "waste_type": "CONSTRUCTION_DEBRIS"},
+        world_truth={
+            "category": "WASTE",
+            "risk": "MEDIUM",
+            "waste_type": "CONSTRUCTION_DEBRIS",
+        },
     ),
     ScenarioTemplate(
         family_id="waste-tire-burning-pollution",
@@ -557,9 +625,12 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Trimulyo, Kecamatan Pedurungan",
         city="Kota Semarang",
         urgency="URGENT",
-        world_truth={"category": "WASTE", "risk": "URGENT", "waste_type": "TIRE_BURNING"},
+        world_truth={
+            "category": "WASTE",
+            "risk": "URGENT",
+            "waste_type": "TIRE_BURNING",
+        },
     ),
-
     # CLEAN_WATER (9 templates -> total 12 with DEFAULT_TEMPLATES)
     ScenarioTemplate(
         family_id="water-low-pressure-terminal",
@@ -651,7 +722,6 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         urgency="MEDIUM",
         world_truth={"category": "CLEAN_WATER", "risk": "MEDIUM", "service": "PDAM"},
     ),
-
     # CIVIL_ADMIN (9 templates -> total 12 with DEFAULT_TEMPLATES)
     ScenarioTemplate(
         family_id="admin-birth-certificate-extortion",
@@ -661,7 +731,11 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Teluk Lerong, Kecamatan Sungai Kunjang",
         city="Kota Samarinda",
         urgency="HIGH",
-        world_truth={"category": "CIVIL_ADMIN", "risk": "HIGH", "document": "AKTA_LAHIR"},
+        world_truth={
+            "category": "CIVIL_ADMIN",
+            "risk": "HIGH",
+            "document": "AKTA_LAHIR",
+        },
     ),
     ScenarioTemplate(
         family_id="admin-family-card-data-mismatch",
@@ -671,7 +745,11 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Kotabaru, Kecamatan Gondokusuman",
         city="Kota Yogyakarta",
         urgency="HIGH",
-        world_truth={"category": "CIVIL_ADMIN", "risk": "HIGH", "document": "KARTU_KELUARGA"},
+        world_truth={
+            "category": "CIVIL_ADMIN",
+            "risk": "HIGH",
+            "document": "KARTU_KELUARGA",
+        },
     ),
     ScenarioTemplate(
         family_id="admin-social-aid-registration-denied",
@@ -691,7 +769,11 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Wonokromo, Kecamatan Sawahan",
         city="Kota Surabaya",
         urgency="MEDIUM",
-        world_truth={"category": "CIVIL_ADMIN", "risk": "MEDIUM", "document": "AKTA_KEMATIAN"},
+        world_truth={
+            "category": "CIVIL_ADMIN",
+            "risk": "MEDIUM",
+            "document": "AKTA_KEMATIAN",
+        },
     ),
     ScenarioTemplate(
         family_id="admin-child-identity-card-denied",
@@ -708,10 +790,14 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         category=Category.CIVIL_ADMIN,
         issue="pembaruan status pernikahan pada data identitas dipersulit petugas loket mandek",
         landmark="kantor catatan sipil lantai dua alun alun",
-        jurisdiction="Kelurahan Kauman, Kecamatan Klojen",
+        jurisdiction="Kelurahan Sukoharjo, Kecamatan Klojen",
         city="Kota Malang",
         urgency="MEDIUM",
-        world_truth={"category": "CIVIL_ADMIN", "risk": "MEDIUM", "document": "STATUS_KTP"},
+        world_truth={
+            "category": "CIVIL_ADMIN",
+            "risk": "MEDIUM",
+            "document": "STATUS_KTP",
+        },
     ),
     ScenarioTemplate(
         family_id="admin-mobile-service-unannounced-cancel",
@@ -721,7 +807,11 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Bantarjati, Kecamatan Bogor Utara",
         city="Kota Bogor",
         urgency="MEDIUM",
-        world_truth={"category": "CIVIL_ADMIN", "risk": "MEDIUM", "document": "MOBILE_ADMIN"},
+        world_truth={
+            "category": "CIVIL_ADMIN",
+            "risk": "MEDIUM",
+            "document": "MOBILE_ADMIN",
+        },
     ),
     ScenarioTemplate(
         family_id="admin-unauthorized-legalization-fee",
@@ -731,7 +821,11 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Bunulrejo, Kecamatan Blimbing",
         city="Kota Malang",
         urgency="HIGH",
-        world_truth={"category": "CIVIL_ADMIN", "risk": "HIGH", "document": "LEGALISIR"},
+        world_truth={
+            "category": "CIVIL_ADMIN",
+            "risk": "HIGH",
+            "document": "LEGALISIR",
+        },
     ),
     ScenarioTemplate(
         family_id="admin-address-mutation-held",
@@ -741,9 +835,12 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Danukusuman, Kecamatan Serengan",
         city="Kota Surakarta",
         urgency="HIGH",
-        world_truth={"category": "CIVIL_ADMIN", "risk": "HIGH", "document": "SURAT_PINDAH"},
+        world_truth={
+            "category": "CIVIL_ADMIN",
+            "risk": "HIGH",
+            "document": "SURAT_PINDAH",
+        },
     ),
-
     # HEALTH_SERVICE (9 templates -> total 12 with DEFAULT_TEMPLATES)
     ScenarioTemplate(
         family_id="health-vaccine-cold-chain-break",
@@ -753,7 +850,11 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Alak, Kecamatan Alak",
         city="Kota Kupang",
         urgency="URGENT",
-        world_truth={"category": "HEALTH_SERVICE", "risk": "URGENT", "facility": "COLD_CHAIN"},
+        world_truth={
+            "category": "HEALTH_SERVICE",
+            "risk": "URGENT",
+            "facility": "COLD_CHAIN",
+        },
     ),
     ScenarioTemplate(
         family_id="health-posyandu-nutrition-shortage",
@@ -763,7 +864,11 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Sesetan, Kecamatan Denpasar Selatan",
         city="Kota Denpasar",
         urgency="MEDIUM",
-        world_truth={"category": "HEALTH_SERVICE", "risk": "MEDIUM", "facility": "POSYANDU"},
+        world_truth={
+            "category": "HEALTH_SERVICE",
+            "risk": "MEDIUM",
+            "facility": "POSYANDU",
+        },
     ),
     ScenarioTemplate(
         family_id="health-er-overcapacity-rejection",
@@ -773,7 +878,11 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Kuanino, Kecamatan Kota Raja",
         city="Kota Jayapura",
         urgency="URGENT",
-        world_truth={"category": "HEALTH_SERVICE", "risk": "URGENT", "facility": "ER_TRIAGE"},
+        world_truth={
+            "category": "HEALTH_SERVICE",
+            "risk": "URGENT",
+            "facility": "ER_TRIAGE",
+        },
     ),
     ScenarioTemplate(
         family_id="health-midwife-absent-labor",
@@ -783,17 +892,25 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Kanigoro, Kecamatan Kartoharjo",
         city="Kota Madiun",
         urgency="URGENT",
-        world_truth={"category": "HEALTH_SERVICE", "risk": "URGENT", "facility": "PERSALINAN"},
+        world_truth={
+            "category": "HEALTH_SERVICE",
+            "risk": "URGENT",
+            "facility": "PERSALINAN",
+        },
     ),
     ScenarioTemplate(
         family_id="health-oxygen-cylinder-depleted",
         category=Category.HEALTH_SERVICE,
         issue="tabung oksigen medis darurat pada ruang periksan faskes kosong total hampa",
         landmark="bangsal darurat faskes mergosono",
-        jurisdiction="Kelurahan Karangbesuki, Kecamatan Sukun",
+        jurisdiction="Kelurahan Bandungrejosari, Kecamatan Sukun",
         city="Kota Malang",
         urgency="URGENT",
-        world_truth={"category": "HEALTH_SERVICE", "risk": "URGENT", "facility": "OXYGEN"},
+        world_truth={
+            "category": "HEALTH_SERVICE",
+            "risk": "URGENT",
+            "facility": "OXYGEN",
+        },
     ),
     ScenarioTemplate(
         family_id="health-laboratory-reagent-exhausted",
@@ -803,7 +920,11 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Cemorokandang, Kecamatan Kedungkandang",
         city="Kota Malang",
         urgency="MEDIUM",
-        world_truth={"category": "HEALTH_SERVICE", "risk": "MEDIUM", "facility": "LABORATORY"},
+        world_truth={
+            "category": "HEALTH_SERVICE",
+            "risk": "MEDIUM",
+            "facility": "LABORATORY",
+        },
     ),
     ScenarioTemplate(
         family_id="health-pharmacy-dispensary-halted",
@@ -813,7 +934,11 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Kanigaran, Kecamatan Kanigaran",
         city="Kota Probolinggo",
         urgency="HIGH",
-        world_truth={"category": "HEALTH_SERVICE", "risk": "HIGH", "facility": "FARMASI_LOKET"},
+        world_truth={
+            "category": "HEALTH_SERVICE",
+            "risk": "HIGH",
+            "facility": "FARMASI_LOKET",
+        },
     ),
     ScenarioTemplate(
         family_id="health-pediatric-clinic-delayed",
@@ -823,7 +948,11 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Purbayan, Kecamatan Kotagede",
         city="Kota Yogyakarta",
         urgency="MEDIUM",
-        world_truth={"category": "HEALTH_SERVICE", "risk": "MEDIUM", "facility": "POLI_ANAK"},
+        world_truth={
+            "category": "HEALTH_SERVICE",
+            "risk": "MEDIUM",
+            "facility": "POLI_ANAK",
+        },
     ),
     ScenarioTemplate(
         family_id="health-tuberculosis-drug-stockout",
@@ -833,11 +962,17 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Mojoroto, Kecamatan Mojoroto",
         city="Kota Kediri",
         urgency="HIGH",
-        world_truth={"category": "HEALTH_SERVICE", "risk": "HIGH", "facility": "DOTS_PULMONARY"},
+        world_truth={
+            "category": "HEALTH_SERVICE",
+            "risk": "HIGH",
+            "facility": "DOTS_PULMONARY",
+        },
     ),
 )
 
-ALL_SCENARIO_TEMPLATES: tuple[ScenarioTemplate, ...] = DEFAULT_TEMPLATES + EXTENDED_TEMPLATES
+ALL_SCENARIO_TEMPLATES: tuple[ScenarioTemplate, ...] = (
+    DEFAULT_TEMPLATES + EXTENDED_TEMPLATES
+)
 
 BOILERPLATE_PROTECTED_TOKENS: frozenset[str] = frozenset(COMMON_LANGUAGE_TOKENS)
 
@@ -1098,6 +1233,41 @@ def compose_category_anchor_text(
     return f"{conn_pre} {compact_obj} {conn_mid} {cue} {conn_suf}"
 
 
+def _annotate_canonical_spans(
+    trajectory: ComplaintTrajectory,
+) -> ComplaintTrajectory:
+    loc_targets: list[str] = []
+    for fact in trajectory.observable_facts[1:]:
+        loc_targets.append(fact)
+    loc_targets.extend(trajectory.hidden_facts)
+    for turn in trajectory.turns:
+        loc_targets.extend(turn.observable_facts[1:])
+        loc_targets.extend(turn.hidden_facts)
+
+    new_turns: list[TrajectoryTurn] = []
+    for turn in trajectory.turns:
+        new_bubbles: list[TrajectoryBubble] = []
+        for bubble in turn.bubbles:
+            spans = _extract_spans_for_text(
+                bubble.text,
+                trajectory,
+                loc_targets,
+                canonical_spans=None,
+            )
+            new_bubbles.append(
+                bubble.model_copy(
+                    update={
+                        "canonical_spans": tuple(
+                            CanonicalSpan(start, end, label)
+                            for start, end, label in spans
+                        )
+                    }
+                )
+            )
+        new_turns.append(turn.model_copy(update={"bubbles": tuple(new_bubbles)}))
+    return trajectory.model_copy(update={"turns": tuple(new_turns)})
+
+
 def generate_safe_trajectory(
     template: ScenarioTemplate,
     scenario_id: str,
@@ -1122,9 +1292,7 @@ def generate_safe_trajectory(
         for s in [landmark_text, jurisdiction_text, city_text]
         for w in s.split()
     }
-    protected_tokens.update(
-        w.lower().strip(".,!?:;") for w in anchor_comp.split()
-    )
+    protected_tokens.update(w.lower().strip(".,!?:;") for w in anchor_comp.split())
 
     if risk is None:
         risk = template.world_truth.get("risk", template.urgency)
@@ -1269,11 +1437,15 @@ def generate_safe_trajectory(
             if persona == "FORMAL":
                 t1_b2_text = f"{incomp_prefix} {landmark_text}"
             elif persona == "FRUSTRATED_RAMBLING":
-                t1_b2_text = f"Kondisi parah patokan di {landmark_text} segera ditangani"
+                t1_b2_text = (
+                    f"Kondisi parah patokan di {landmark_text} segera ditangani"
+                )
             elif persona == "PANICKED":
                 t1_b2_text = f"Lokasi patokan persis di {landmark_text} tolong cepat"
             else:
-                t1_b2_text = f"Titik patokannya di {landmark_text}, mohon bantuan unit terkait"
+                t1_b2_text = (
+                    f"Titik patokannya di {landmark_text}, mohon bantuan unit terkait"
+                )
 
             t2_text = f"Untuk wilayah administrasinya berada di {jurisdiction_text}, {city_text}"
 
@@ -1386,7 +1558,7 @@ def generate_safe_trajectory(
         world_truth["synthetic_heldout"] = True
         world_truth["is_synthetic"] = True
 
-    return ComplaintTrajectory(
+    trajectory = ComplaintTrajectory(
         scenario_id=scenario_id,
         family_id=template.family_id,
         split=split,
@@ -1403,20 +1575,27 @@ def generate_safe_trajectory(
         turns=turns,
         expected_action_by_turn=expected_actions,
     )
+    return _annotate_canonical_spans(trajectory)
 
 
 def generate_synthetic_corpus(
     train_trajectories: Sequence[ComplaintTrajectory],
     target_lines: int = 1500,
     seed: int = 42,
+    excluded_hidden_facts: Sequence[str] = (),
 ) -> list[str]:
     raw_lines: list[str] = []
+    excluded = tuple(
+        fact.strip().lower() for fact in excluded_hidden_facts if len(fact.strip()) >= 4
+    )
 
     for traj in train_trajectories:
         for turn in traj.turns:
             for b in turn.bubbles:
                 text = b.text.strip()
-                if len(text) > 10:
+                if len(text) > 10 and not any(
+                    fact in text.lower() for fact in excluded
+                ):
                     raw_lines.append(text)
 
     adminduk_topics = [
@@ -1460,21 +1639,81 @@ def generate_synthetic_corpus(
             raw_lines.append(tmpl.format(topic=top))
 
     infra_actions = [
-        ("perbaikan jalan berlubang di jalan arteri primer", "Bina Marga", "aspal hotmix"),
-        ("penambalan aspal ambles dekat jembatan", "Dinas Pekerjaan Umum", "material cold mix"),
-        ("pemasangan rambu peringatan tikungan rawan", "Dinas Perhubungan", "rambu reflektif"),
-        ("penggantian lampu penerangan jalan yang padam", "Unit PJU Kota", "lampu hemat energi"),
-        ("pembersihan gorong-gorong yang tersumbat sedimen", "Dinas Sumber Daya Air", "alat pengeruk mini"),
-        ("perbaikan tanggul kali yang retak tergerus arus", "Balai Wilayah Sungai", "bronjong batu kali"),
-        ("pengangkatan tumpukan sampah liar di lahan terbuka", "Dinas Lingkungan Hidup", "armada truk sampah"),
-        ("pengosongan bak penampungan sampah sementara", "Regu Kebersihan Kebersihan", "kontainer hidrolik"),
-        ("penertiban pembakaran sampah terbuka di lingkungan", "Satpol PP dan DLH", "patroli pengawasan"),
-        ("perbaikan kebocoran pipa induk transmisi air", "Tim Teknis PDAM", "klem pipa baja"),
-        ("penanganan aliran air keran keruh berlumpur", "Petugas Pengolahan PDAM", "flushing jaringan perpipaan"),
-        ("pengaturan giliran distribusi air saat pemeliharaan", "Humas Layanan Pelanggan", "truk tangki darurat"),
-        ("penebangan pohon lapuk rawan tumbang di tepi jalan", "Dinas Pertamanan", "gergaji mesin hidrolik"),
-        ("penataan jaringan kabel utilitas semrawut", "Dinas Kominfo dan PU", "saluran utilitas terpadu"),
-        ("pembersihan saluran drainase pemukiman padat", "Kelompok Swadaya Masyarakat", "peralatan gotong royong"),
+        (
+            "perbaikan jalan berlubang di jalan arteri primer",
+            "Bina Marga",
+            "aspal hotmix",
+        ),
+        (
+            "penambalan aspal ambles dekat jembatan",
+            "Dinas Pekerjaan Umum",
+            "material cold mix",
+        ),
+        (
+            "pemasangan rambu peringatan tikungan rawan",
+            "Dinas Perhubungan",
+            "rambu reflektif",
+        ),
+        (
+            "penggantian lampu penerangan jalan yang padam",
+            "Unit PJU Kota",
+            "lampu hemat energi",
+        ),
+        (
+            "pembersihan gorong-gorong yang tersumbat sedimen",
+            "Dinas Sumber Daya Air",
+            "alat pengeruk mini",
+        ),
+        (
+            "perbaikan tanggul kali yang retak tergerus arus",
+            "Balai Wilayah Sungai",
+            "bronjong batu kali",
+        ),
+        (
+            "pengangkatan tumpukan sampah liar di lahan terbuka",
+            "Dinas Lingkungan Hidup",
+            "armada truk sampah",
+        ),
+        (
+            "pengosongan bak penampungan sampah sementara",
+            "Regu Kebersihan Kebersihan",
+            "kontainer hidrolik",
+        ),
+        (
+            "penertiban pembakaran sampah terbuka di lingkungan",
+            "Satpol PP dan DLH",
+            "patroli pengawasan",
+        ),
+        (
+            "perbaikan kebocoran pipa induk transmisi air",
+            "Tim Teknis PDAM",
+            "klem pipa baja",
+        ),
+        (
+            "penanganan aliran air keran keruh berlumpur",
+            "Petugas Pengolahan PDAM",
+            "flushing jaringan perpipaan",
+        ),
+        (
+            "pengaturan giliran distribusi air saat pemeliharaan",
+            "Humas Layanan Pelanggan",
+            "truk tangki darurat",
+        ),
+        (
+            "penebangan pohon lapuk rawan tumbang di tepi jalan",
+            "Dinas Pertamanan",
+            "gergaji mesin hidrolik",
+        ),
+        (
+            "penataan jaringan kabel utilitas semrawut",
+            "Dinas Kominfo dan PU",
+            "saluran utilitas terpadu",
+        ),
+        (
+            "pembersihan saluran drainase pemukiman padat",
+            "Kelompok Swadaya Masyarakat",
+            "peralatan gotong royong",
+        ),
     ]
 
     infra_templates = [
@@ -1602,7 +1841,9 @@ def generate_synthetic_corpus(
     for notice in admin_notices:
         raw_lines.append(notice)
 
-    cleaned_corpus = validate_corpus_text(raw_lines, pii_scrubbing=True, minhash_threshold=0.85)
+    cleaned_corpus = validate_corpus_text(
+        raw_lines, pii_scrubbing=True, minhash_threshold=0.85
+    )
 
     if len(cleaned_corpus) < target_lines:
         extras: list[str] = []
@@ -1688,9 +1929,13 @@ def generate_and_export_m3_dataset(
     out_dir = Path(output_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    active_templates = tuple(templates) if templates is not None else ALL_SCENARIO_TEMPLATES
+    active_templates = (
+        tuple(templates) if templates is not None else ALL_SCENARIO_TEMPLATES
+    )
     if len(active_templates) < 6:
-        raise ValueError("At least 6 scenario templates are required for dataset export.")
+        raise ValueError(
+            "At least 6 scenario templates are required for dataset export."
+        )
 
     family_to_cat = {t.family_id: t.category for t in active_templates}
     split_map = build_family_split_map(
@@ -1752,10 +1997,16 @@ def generate_and_export_m3_dataset(
     dev_trajs = [t for t in trajectories if t.split == DatasetSplit.DEV]
     test_trajs = [t for t in trajectories if t.split == DatasetSplit.TEST]
 
+    heldout_hidden_facts = [
+        hidden_fact
+        for trajectory in test_trajs + dev_trajs
+        for hidden_fact in trajectory.hidden_facts
+    ]
     corpus_lines = generate_synthetic_corpus(
         train_trajectories=train_trajs,
         target_lines=corpus_target_lines,
         seed=seed,
+        excluded_hidden_facts=heldout_hidden_facts,
     )
 
     if audit:
@@ -1802,11 +2053,15 @@ def generate_and_export_m3_dataset(
         hashes[p.name] = sha
         sizes[p.name] = p.stat().st_size
 
-    categories_per_split: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    categories_per_split: dict[str, dict[str, int]] = defaultdict(
+        lambda: defaultdict(int)
+    )
     families_per_split: dict[str, set[str]] = defaultdict(set)
     intents_per_split: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     risks_per_split: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
-    completeness_per_split: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    completeness_per_split: dict[str, dict[str, int]] = defaultdict(
+        lambda: defaultdict(int)
+    )
     for t in trajectories:
         split_key = t.split.value
         cat_key = t.category.value
@@ -1914,13 +2169,55 @@ def generate_and_export_m3_dataset(
     sizes[dataset_manifest_file.name] = dataset_manifest_file.stat().st_size
 
     manifest_items = [
-        create_artifact_item(train_file, name="dataset-trajectories-train", version=version, task="dataset-trajectories-train", relative_to=out_dir),
-        create_artifact_item(dev_file, name="dataset-trajectories-dev", version=version, task="dataset-trajectories-dev", relative_to=out_dir),
-        create_artifact_item(test_synthetic_file, name="synthetic-heldout-test", version=version, task="synthetic-heldout", relative_to=out_dir),
-        create_artifact_item(test_file, name="dataset-trajectories-test", version=version, task="dataset-trajectories-test", relative_to=out_dir),
-        create_artifact_item(all_file, name="dataset-trajectories-all", version=version, task="dataset-trajectories-all", relative_to=out_dir),
-        create_artifact_item(corpus_file, name="dataset-corpus-dapt", version=version, task="dataset-corpus-dapt", relative_to=out_dir),
-        create_artifact_item(dataset_manifest_file, name="dataset-manifest", version=version, task="dataset-manifest", relative_to=out_dir),
+        create_artifact_item(
+            train_file,
+            name="dataset-trajectories-train",
+            version=version,
+            task="dataset-trajectories-train",
+            relative_to=out_dir,
+        ),
+        create_artifact_item(
+            dev_file,
+            name="dataset-trajectories-dev",
+            version=version,
+            task="dataset-trajectories-dev",
+            relative_to=out_dir,
+        ),
+        create_artifact_item(
+            test_synthetic_file,
+            name="synthetic-heldout-test",
+            version=version,
+            task="synthetic-heldout",
+            relative_to=out_dir,
+        ),
+        create_artifact_item(
+            test_file,
+            name="dataset-trajectories-test",
+            version=version,
+            task="dataset-trajectories-test",
+            relative_to=out_dir,
+        ),
+        create_artifact_item(
+            all_file,
+            name="dataset-trajectories-all",
+            version=version,
+            task="dataset-trajectories-all",
+            relative_to=out_dir,
+        ),
+        create_artifact_item(
+            corpus_file,
+            name="dataset-corpus-dapt",
+            version=version,
+            task="dataset-corpus-dapt",
+            relative_to=out_dir,
+        ),
+        create_artifact_item(
+            dataset_manifest_file,
+            name="dataset-manifest",
+            version=version,
+            task="dataset-manifest",
+            relative_to=out_dir,
+        ),
     ]
 
     manifest = create_or_update_artifact_manifest(
@@ -1956,12 +2253,18 @@ def generate_and_export_m3_dataset(
             "train_families": len(families_per_split["train"]),
             "dev_families": len(families_per_split["dev"]),
             "test_families": len(families_per_split["test"]),
-            "categories_per_split": {k: dict(v) for k, v in categories_per_split.items()},
+            "categories_per_split": {
+                k: dict(v) for k, v in categories_per_split.items()
+            },
             "intents_per_split": {k: dict(v) for k, v in intents_per_split.items()},
             "risks_per_split": {k: dict(v) for k, v in risks_per_split.items()},
-            "completeness_per_split": {k: dict(v) for k, v in completeness_per_split.items()},
+            "completeness_per_split": {
+                k: dict(v) for k, v in completeness_per_split.items()
+            },
         },
-        "files": {str(out_dir / fname): hashes[fname] for fname in sorted(hashes.keys())},
+        "files": {
+            str(out_dir / fname): hashes[fname] for fname in sorted(hashes.keys())
+        },
         "hashes": hashes,
         "sizes": sizes,
         "manifest": manifest,
@@ -2048,8 +2351,12 @@ def main(argv: list[str] | None = None) -> int:
         print("M3 Synthetic Dataset Generation Completed Successfully:")
         print(f"  - Output Dir: {res['output_dir']}")
         print(f"  - Total Trajectories: {counts['total_trajectories']}")
-        print(f"  - Splits: Train={counts['train_trajectories']}, Dev={counts['dev_trajectories']}, Test={counts['test_trajectories']}")
-        print(f"  - Families: Train={counts['train_families']}, Dev={counts['dev_families']}, Test={counts['test_families']}")
+        print(
+            f"  - Splits: Train={counts['train_trajectories']}, Dev={counts['dev_trajectories']}, Test={counts['test_trajectories']}"
+        )
+        print(
+            f"  - Families: Train={counts['train_families']}, Dev={counts['dev_families']}, Test={counts['test_families']}"
+        )
         print(f"  - DAPT Corpus Lines: {counts['corpus_lines']}")
         print("Exported Files & Hashes:")
         for fname, sha in sorted(res["hashes"].items()):

@@ -13,7 +13,7 @@ not the current evaluation target.
 | Area | State |
 |---|---|
 | Core CI | `686 passed, 42 skipped, 85 deselected` |
-| Research/integration lane | Green with an explicit quarantine of 29 known failures |
+| Research/integration lane | Green with 6 explicit content/model gaps quarantined |
 | Harness X | M1 through M6 implemented |
 | WhatsApp pipeline | Experimental, still present, not the current focus |
 | Production readiness | Not production-ready |
@@ -230,16 +230,16 @@ Research and integration lane with the documented quarantine:
 bash scripts/research_ci.sh
 ```
 
-The full, unquarantined research lane currently has 29 failures:
+The full, unquarantined research lane currently has 6 known failures:
 
 ```bash
 pytest -q -m "research or integration"
 ```
 
 The blockers are listed in [tests/quarantine.txt](tests/quarantine.txt). They
-cover missing M3 artifacts, generator defects, a trained IndoBERT artifact, the
-dashboard database, and thesis report artifacts. The quarantine is visible debt,
-not a fix.
+cover extended-category family diversity, independent-holdout coverage, and the
+legacy semantic-cache model threshold. Missing Postgres, M3, and thesis artifacts
+now produce skips instead of failures.
 
 ## Legacy WhatsApp pipeline
 

@@ -655,7 +655,7 @@ def test_multitask_head_coverage_across_dataset_splits() -> None:
 
     split_idx_map: dict[str, int] = defaultdict(int)
     trajectories = []
-    for i in range(72):
+    for i in range(len(active_templates)):
         template = active_templates[(i + 42) % len(active_templates)]
         target_split = split_map[template.family_id]
         s_key = target_split.value

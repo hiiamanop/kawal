@@ -27,7 +27,15 @@ from scripts import (
 from services.dataset.generator import generate_dataset, load_trajectories_from_jsonl
 from services.ml.manifest import ArtifactManifest
 
-DEFAULT_TAGSET: tuple[str, ...] = ("O", "B-LOC", "I-LOC", "B-OBJ", "I-OBJ", "B-TIME", "I-TIME")
+DEFAULT_TAGSET: tuple[str, ...] = (
+    "O",
+    "B-LOC",
+    "I-LOC",
+    "B-OBJ",
+    "I-OBJ",
+    "B-TIME",
+    "I-TIME",
+)
 
 TIME_PATTERNS = re.compile(
     r"\b(?:"
@@ -210,7 +218,12 @@ COMPACT_OBJECT_PATTERNS = re.compile(
     r"alat\s+sterilisasi(?:\s+instrumen\s+medis)?|"
     r"ruang\s+rawat\s+inap(?:\s+isolasi)?|"
     r"tandu\s+kursi\s+roda(?:\s+evakuasi\s+pasien)?|"
-    r"kursi\s+roda"
+    r"kursi\s+roda|"
+    r"bantuan\s+sembako(?:\s+keluarga\s+prasejahtera)?|"
+    r"bantuan\s+sosial|"
+    r"data\s+bansos|"
+    r"lansia\s+terlantar|"
+    r"anak\s+terlantar"
     r")\b",
     re.IGNORECASE,
 )
@@ -238,7 +251,9 @@ def _supports_kwarg(fn_or_cls: Any, kwarg_name: str) -> bool:
 class NERTrainConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    model_name_or_path: str = Field(default="indobenchmark/indobert-base-p1", min_length=1)
+    model_name_or_path: str = Field(
+        default="indobenchmark/indobert-base-p1", min_length=1
+    )
     dataset_path: str | None = None
     output_dir: str = Field(default="artifacts/ner", min_length=1)
     seed: int = Field(default=42, ge=0)
@@ -275,11 +290,15 @@ class NERTrainConfig(BaseModel):
         i_tags = {t[2:] for t in tags if t.startswith("I-")}
         if not b_tags.issubset(i_tags):
             missing = b_tags - i_tags
-            raise ValueError(f"Every B-tag must have corresponding I-tag. Missing: {missing}")
+            raise ValueError(
+                f"Every B-tag must have corresponding I-tag. Missing: {missing}"
+            )
         return tags
 
     @classmethod
-    def for_rtx3060(cls, dataset_path: str | None = None, **kwargs: Any) -> NERTrainConfig:
+    def for_rtx3060(
+        cls, dataset_path: str | None = None, **kwargs: Any
+    ) -> NERTrainConfig:
         """Create NER training configuration with safe RTX 3060 12GB FP16 defaults for ~8k trajectories."""
         defaults: dict[str, Any] = {
             "batch_size": 16,
@@ -318,7 +337,9 @@ def parse_ner_config_dict(data: dict[str, Any]) -> NERTrainConfig:
             seed=data.get("seed", 42),
             max_seq_length=mv.get("max_sequence_length", 448),
             learning_rate=hp.get("learning_rate", 3e-5),
-            batch_size=extra.get("per_device_train_batch_size", hp.get("batch_size", 16)),
+            batch_size=extra.get(
+                "per_device_train_batch_size", hp.get("batch_size", 16)
+            ),
             gradient_accumulation_steps=extra.get(
                 "gradient_accumulation_steps", hp.get("gradient_accumulation_steps", 2)
             ),
@@ -335,7 +356,9 @@ def parse_ner_config_dict(data: dict[str, Any]) -> NERTrainConfig:
             class_weights=extra.get("class_weights") or hp.get("task_weights") or None,
             metric_for_best_model=extra.get("metric_for_best_model", "entity_f1"),
             greater_is_better=extra.get("greater_is_better", True),
-            early_stopping_patience=extra.get("early_stopping_patience", hp.get("early_stopping_patience", 2)),
+            early_stopping_patience=extra.get(
+                "early_stopping_patience", hp.get("early_stopping_patience", 2)
+            ),
         )
     return NERTrainConfig.model_validate(data)
 
@@ -382,7 +405,9 @@ def resolve_overlapping_spans(
         if (s, e) not in exact or prio.get(l, 0) > prio.get(exact[(s, e)], 0):
             exact[(s, e)] = l
 
-    current = sorted([(s, e, l) for (s, e), l in exact.items()], key=lambda x: (x[0], -(x[1] - x[0])))
+    current = sorted(
+        [(s, e, l) for (s, e), l in exact.items()], key=lambda x: (x[0], -(x[1] - x[0]))
+    )
 
     # 2. Resolve nested spans:
     changed = True
@@ -394,7 +419,10 @@ def resolve_overlapping_spans(
             all_inners = [
                 in_span
                 for j, in_span in enumerate(current)
-                if i != j and s_out <= in_span[0] and in_span[1] <= e_out and (in_span[0], in_span[1]) != (s_out, e_out)
+                if i != j
+                and s_out <= in_span[0]
+                and in_span[1] <= e_out
+                and (in_span[0], in_span[1]) != (s_out, e_out)
             ]
             sorted_all = sorted(all_inners, key=lambda x: x[0])
             disjoint_inners: list[tuple[int, int, str]] = []
@@ -408,7 +436,9 @@ def resolve_overlapping_spans(
             # Check if outer span is bridging across non-entity filler text (e.g. test 5).
             # If the gap between inners contains filler words or is large (> 6 chars), drop out_span.
             # Otherwise, out_span is a compound noun phrase (e.g. "pipa induk air bersih"), keep out_span.
-            if len(disjoint_inners) >= 2 and all(inn[2] == l_out for inn in disjoint_inners):
+            if len(disjoint_inners) >= 2 and all(
+                inn[2] == l_out for inn in disjoint_inners
+            ):
                 is_filler_bridge = False
                 for k in range(len(disjoint_inners) - 1):
                     gap_s = disjoint_inners[k][1]
@@ -416,7 +446,11 @@ def resolve_overlapping_spans(
                     gap_len = gap_e - gap_s
                     if text is not None and gap_e <= len(text):
                         gap_str = text[gap_s:gap_e].strip().lower()
-                        if gap_str not in ("", "dan", "atau", "serta", "&", "yg", "yang") and gap_len > 1:
+                        if (
+                            gap_str
+                            not in ("", "dan", "atau", "serta", "&", "yg", "yang")
+                            and gap_len > 1
+                        ):
                             is_filler_bridge = True
                             break
                     elif gap_len > 6:
@@ -429,7 +463,9 @@ def resolve_overlapping_spans(
             # Carve outer span ONLY around inners that have strictly higher priority:
             # Lower priority inners (e.g. OBJ inside LOC landmark) do NOT carve outer span.
             inners_to_carve = [
-                inn for inn in disjoint_inners if prio.get(inn[2], 0) > prio.get(l_out, 0)
+                inn
+                for inn in disjoint_inners
+                if prio.get(inn[2], 0) > prio.get(l_out, 0)
             ]
             if inners_to_carve:
                 cursor = s_out
@@ -456,13 +492,20 @@ def resolve_overlapping_spans(
                 s_c, e_c = s + offset, s + offset + len(stripped)
             else:
                 s_c, e_c = s, e
-            if (s_c, e_c) not in exact2 or prio.get(l, 0) > prio.get(exact2[(s_c, e_c)], 0):
+            if (s_c, e_c) not in exact2 or prio.get(l, 0) > prio.get(
+                exact2[(s_c, e_c)], 0
+            ):
                 exact2[(s_c, e_c)] = l
-        current = sorted([(s, e, l) for (s, e), l in exact2.items()], key=lambda x: (x[0], -(x[1] - x[0])))
+        current = sorted(
+            [(s, e, l) for (s, e), l in exact2.items()],
+            key=lambda x: (x[0], -(x[1] - x[0])),
+        )
 
     # 3. Resolve crossing overlaps and finalize non-overlapping spans
     # Priority order: higher priority label, longer span, earlier start
-    sorted_candidates = sorted(current, key=lambda x: (-prio.get(x[2], 0), -(x[1] - x[0]), x[0]))
+    sorted_candidates = sorted(
+        current, key=lambda x: (-prio.get(x[2], 0), -(x[1] - x[0]), x[0])
+    )
     selected: list[tuple[int, int, str]] = []
     for s, e, l in sorted_candidates:
         if not any(max(s, sel_s) < min(e, sel_e) for sel_s, sel_e, _ in selected):
@@ -495,14 +538,24 @@ def extract_grounded_object_candidates(traj: Any, text: str) -> list[str]:
     lower_text = text.lower()
 
     # 1. World truth hints if present
-    wt = traj.get("world_truth") if isinstance(traj, dict) else (getattr(traj, "world_truth", None) or {})
+    wt = (
+        traj.get("world_truth")
+        if isinstance(traj, dict)
+        else (getattr(traj, "world_truth", None) or {})
+    )
     wt = wt or {}
 
     # Documents (Civil Administration)
     doc = wt.get("document") or wt.get("doc")
     if doc in ("KTP", "STATUS_KTP"):
         hit = _pick_canonical(
-            ["blanko kartu tanda penduduk", "kartu tanda penduduk", "status pernikahan", "data identitas", "ktp"],
+            [
+                "blanko kartu tanda penduduk",
+                "kartu tanda penduduk",
+                "status pernikahan",
+                "data identitas",
+                "ktp",
+            ],
             lower_text,
         )
         if hit:
@@ -512,19 +565,29 @@ def extract_grounded_object_candidates(traj: Any, text: str) -> list[str]:
         if hit:
             candidates.append(hit)
     elif doc == "ANTREAN_ONLINE":
-        hit = _pick_canonical(["sistem antrean elektronik", "antrean elektronik", "antrean online"], lower_text)
+        hit = _pick_canonical(
+            ["sistem antrean elektronik", "antrean elektronik", "antrean online"],
+            lower_text,
+        )
         if hit:
             candidates.append(hit)
     elif doc == "AKTA_LAHIR":
-        hit = _pick_canonical(["akta kelahiran", "pungutan tidak resmi", "pungutan liar"], lower_text)
+        hit = _pick_canonical(
+            ["akta kelahiran", "pungutan tidak resmi", "pungutan liar"], lower_text
+        )
         if hit:
             candidates.append(hit)
     elif doc == "KARTU_KELUARGA":
-        hit = _pick_canonical(["kartu keluarga", "nik berkas kartu keluarga"], lower_text)
+        hit = _pick_canonical(
+            ["kartu keluarga", "nik berkas kartu keluarga"], lower_text
+        )
         if hit:
             candidates.append(hit)
     elif doc == "BPJS_PBI":
-        hit = _pick_canonical(["data pbi bantuan jaminan kesehatan", "bantuan jaminan kesehatan"], lower_text)
+        hit = _pick_canonical(
+            ["data pbi bantuan jaminan kesehatan", "bantuan jaminan kesehatan"],
+            lower_text,
+        )
         if hit:
             candidates.append(hit)
     elif doc == "AKTA_KEMATIAN":
@@ -536,7 +599,10 @@ def extract_grounded_object_candidates(traj: Any, text: str) -> list[str]:
         if hit:
             candidates.append(hit)
     elif doc == "MOBILE_ADMIN":
-        hit = _pick_canonical(["kendaraan mobil keliling berkas kependudukan", "mobil keliling"], lower_text)
+        hit = _pick_canonical(
+            ["kendaraan mobil keliling berkas kependudukan", "mobil keliling"],
+            lower_text,
+        )
         if hit:
             candidates.append(hit)
     elif doc == "LEGALISIR":
@@ -551,12 +617,21 @@ def extract_grounded_object_candidates(traj: Any, text: str) -> list[str]:
         if hit:
             candidates.append(hit)
     elif fac == "AMBULANCE":
-        hit = _pick_canonical(["telepon ambulans gawat darurat", "ambulans gawat darurat", "ambulans"], lower_text)
+        hit = _pick_canonical(
+            ["telepon ambulans gawat darurat", "ambulans gawat darurat", "ambulans"],
+            lower_text,
+        )
         if hit:
             candidates.append(hit)
     elif fac == "FARMASI":
         hit = _pick_canonical(
-            ["stok obat rutin diabetes dan darah tinggi", "stok obat rutin", "obat rutin", "stok obat", "depo farmasi"],
+            [
+                "stok obat rutin diabetes dan darah tinggi",
+                "stok obat rutin",
+                "obat rutin",
+                "stok obat",
+                "depo farmasi",
+            ],
             lower_text,
         )
         if hit:
@@ -566,7 +641,10 @@ def extract_grounded_object_candidates(traj: Any, text: str) -> list[str]:
         if hit:
             candidates.append(hit)
     elif fac == "POSYANDU":
-        hit = _pick_canonical(["paket bantuan makanan gizi tambahan balita", "bantuan makanan gizi"], lower_text)
+        hit = _pick_canonical(
+            ["paket bantuan makanan gizi tambahan balita", "bantuan makanan gizi"],
+            lower_text,
+        )
         if hit:
             candidates.append(hit)
     elif fac == "ER_TRIAGE":
@@ -575,7 +653,11 @@ def extract_grounded_object_candidates(traj: Any, text: str) -> list[str]:
             candidates.append(hit)
     elif fac == "LABORATORY":
         hit = _pick_canonical(
-            ["cairan reagen uji tes darah", "stok reagen uji laboratorium darah", "reagen uji laboratorium"],
+            [
+                "cairan reagen uji tes darah",
+                "stok reagen uji laboratorium darah",
+                "reagen uji laboratorium",
+            ],
             lower_text,
         )
         if hit:
@@ -585,22 +667,34 @@ def extract_grounded_object_candidates(traj: Any, text: str) -> list[str]:
         if hit:
             candidates.append(hit)
     elif fac == "POLI_ANAK":
-        hit = _pick_canonical(["alat sterilisasi instrumen medis", "dokter spesialis anak"], lower_text)
+        hit = _pick_canonical(
+            ["alat sterilisasi instrumen medis", "dokter spesialis anak"], lower_text
+        )
         if hit:
             candidates.append(hit)
     elif fac == "DOTS_PULMONARY":
         hit = _pick_canonical(
-            ["ruang rawat inap isolasi", "persediaan tablet obat infeksi paru", "tablet obat infeksi paru"],
+            [
+                "ruang rawat inap isolasi",
+                "persediaan tablet obat infeksi paru",
+                "tablet obat infeksi paru",
+            ],
             lower_text,
         )
         if hit:
             candidates.append(hit)
     elif fac == "PERSALINAN":
-        hit = _pick_canonical(["tenaga bidan bersalin", "tandu kursi roda evakuasi pasien", "kursi roda"], lower_text)
+        hit = _pick_canonical(
+            ["tenaga bidan bersalin", "tandu kursi roda evakuasi pasien", "kursi roda"],
+            lower_text,
+        )
         if hit:
             candidates.append(hit)
     elif fac == "FARMASI_LOKET":
-        hit = _pick_canonical(["loket pengambilan obat apotek", "loket farmasi obat resep", "obat resep"], lower_text)
+        hit = _pick_canonical(
+            ["loket pengambilan obat apotek", "loket farmasi obat resep", "obat resep"],
+            lower_text,
+        )
         if hit:
             candidates.append(hit)
 
@@ -615,78 +709,144 @@ def extract_grounded_object_candidates(traj: Any, text: str) -> list[str]:
         if hit:
             candidates.append(hit)
     elif waste == "OPEN_BURNING":
-        hit = _pick_canonical(["pembakaran sampah", "sampah kabel dan plastik"], lower_text)
+        hit = _pick_canonical(
+            ["pembakaran sampah", "sampah kabel dan plastik"], lower_text
+        )
         if hit:
             candidates.append(hit)
     elif waste == "BROKEN_BIN":
-        hit = _pick_canonical(["wadah bak sampah seng", "bak sampah seng", "bak sampah"], lower_text)
+        hit = _pick_canonical(
+            ["wadah bak sampah seng", "bak sampah seng", "bak sampah"], lower_text
+        )
         if hit:
             candidates.append(hit)
     elif waste == "CONSTRUCTION_DEBRIS":
         hit = _pick_canonical(
-            ["puing semen bekas bongkaran gedung", "puing semen bekas bongkaran", "puing semen"],
+            [
+                "puing semen bekas bongkaran gedung",
+                "puing semen bekas bongkaran",
+                "puing semen",
+            ],
             lower_text,
         )
         if hit:
             candidates.append(hit)
     elif waste == "E_WASTE":
-        hit = _pick_canonical(["rongsokan limbah baterai elektronik", "limbah baterai elektronik", "aki bekas"], lower_text)
+        hit = _pick_canonical(
+            [
+                "rongsokan limbah baterai elektronik",
+                "limbah baterai elektronik",
+                "aki bekas",
+            ],
+            lower_text,
+        )
         if hit:
             candidates.append(hit)
     elif waste == "HAZARDOUS_SPILL":
-        hit = _pick_canonical(["tumpahan kaleng cat", "limbah beracun pelarut kimia", "pelarut kimia", "limbah beracun"], lower_text)
+        hit = _pick_canonical(
+            [
+                "tumpahan kaleng cat",
+                "limbah beracun pelarut kimia",
+                "pelarut kimia",
+                "limbah beracun",
+            ],
+            lower_text,
+        )
         if hit:
             candidates.append(hit)
     elif waste == "MARKET":
-        hit = _pick_canonical(["sampah sayur pasar tradisional", "sampah sayur"], lower_text)
+        hit = _pick_canonical(
+            ["sampah sayur pasar tradisional", "sampah sayur"], lower_text
+        )
         if hit:
             candidates.append(hit)
     elif waste == "MEDICAL":
-        hit = _pick_canonical(["limbah medis berbahaya", "jarum suntik bekas", "limbah medis"], lower_text)
+        hit = _pick_canonical(
+            ["limbah medis berbahaya", "jarum suntik bekas", "limbah medis"], lower_text
+        )
         if hit:
             candidates.append(hit)
     elif waste == "PLASTIC":
         hit = _pick_canonical(
-            ["onggokan limbah plastik kemasan padat", "limbah plastik kemasan padat", "limbah plastik"],
+            [
+                "onggokan limbah plastik kemasan padat",
+                "limbah plastik kemasan padat",
+                "limbah plastik",
+            ],
             lower_text,
         )
         if hit:
             candidates.append(hit)
     elif waste == "SLAUGHTERHOUSE":
-        hit = _pick_canonical(["buangan jeroan potongan ternak", "jeroan potongan ternak", "buangan jeroan"], lower_text)
+        hit = _pick_canonical(
+            [
+                "buangan jeroan potongan ternak",
+                "jeroan potongan ternak",
+                "buangan jeroan",
+            ],
+            lower_text,
+        )
         if hit:
             candidates.append(hit)
     elif waste == "TIRE_BURNING":
-        hit = _pick_canonical(["pembakaran tumpukan ban bekas", "tumpukan ban bekas", "ban bekas"], lower_text)
+        hit = _pick_canonical(
+            ["pembakaran tumpukan ban bekas", "tumpukan ban bekas", "ban bekas"],
+            lower_text,
+        )
         if hit:
             candidates.append(hit)
 
     # Road infrastructure
     infra = wt.get("infra_type") or wt.get("infra")
     if infra == "ROAD":
-        hit = _pick_canonical(["jalan berlubang", "jln berlubang", "aspal ambles", "aspal amblas"], lower_text)
+        hit = _pick_canonical(
+            ["jalan berlubang", "jln berlubang", "aspal ambles", "aspal amblas"],
+            lower_text,
+        )
         if hit:
             candidates.append(hit)
     elif infra == "BRIDGE_ACCESS":
         hit = _pick_canonical(
-            ["badan jalan ambrol", "badan jln ambrol", "akses jembatan penghubung", "jembatan penghubung"],
+            [
+                "badan jalan ambrol",
+                "badan jln ambrol",
+                "akses jembatan penghubung",
+                "jembatan penghubung",
+            ],
             lower_text,
         )
         if hit:
             candidates.append(hit)
     elif infra == "STREET_LIGHT":
         hit = _pick_canonical(
-            ["penerangan jalan umum", "penerangan jln umum", "lampu jalan", "lampu jln", "jalan bergelombang", "jln bergelombang"],
+            [
+                "penerangan jalan umum",
+                "penerangan jln umum",
+                "lampu jalan",
+                "lampu jln",
+                "jalan bergelombang",
+                "jln bergelombang",
+            ],
             lower_text,
         )
         if hit:
             candidates.append(hit)
     elif infra == "TRAFFIC_LIGHT":
-        hit = _pick_canonical(["lampu pengatur lalu lintas", "lampu lalu lintas"], lower_text)
+        hit = _pick_canonical(
+            ["lampu pengatur lalu lintas", "lampu lalu lintas"], lower_text
+        )
         if hit:
             candidates.append(hit)
     elif infra == "MANHOLE":
-        hit = _pick_canonical(["penutup besi lubang jalan", "penutup lubang jalan", "lubang jalan", "lubang jln"], lower_text)
+        hit = _pick_canonical(
+            [
+                "penutup besi lubang jalan",
+                "penutup lubang jalan",
+                "lubang jalan",
+                "lubang jln",
+            ],
+            lower_text,
+        )
         if hit:
             candidates.append(hit)
     elif infra == "SIDEWALK":
@@ -695,28 +855,45 @@ def extract_grounded_object_candidates(traj: Any, text: str) -> list[str]:
             candidates.append(hit)
     elif infra == "GUARDRAIL":
         hit = _pick_canonical(
-            ["pagar pengaman guardrail tol", "pagar pengaman guardrail", "guardrail tol", "guardrail"],
+            [
+                "pagar pengaman guardrail tol",
+                "pagar pengaman guardrail",
+                "guardrail tol",
+                "guardrail",
+            ],
             lower_text,
         )
         if hit:
             candidates.append(hit)
     elif infra == "ZEBRA_CROSS":
-        hit = _pick_canonical(["garis penyeberangan zebra cross", "zebra cross"], lower_text)
+        hit = _pick_canonical(
+            ["garis penyeberangan zebra cross", "zebra cross"], lower_text
+        )
         if hit:
             candidates.append(hit)
     elif infra == "SEPARATOR":
         hit = _pick_canonical(
-            ["separator beton pembatas jalan", "separator beton", "pembatas jalan", "pembatas jln"],
+            [
+                "separator beton pembatas jalan",
+                "separator beton",
+                "pembatas jalan",
+                "pembatas jln",
+            ],
             lower_text,
         )
         if hit:
             candidates.append(hit)
     elif infra == "EXPANSION_JOINT":
-        hit = _pick_canonical(["celah ekspansi jembatan flyover", "celah ekspansi"], lower_text)
+        hit = _pick_canonical(
+            ["celah ekspansi jembatan flyover", "celah ekspansi"], lower_text
+        )
         if hit:
             candidates.append(hit)
     elif infra == "TRAFFIC_SIGN":
-        hit = _pick_canonical(["papan plang petunjuk jalan", "plang petunjuk jalan", "rambu lalu lintas"], lower_text)
+        hit = _pick_canonical(
+            ["papan plang petunjuk jalan", "plang petunjuk jalan", "rambu lalu lintas"],
+            lower_text,
+        )
         if hit:
             candidates.append(hit)
     elif infra == "ROAD_SHOULDER":
@@ -729,12 +906,24 @@ def extract_grounded_object_candidates(traj: Any, text: str) -> list[str]:
     if service == "PDAM" or wt.get("category") == "CLEAN_WATER":
         hit = _pick_canonical(
             [
-                "pipa induk air bersih", "pipa air bersih", "pipa distribusi leding", "pipa induk",
-                "pipa bocor", "pipa pecah", "semburan air", "air keran", "pasokan air bersih",
-                "debit air pdam", "sambungan arloji meteran air",
-                "meteran air pipa rumah", "meteran pelanggan air pdam", "suplai kran leding",
-                "instalasi pipa distribusi leding", "unit pendorong reservoir pdam",
-                "reservoir pdam", "distribusi pipa leding",
+                "pipa induk air bersih",
+                "pipa air bersih",
+                "pipa distribusi leding",
+                "pipa induk",
+                "pipa bocor",
+                "pipa pecah",
+                "semburan air",
+                "air keran",
+                "pasokan air bersih",
+                "debit air pdam",
+                "sambungan arloji meteran air",
+                "meteran air pipa rumah",
+                "meteran pelanggan air pdam",
+                "suplai kran leding",
+                "instalasi pipa distribusi leding",
+                "unit pendorong reservoir pdam",
+                "reservoir pdam",
+                "distribusi pipa leding",
             ],
             lower_text,
         )
@@ -746,14 +935,37 @@ def extract_grounded_object_candidates(traj: Any, text: str) -> list[str]:
     if cat in ("DRAINAGE_FLOOD", "DRAINAGE") or wt.get("flood_depth_cm") is not None:
         hit = _pick_canonical(
             [
-                "pintu air pengendali banjir", "pintu air", "kolam retensi pengendali air hujan",
-                "kolam retensi", "gorong-gorong saluran", "gorong-gorong tersumbat", "gorong-gorong ambrol",
-                "gorong-gorong", "bendungan penahan luapan air kali", "bendungan",
-                "mesin pompa drainase otomatis", "mesin pompa drainase", "pompa drainase", "rumah pompa",
-                "parit comberan", "parit", "bak kontrol saluran pembuangan air", "bak kontrol saluran",
-                "bak kontrol", "dinding plengsengan kali", "dinding plengsengan", "katup pengendali pasang laut",
-                "katup pengendali", "tanggul saluran air", "tanggul", "saluran drainase mampet",
-                "saluran drainase", "saluran air", "luapan air", "genangan air", "air limbah meluber",
+                "pintu air pengendali banjir",
+                "pintu air",
+                "kolam retensi pengendali air hujan",
+                "kolam retensi",
+                "gorong-gorong saluran",
+                "gorong-gorong tersumbat",
+                "gorong-gorong ambrol",
+                "gorong-gorong",
+                "bendungan penahan luapan air kali",
+                "bendungan",
+                "mesin pompa drainase otomatis",
+                "mesin pompa drainase",
+                "pompa drainase",
+                "rumah pompa",
+                "parit comberan",
+                "parit",
+                "bak kontrol saluran pembuangan air",
+                "bak kontrol saluran",
+                "bak kontrol",
+                "dinding plengsengan kali",
+                "dinding plengsengan",
+                "katup pengendali pasang laut",
+                "katup pengendali",
+                "tanggul saluran air",
+                "tanggul",
+                "saluran drainase mampet",
+                "saluran drainase",
+                "saluran air",
+                "luapan air",
+                "genangan air",
+                "air limbah meluber",
             ],
             lower_text,
         )
@@ -762,25 +974,100 @@ def extract_grounded_object_candidates(traj: Any, text: str) -> list[str]:
 
     # 2. Decompose complaint issue clause into compact noun phrases
     NON_OBJECT_WORDS = {
-        "total", "tercemar", "tergeletak", "bertumpuk", "teronggok", "terbengkalai", "ditolak",
-        "mangkir", "alasan", "kabar", "pengesahan", "cap", "bayar", "perih", "mata", "kondisi",
-        "keadaan", "situasi", "masalah", "keluhan", "bantuan", "petugas", "warga", "pengendara",
-        "pejalan", "pemotor", "pasien", "pemberitahuan", "pengurusan", "pelayanan", "keterangan",
-        "informasi", "laporan", "hancur", "rusak", "rsk", "pecah", "mati", "hilang", "habis",
-        "meluap", "mengendap", "melimpah", "tersendat", "tertunda", "tertahan", "penyok", "pudar",
-        "terguling", "renggang", "patah", "miring", "roboh", "tergerus", "jebol", "macet",
-        "bocor", "terputus", "dipersulit", "mandek", "kebun", "tanah", "lapang", "jalan raya",
-        "terbakar", "tergencet", "menggantung", "terhambat", "semburan", "masuk", "membanjiri",
-        "mengalir", "berbahaya", "berada", "terbuka",
+        "total",
+        "tercemar",
+        "tergeletak",
+        "bertumpuk",
+        "teronggok",
+        "terbengkalai",
+        "ditolak",
+        "mangkir",
+        "alasan",
+        "kabar",
+        "pengesahan",
+        "cap",
+        "bayar",
+        "perih",
+        "mata",
+        "kondisi",
+        "keadaan",
+        "situasi",
+        "masalah",
+        "keluhan",
+        "bantuan",
+        "petugas",
+        "warga",
+        "pengendara",
+        "pejalan",
+        "pemotor",
+        "pasien",
+        "pemberitahuan",
+        "pengurusan",
+        "pelayanan",
+        "keterangan",
+        "informasi",
+        "laporan",
+        "hancur",
+        "rusak",
+        "rsk",
+        "pecah",
+        "mati",
+        "hilang",
+        "habis",
+        "meluap",
+        "mengendap",
+        "melimpah",
+        "tersendat",
+        "tertunda",
+        "tertahan",
+        "penyok",
+        "pudar",
+        "terguling",
+        "renggang",
+        "patah",
+        "miring",
+        "roboh",
+        "tergerus",
+        "jebol",
+        "macet",
+        "bocor",
+        "terputus",
+        "dipersulit",
+        "mandek",
+        "kebun",
+        "tanah",
+        "lapang",
+        "jalan raya",
+        "terbakar",
+        "tergencet",
+        "menggantung",
+        "terhambat",
+        "semburan",
+        "masuk",
+        "membanjiri",
+        "mengalir",
+        "berbahaya",
+        "berada",
+        "terbuka",
     }
 
     issues_to_check: list[str] = []
-    obs = traj.get("observable_facts") if isinstance(traj, dict) else getattr(traj, "observable_facts", ())
+    obs = (
+        traj.get("observable_facts")
+        if isinstance(traj, dict)
+        else getattr(traj, "observable_facts", ())
+    )
     if obs and len(obs) > 0:
         issues_to_check.append(obs[0])
-    turns_val = traj.get("turns") if isinstance(traj, dict) else getattr(traj, "turns", ())
+    turns_val = (
+        traj.get("turns") if isinstance(traj, dict) else getattr(traj, "turns", ())
+    )
     for turn in turns_val:
-        t_obs = turn.get("observable_facts") if isinstance(turn, dict) else getattr(turn, "observable_facts", ())
+        t_obs = (
+            turn.get("observable_facts")
+            if isinstance(turn, dict)
+            else getattr(turn, "observable_facts", ())
+        )
         if t_obs and len(t_obs) > 0 and t_obs[0] not in issues_to_check:
             issues_to_check.append(t_obs[0])
 
@@ -815,11 +1102,26 @@ def extract_grounded_object_candidates(traj: Any, text: str) -> list[str]:
                     if sub_matches:
                         for sm in sub_matches:
                             matched_cand = sm.group(0).strip(" \t\r\n.,!?:;\"'()[]{}")
-                            if matched_cand and matched_cand.lower() not in seen_issue_cands:
+                            if (
+                                matched_cand
+                                and matched_cand.lower() not in seen_issue_cands
+                            ):
                                 seen_issue_cands.add(matched_cand.lower())
                                 candidates.append(matched_cand)
                     elif not any(w in NON_OBJECT_WORDS for w in words):
-                        if not any(w in ("tidak", "bukan", "belum", "sangat", "amat", "tolong", "mohon") for w in words):
+                        if not any(
+                            w
+                            in (
+                                "tidak",
+                                "bukan",
+                                "belum",
+                                "sangat",
+                                "amat",
+                                "tolong",
+                                "mohon",
+                            )
+                            for w in words
+                        ):
                             if clean.lower() not in seen_issue_cands:
                                 seen_issue_cands.add(clean.lower())
                                 candidates.append(clean)
@@ -901,13 +1203,28 @@ def _normalize_canonical_spans(raw_spans: Any) -> list[tuple[int, int, str]]:
         if isinstance(item, (list, tuple)) and len(item) >= 3:
             s, e, l = item[0], item[1], item[2]
         elif isinstance(item, dict):
-            s = item.get("start") if "start" in item else item.get("start_char", item.get("start_offset"))
-            e = item.get("end") if "end" in item else item.get("end_char", item.get("end_offset"))
-            l = item.get("label") or item.get("type") or item.get("entity") or item.get("entity_type")
+            s = (
+                item.get("start")
+                if "start" in item
+                else item.get("start_char", item.get("start_offset"))
+            )
+            e = (
+                item.get("end")
+                if "end" in item
+                else item.get("end_char", item.get("end_offset"))
+            )
+            l = (
+                item.get("label")
+                or item.get("type")
+                or item.get("entity")
+                or item.get("entity_type")
+            )
         elif hasattr(item, "start_char") or hasattr(item, "start"):
             s = getattr(item, "start_char", getattr(item, "start", 0))
             e = getattr(item, "end_char", getattr(item, "end", 0))
-            l = getattr(item, "label", getattr(item, "type", getattr(item, "entity", None)))
+            l = getattr(
+                item, "label", getattr(item, "type", getattr(item, "entity", None))
+            )
         else:
             continue
         try:
@@ -925,33 +1242,61 @@ def _normalize_canonical_spans(raw_spans: Any) -> list[tuple[int, int, str]]:
 
 def _is_ood_record(traj: Any) -> bool:
     is_d = isinstance(traj, dict)
-    scen = str(traj.get("scenario_id", "") if is_d else getattr(traj, "scenario_id", "")).lower()
-    fam = str(traj.get("family_id", "") if is_d else getattr(traj, "family_id", "")).lower()
+    scen = str(
+        traj.get("scenario_id", "") if is_d else getattr(traj, "scenario_id", "")
+    ).lower()
+    fam = str(
+        traj.get("family_id", "") if is_d else getattr(traj, "family_id", "")
+    ).lower()
     wt = traj.get("world_truth", {}) if is_d else getattr(traj, "world_truth", {})
     if not isinstance(wt, dict):
         wt = dict(wt) if hasattr(wt, "__dict__") else {}
-    prov = str(
-        (traj.get("provenance") if is_d else getattr(traj, "provenance", None))
-        or wt.get("provenance", "")
-        or wt.get("dataset_origin", "")
-        or (traj.get("metadata", {}).get("provenance") if is_d else getattr(traj, "metadata", {}).get("provenance", ""))
-    ).strip().lower()
-    task = str((traj.get("task") if is_d else getattr(traj, "task", None)) or wt.get("task", "")).strip().lower()
+    prov = (
+        str(
+            (traj.get("provenance") if is_d else getattr(traj, "provenance", None))
+            or wt.get("provenance", "")
+            or wt.get("dataset_origin", "")
+            or (
+                traj.get("metadata", {}).get("provenance")
+                if is_d
+                else getattr(traj, "metadata", {}).get("provenance", "")
+            )
+        )
+        .strip()
+        .lower()
+    )
+    task = (
+        str(
+            (traj.get("task") if is_d else getattr(traj, "task", None))
+            or wt.get("task", "")
+        )
+        .strip()
+        .lower()
+    )
     is_ood_flag = bool(
         (traj.get("is_ood") if is_d else getattr(traj, "is_ood", False))
         or wt.get("is_ood", False)
         or wt.get("ood", False)
     )
     split_val = traj.get("split") if is_d else getattr(traj, "split", None)
-    split_str = (split_val.value if hasattr(split_val, "value") else str(split_val or "")).lower()
+    split_str = (
+        split_val.value if hasattr(split_val, "value") else str(split_val or "")
+    ).lower()
 
     if is_ood_flag or split_str == "ood" or task in ("holdout", "ood", "ood_canary"):
         return True
     if prov in ("synthetic_ood", "synthetic_canary"):
         return True
-    if scen.startswith(("ood_", "ood-", "canary_ood", "ood_canary")) or "ood_canary" in scen:
+    if (
+        scen.startswith(("ood_", "ood-", "canary_ood", "ood_canary"))
+        or "ood_canary" in scen
+    ):
         return True
-    if fam.startswith(("fam_ood", "fam-ood", "ood_canary")) or "fam-canary" in fam or "fam_canary" in fam:
+    if (
+        fam.startswith(("fam_ood", "fam-ood", "ood_canary"))
+        or "fam-canary" in fam
+        or "fam_canary" in fam
+    ):
         return True
     return False
 
@@ -971,15 +1316,28 @@ def _preserve_canonical_spans_in_record(item: dict[str, Any]) -> dict[str, Any]:
         wt["canonical_spans"] = top_spans
 
     bubble_map: dict[str, Any] = dict(wt.get("bubble_canonical_spans") or {})
-    turns = item.get("turns", []) if isinstance(item, dict) else getattr(item, "turns", ())
+    turns = (
+        item.get("turns", []) if isinstance(item, dict) else getattr(item, "turns", ())
+    )
     if isinstance(turns, (list, tuple)):
         for t_idx, turn in enumerate(turns):
-            bubbles = turn.get("bubbles", []) if isinstance(turn, dict) else getattr(turn, "bubbles", ())
+            bubbles = (
+                turn.get("bubbles", [])
+                if isinstance(turn, dict)
+                else getattr(turn, "bubbles", ())
+            )
             if isinstance(bubbles, (list, tuple)):
                 for b_idx, bubble in enumerate(bubbles):
                     b_spans = _extract_canonical_from_obj(bubble)
                     if b_spans is not None:
-                        msg_id = str((bubble.get("source_message_id") if isinstance(bubble, dict) else getattr(bubble, "source_message_id", None)) or "")
+                        msg_id = str(
+                            (
+                                bubble.get("source_message_id")
+                                if isinstance(bubble, dict)
+                                else getattr(bubble, "source_message_id", None)
+                            )
+                            or ""
+                        )
                         if msg_id:
                             bubble_map[msg_id] = b_spans
                         bubble_map[f"{t_idx}_{b_idx}"] = b_spans
@@ -994,17 +1352,36 @@ def _preserve_canonical_spans_in_record(item: dict[str, Any]) -> dict[str, Any]:
             projected_spans: list[tuple[int, int, str]] = []
             cur_full_off = 0
             for t_idx, turn in enumerate(turns):
-                bubbles = turn.get("bubbles", []) if isinstance(turn, dict) else getattr(turn, "bubbles", ())
+                bubbles = (
+                    turn.get("bubbles", [])
+                    if isinstance(turn, dict)
+                    else getattr(turn, "bubbles", ())
+                )
                 cur_turn_off = 0
                 bubble_texts: list[str] = []
                 turn_spans: list[tuple[int, tuple[int, int, str]]] = []
                 for b_idx, bubble in enumerate(bubbles):
-                    b_text = (bubble.get("text", "") if isinstance(bubble, dict) else getattr(bubble, "text", "")).strip()
+                    b_text = (
+                        bubble.get("text", "")
+                        if isinstance(bubble, dict)
+                        else getattr(bubble, "text", "")
+                    ).strip()
                     if not b_text:
                         continue
                     bubble_texts.append(b_text)
-                    msg_id = str((bubble.get("source_message_id") if isinstance(bubble, dict) else getattr(bubble, "source_message_id", None)) or "")
-                    b_sp = bubble_map.get(msg_id) if msg_id in bubble_map else bubble_map.get(f"{t_idx}_{b_idx}")
+                    msg_id = str(
+                        (
+                            bubble.get("source_message_id")
+                            if isinstance(bubble, dict)
+                            else getattr(bubble, "source_message_id", None)
+                        )
+                        or ""
+                    )
+                    b_sp = (
+                        bubble_map.get(msg_id)
+                        if msg_id in bubble_map
+                        else bubble_map.get(f"{t_idx}_{b_idx}")
+                    )
                     if b_sp is not None:
                         for s in _normalize_canonical_spans(b_sp):
                             turn_spans.append((cur_turn_off, s))
@@ -1012,7 +1389,13 @@ def _preserve_canonical_spans_in_record(item: dict[str, Any]) -> dict[str, Any]:
                 if bubble_texts:
                     comb = " ".join(bubble_texts)
                     for b_off, (s_s, s_e, s_lbl) in turn_spans:
-                        projected_spans.append((cur_full_off + b_off + s_s, cur_full_off + b_off + s_e, s_lbl))
+                        projected_spans.append(
+                            (
+                                cur_full_off + b_off + s_s,
+                                cur_full_off + b_off + s_e,
+                                s_lbl,
+                            )
+                        )
                     cur_full_off += len(comb) + 1
             wt["canonical_spans"] = projected_spans
 
@@ -1071,13 +1454,23 @@ def _trajectory_ner_sample_dedup_key(
     sample: dict[str, Any],
 ) -> tuple[str, tuple[tuple[int, int, str], ...]]:
     """Return deterministic key composed of sample text and canonical spans."""
-    raw_spans = sample.get("canonical_spans") if sample.get("canonical_spans") is not None else sample.get("spans", [])
+    raw_spans = (
+        sample.get("canonical_spans")
+        if sample.get("canonical_spans") is not None
+        else sample.get("spans", [])
+    )
     norm_spans: list[tuple[int, int, str]] = []
     for item in raw_spans:
         if isinstance(item, (list, tuple)) and len(item) >= 3:
             norm_spans.append((int(item[0]), int(item[1]), str(item[2])))
         elif isinstance(item, dict):
-            norm_spans.append((int(item.get("start", 0)), int(item.get("end", 0)), str(item.get("label", ""))))
+            norm_spans.append(
+                (
+                    int(item.get("start", 0)),
+                    int(item.get("end", 0)),
+                    str(item.get("label", "")),
+                )
+            )
         elif hasattr(item, "start") and hasattr(item, "end") and hasattr(item, "label"):
             lbl = getattr(item, "label")
             lbl_str = lbl.value if hasattr(lbl, "value") else str(lbl)
@@ -1113,10 +1506,18 @@ def extract_trajectory_ner_samples(
 
     for traj in trajectories:
         is_dict = isinstance(traj, dict)
-        scenario_id = traj.get("scenario_id", "") if is_dict else getattr(traj, "scenario_id", "")
-        family_id = traj.get("family_id", "") if is_dict else getattr(traj, "family_id", "")
-        split_val = traj.get("split", "train") if is_dict else getattr(traj, "split", "train")
-        split_str = split_val.value if hasattr(split_val, "value") else str(split_val).lower()
+        scenario_id = (
+            traj.get("scenario_id", "") if is_dict else getattr(traj, "scenario_id", "")
+        )
+        family_id = (
+            traj.get("family_id", "") if is_dict else getattr(traj, "family_id", "")
+        )
+        split_val = (
+            traj.get("split", "train") if is_dict else getattr(traj, "split", "train")
+        )
+        split_str = (
+            split_val.value if hasattr(split_val, "value") else str(split_val).lower()
+        )
 
         if _is_ood_record(traj) and split_str in ("train", "dev", "calibration"):
             raise DatasetAuditError(
@@ -1124,7 +1525,9 @@ def extract_trajectory_ner_samples(
                 f"(family '{family_id}') cannot be included in '{split_str}' split."
             )
 
-        wt = traj.get("world_truth", {}) if is_dict else getattr(traj, "world_truth", {})
+        wt = (
+            traj.get("world_truth", {}) if is_dict else getattr(traj, "world_truth", {})
+        )
         if not isinstance(wt, dict):
             wt = dict(wt) if hasattr(wt, "__dict__") else {}
 
@@ -1132,11 +1535,19 @@ def extract_trajectory_ner_samples(
             (traj.get("provenance") if is_dict else getattr(traj, "provenance", None))
             or wt.get("provenance", "")
             or wt.get("dataset_origin", "")
-            or (traj.get("metadata", {}).get("provenance") if is_dict else getattr(traj, "metadata", {}).get("provenance", ""))
+            or (
+                traj.get("metadata", {}).get("provenance")
+                if is_dict
+                else getattr(traj, "metadata", {}).get("provenance", "")
+            )
         ).strip()
 
         loc_targets: list[str] = []
-        obs = traj.get("observable_facts") if is_dict else getattr(traj, "observable_facts", ())
+        obs = (
+            traj.get("observable_facts")
+            if is_dict
+            else getattr(traj, "observable_facts", ())
+        )
         hid = traj.get("hidden_facts") if is_dict else getattr(traj, "hidden_facts", ())
         if obs and len(obs) > 1:
             loc_targets.extend(obs[1:])
@@ -1145,8 +1556,16 @@ def extract_trajectory_ner_samples(
 
         turns_data = traj.get("turns", []) if is_dict else getattr(traj, "turns", ())
         for turn in turns_data:
-            t_obs = turn.get("observable_facts") if isinstance(turn, dict) else getattr(turn, "observable_facts", ())
-            t_hid = turn.get("hidden_facts") if isinstance(turn, dict) else getattr(turn, "hidden_facts", ())
+            t_obs = (
+                turn.get("observable_facts")
+                if isinstance(turn, dict)
+                else getattr(turn, "observable_facts", ())
+            )
+            t_hid = (
+                turn.get("hidden_facts")
+                if isinstance(turn, dict)
+                else getattr(turn, "hidden_facts", ())
+            )
             if t_obs and len(t_obs) > 1:
                 loc_targets.extend(t_obs[1:])
             if t_hid:
@@ -1163,7 +1582,11 @@ def extract_trajectory_ner_samples(
                     expanded_loc_targets.append(clean_part)
 
         total_bubbles_count = sum(
-            len(t.get("bubbles", []) if isinstance(t, dict) else getattr(t, "bubbles", ()))
+            len(
+                t.get("bubbles", [])
+                if isinstance(t, dict)
+                else getattr(t, "bubbles", ())
+            )
             for t in turns_data
         )
 
@@ -1175,14 +1598,20 @@ def extract_trajectory_ner_samples(
 
         for turn_idx, turn in enumerate(turns_data):
             turn_is_dict = isinstance(turn, dict)
-            bubbles = turn.get("bubbles", []) if turn_is_dict else getattr(turn, "bubbles", ())
+            bubbles = (
+                turn.get("bubbles", [])
+                if turn_is_dict
+                else getattr(turn, "bubbles", ())
+            )
             bubble_texts: list[str] = []
             turn_bubble_spans: list[tuple[int, tuple[int, int, str]]] = []
             current_turn_offset = 0
 
             for b_idx, bubble in enumerate(bubbles):
                 b_is_dict = isinstance(bubble, dict)
-                text = (bubble.get("text", "") if b_is_dict else getattr(bubble, "text", "")).strip()
+                text = (
+                    bubble.get("text", "") if b_is_dict else getattr(bubble, "text", "")
+                ).strip()
                 if not text:
                     continue
                 bubble_texts.append(text)
@@ -1190,7 +1619,14 @@ def extract_trajectory_ner_samples(
                 b_canonical = _extract_canonical_from_obj(bubble)
 
                 if b_canonical is None:
-                    msg_id = str((bubble.get("source_message_id") if b_is_dict else getattr(bubble, "source_message_id", None)) or "")
+                    msg_id = str(
+                        (
+                            bubble.get("source_message_id")
+                            if b_is_dict
+                            else getattr(bubble, "source_message_id", None)
+                        )
+                        or ""
+                    )
                     b_map = (
                         wt.get("bubble_canonical_spans")
                         or wt.get("_bubble_canonical_spans")
@@ -1210,7 +1646,11 @@ def extract_trajectory_ner_samples(
                 if b_canonical is None and total_bubbles_count == 1:
                     b_canonical = _extract_canonical_from_obj(traj)
                     if b_canonical is None:
-                        b_canonical = wt.get("canonical_spans") if wt.get("canonical_spans") is not None else wt.get("spans")
+                        b_canonical = (
+                            wt.get("canonical_spans")
+                            if wt.get("canonical_spans") is not None
+                            else wt.get("spans")
+                        )
 
                 if b_canonical is not None:
                     has_any_bubble_canonical = True
@@ -1221,7 +1661,9 @@ def extract_trajectory_ner_samples(
 
                 if b_canonical is not None:
                     for s_s, s_e, s_lbl in clean_spans:
-                        turn_bubble_spans.append((current_turn_offset, (s_s, s_e, s_lbl)))
+                        turn_bubble_spans.append(
+                            (current_turn_offset, (s_s, s_e, s_lbl))
+                        )
 
                 sample_dict = {
                     "text": text,
@@ -1240,26 +1682,40 @@ def extract_trajectory_ner_samples(
             if bubble_texts:
                 combined_turn = " ".join(bubble_texts)
                 for b_off, (s_s, s_e, s_lbl) in turn_bubble_spans:
-                    bubble_canonical_projected.append((
-                        current_full_offset + b_off + s_s,
-                        current_full_offset + b_off + s_e,
-                        s_lbl,
-                    ))
+                    bubble_canonical_projected.append(
+                        (
+                            current_full_offset + b_off + s_s,
+                            current_full_offset + b_off + s_e,
+                            s_lbl,
+                        )
+                    )
                 turn_texts.append(combined_turn)
                 current_full_offset += len(combined_turn) + 1
 
         if not turn_texts:
             direct_text = ""
             if is_dict:
-                direct_text = str(traj.get("text") or traj.get("content") or traj.get("complaint") or "").strip()
+                direct_text = str(
+                    traj.get("text")
+                    or traj.get("content")
+                    or traj.get("complaint")
+                    or ""
+                ).strip()
             elif hasattr(traj, "text"):
                 direct_text = str(getattr(traj, "text", "")).strip()
             if direct_text:
                 direct_canonical = _extract_canonical_from_obj(traj)
                 if direct_canonical is None:
-                    direct_canonical = wt.get("canonical_spans") if wt.get("canonical_spans") is not None else wt.get("spans")
+                    direct_canonical = (
+                        wt.get("canonical_spans")
+                        if wt.get("canonical_spans") is not None
+                        else wt.get("spans")
+                    )
                 clean_spans = _extract_spans_for_text(
-                    direct_text, traj, expanded_loc_targets, canonical_spans=direct_canonical
+                    direct_text,
+                    traj,
+                    expanded_loc_targets,
+                    canonical_spans=direct_canonical,
                 )
                 sample_dict = {
                     "text": direct_text,
@@ -1280,7 +1736,11 @@ def extract_trajectory_ner_samples(
             else:
                 traj_canonical = _extract_canonical_from_obj(traj)
                 if traj_canonical is None:
-                    traj_canonical = wt.get("canonical_spans") if wt.get("canonical_spans") is not None else wt.get("spans")
+                    traj_canonical = (
+                        wt.get("canonical_spans")
+                        if wt.get("canonical_spans") is not None
+                        else wt.get("spans")
+                    )
 
             clean_spans = _extract_spans_for_text(
                 full_text, traj, expanded_loc_targets, canonical_spans=traj_canonical
@@ -1298,7 +1758,9 @@ def extract_trajectory_ner_samples(
             traj_samples.append(sample_dict)
 
         if granularity is not None:
-            traj_samples = [s for s in traj_samples if s.get("granularity") == granularity]
+            traj_samples = [
+                s for s in traj_samples if s.get("granularity") == granularity
+            ]
 
         samples.extend(deduplicate_trajectory_ner_samples(traj_samples))
 
@@ -1482,9 +1944,17 @@ def load_or_generate_dataset(
     if audit_splits:
         for traj in trajectories:
             is_d = isinstance(traj, dict)
-            scen = str(traj.get("scenario_id", "") if is_d else getattr(traj, "scenario_id", ""))
-            fam = str(traj.get("family_id", "") if is_d else getattr(traj, "family_id", ""))
-            s_val = traj.get("split", "train") if is_d else getattr(traj, "split", "train")
+            scen = str(
+                traj.get("scenario_id", "")
+                if is_d
+                else getattr(traj, "scenario_id", "")
+            )
+            fam = str(
+                traj.get("family_id", "") if is_d else getattr(traj, "family_id", "")
+            )
+            s_val = (
+                traj.get("split", "train") if is_d else getattr(traj, "split", "train")
+            )
             s_str = (s_val.value if hasattr(s_val, "value") else str(s_val)).lower()
             if _is_ood_record(traj) and s_str in ("train", "dev", "calibration"):
                 raise DatasetAuditError(
@@ -1519,7 +1989,9 @@ def get_weighted_ner_trainer_class(base_trainer_cls: type | None = None) -> type
             base_trainer_cls = object
 
     class WeightedNERTrainer(base_trainer_cls):  # type: ignore[valid-type, misc]
-        def __init__(self, *args: Any, class_weights: Any = None, **kwargs: Any) -> None:
+        def __init__(
+            self, *args: Any, class_weights: Any = None, **kwargs: Any
+        ) -> None:
             super().__init__(*args, **kwargs)
             self.class_weights = class_weights
 
@@ -1546,9 +2018,7 @@ def get_weighted_ner_trainer_class(base_trainer_cls: type | None = None) -> type
                         weight=self.class_weights.to(logits.device),
                         ignore_index=-100,
                     )
-                    loss = loss_fct(
-                        logits.view(-1, logits.size(-1)), labels.view(-1)
-                    )
+                    loss = loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
                     if isinstance(outputs, dict):
                         outputs["loss"] = loss
                     elif hasattr(outputs, "loss"):
@@ -1563,7 +2033,11 @@ def get_weighted_ner_trainer_class(base_trainer_cls: type | None = None) -> type
                         else getattr(outputs, "loss", None)
                     )
             else:
-                loss = outputs.get("loss") if isinstance(outputs, dict) else getattr(outputs, "loss", None)
+                loss = (
+                    outputs.get("loss")
+                    if isinstance(outputs, dict)
+                    else getattr(outputs, "loss", None)
+                )
             return (loss, outputs) if return_outputs else loss
 
     return WeightedNERTrainer
@@ -1732,10 +2206,14 @@ def train_transformers_ner(
     )
 
     train_samples = [
-        s for s in samples if s.get("split") in (DatasetSplit.TRAIN.value, DatasetSplit.TRAIN)
+        s
+        for s in samples
+        if s.get("split") in (DatasetSplit.TRAIN.value, DatasetSplit.TRAIN)
     ]
     dev_samples = [
-        s for s in samples if s.get("split") in (DatasetSplit.DEV.value, DatasetSplit.DEV)
+        s
+        for s in samples
+        if s.get("split") in (DatasetSplit.DEV.value, DatasetSplit.DEV)
     ]
 
     if not train_samples:
@@ -1835,7 +2313,11 @@ def train_transformers_ner(
         trainer_kwargs["compute_metrics"] = compute_metrics
 
     callbacks: list[Any] = []
-    if dev_dataset and config.early_stopping_patience and config.early_stopping_patience > 0:
+    if (
+        dev_dataset
+        and config.early_stopping_patience
+        and config.early_stopping_patience > 0
+    ):
         try:
             from transformers import EarlyStoppingCallback
 
@@ -1905,7 +2387,9 @@ def train_transformers_ner(
                 "label2id": label2id,
                 "max_position_embeddings": config.max_seq_length,
                 "hidden_size": 768,
-                "vocab_size": getattr(getattr(model, "config", None), "vocab_size", 50000),
+                "vocab_size": getattr(
+                    getattr(model, "config", None), "vocab_size", 50000
+                ),
             }
             with config_path.open("w", encoding="utf-8") as f:
                 json.dump(std_hf_config, f, indent=2)
@@ -1974,7 +2458,9 @@ def run_train_ner(
 
     samples = extract_trajectory_ner_samples(trajectories)
     if not samples:
-        raise ValueError("No NER training samples could be extracted from trajectories.")
+        raise ValueError(
+            "No NER training samples could be extracted from trajectories."
+        )
 
     if validate_only:
         return None
@@ -2091,16 +2577,24 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="IndoBERT Token Classification (NER BIO) CLI & Training"
     )
-    parser.add_argument("--config", type=str, default=None, help="Path to JSON config file")
+    parser.add_argument(
+        "--config", type=str, default=None, help="Path to JSON config file"
+    )
     parser.add_argument(
         "--model-name-or-path",
         type=str,
         default=None,
         help="Path to pre-trained model or cached checkpoint directory",
     )
-    parser.add_argument("--dataset-path", type=str, default=None, help="Path to JSONL dataset")
-    parser.add_argument("--corpus-path", type=str, default=None, help="Alias for dataset-path")
-    parser.add_argument("--output-dir", type=str, default=None, help="Output directory for artifacts")
+    parser.add_argument(
+        "--dataset-path", type=str, default=None, help="Path to JSONL dataset"
+    )
+    parser.add_argument(
+        "--corpus-path", type=str, default=None, help="Alias for dataset-path"
+    )
+    parser.add_argument(
+        "--output-dir", type=str, default=None, help="Output directory for artifacts"
+    )
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--max-seq-length", type=int, default=None)
     parser.add_argument("--learning-rate", type=float, default=None)
@@ -2109,8 +2603,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--num-epochs", type=int, default=None)
     parser.add_argument("--warmup-ratio", type=float, default=None)
     parser.add_argument("--weight-decay", type=float, default=None)
-    parser.add_argument("--fp16", action="store_true", default=None, help="Enable fp16 training (RTX 3060)")
-    parser.add_argument("--no-fp16", action="store_false", dest="fp16", help="Disable fp16 training")
+    parser.add_argument(
+        "--fp16",
+        action="store_true",
+        default=None,
+        help="Enable fp16 training (RTX 3060)",
+    )
+    parser.add_argument(
+        "--no-fp16", action="store_false", dest="fp16", help="Disable fp16 training"
+    )
     parser.add_argument(
         "--local-files-only",
         action="store_true",
@@ -2141,7 +2642,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--class-weights",
         type=str,
         default=None,
-        help="JSON string of tag class weights dict (e.g. '{\"O\": 1.0, \"B-LOC\": 2.5}')",
+        help='JSON string of tag class weights dict (e.g. \'{"O": 1.0, "B-LOC": 2.5}\')',
     )
     parser.add_argument(
         "--early-stopping-patience",
@@ -2156,8 +2657,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Apply RTX 3060 12GB safe FP16 training configuration preset for 8k synthetic trajectories",
     )
     parser.add_argument("--version", type=str, default=None)
-    parser.add_argument("--dry-run", action="store_true", help="Run skeleton validation without GPU")
-    parser.add_argument("--validate-only", action="store_true", help="Validate config and dataset only")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Run skeleton validation without GPU"
+    )
+    parser.add_argument(
+        "--validate-only", action="store_true", help="Validate config and dataset only"
+    )
     return parser
 
 
@@ -2198,7 +2703,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.local_files_only is not None:
             overrides["local_files_only"] = args.local_files_only
         if args.tagset is not None:
-            overrides["tagset"] = tuple(t.strip() for t in args.tagset.split(",") if t.strip())
+            overrides["tagset"] = tuple(
+                t.strip() for t in args.tagset.split(",") if t.strip()
+            )
         if args.no_audit_splits:
             overrides["audit_splits"] = False
         if args.dataloader_num_workers is not None:
@@ -2261,7 +2768,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.batch_size is not None:
             config_kwargs["batch_size"] = args.batch_size
         if args.gradient_accumulation_steps is not None:
-            config_kwargs["gradient_accumulation_steps"] = args.gradient_accumulation_steps
+            config_kwargs["gradient_accumulation_steps"] = (
+                args.gradient_accumulation_steps
+            )
         if args.num_epochs is not None:
             config_kwargs["num_epochs"] = args.num_epochs
         if args.warmup_ratio is not None:

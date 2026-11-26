@@ -17,12 +17,20 @@ from scripts.run_all_workers import WorkerSupervisor, build_worker_commands
 from services.intake.assembly import ConversationAssembler
 from services.intake.service import IntakeService
 
-DATABASE_URL = os.getenv("KAWAL_DATABASE_URL", "postgresql://postgres:postgres@127.0.0.1:54322/postgres")
+DATABASE_URL = os.getenv(
+    "KAWAL_DATABASE_URL", "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+)
 REDPANDA_BOOTSTRAP = os.getenv("KAWAL_REDPANDA_BOOTSTRAP", "127.0.0.1:19092")
 
 
 @pytest.mark.integration
 def test_full_concurrency_e2e_pipeline() -> None:
+    try:
+        with psycopg.connect(DATABASE_URL, connect_timeout=1):
+            pass
+    except Exception as exc:
+        pytest.skip(f"PostgreSQL is not available: {type(exc).__name__}")
+
     # 1. Ensure test tenant
     tenant_id = f"tenant-conc-e2e-{uuid4().hex[:6]}"
     with psycopg.connect(DATABASE_URL) as conn:
@@ -94,11 +102,15 @@ def test_full_concurrency_e2e_pipeline() -> None:
                         (tenant_id,),
                     )
                     rows = cur.fetchall()
-                    if len(rows) == 3 and all(r[1] == "TICKETED" and r[3] is not None for r in rows):
+                    if len(rows) == 3 and all(
+                        r[1] == "TICKETED" and r[3] is not None for r in rows
+                    ):
                         success = True
                         break
 
-        assert success is True, "All 3 concurrent cases should reach TICKETED status within deadline"
+        assert success is True, (
+            "All 3 concurrent cases should reach TICKETED status within deadline"
+        )
 
         # 5. Verify database invariants: audit traces and unique ticket IDs
         with psycopg.connect(DATABASE_URL) as conn:

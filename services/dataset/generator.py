@@ -54,7 +54,11 @@ DEFAULT_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Margasari, Kecamatan Ciomas",
         city="Kabupaten Bogor",
         urgency="URGENT",
-        world_truth={"category": "ROAD", "risk": "URGENT", "infra_type": "BRIDGE_ACCESS"},
+        world_truth={
+            "category": "ROAD",
+            "risk": "URGENT",
+            "infra_type": "BRIDGE_ACCESS",
+        },
     ),
     ScenarioTemplate(
         family_id="road-broken-street-light",
@@ -64,7 +68,11 @@ DEFAULT_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Menteng, Kecamatan Menteng",
         city="Jakarta Pusat",
         urgency="MEDIUM",
-        world_truth={"category": "ROAD", "risk": "MEDIUM", "infra_type": "STREET_LIGHT"},
+        world_truth={
+            "category": "ROAD",
+            "risk": "MEDIUM",
+            "infra_type": "STREET_LIGHT",
+        },
     ),
     ScenarioTemplate(
         family_id="drainage-blocked-culvert",
@@ -74,7 +82,11 @@ DEFAULT_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Rawasari, Kecamatan Cempaka Putih",
         city="Jakarta Pusat",
         urgency="HIGH",
-        world_truth={"category": "DRAINAGE_FLOOD", "risk": "HIGH", "flood_depth_cm": 40},
+        world_truth={
+            "category": "DRAINAGE_FLOOD",
+            "risk": "HIGH",
+            "flood_depth_cm": 40,
+        },
     ),
     ScenarioTemplate(
         family_id="drainage-river-overflow",
@@ -84,7 +96,11 @@ DEFAULT_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Mekarwangi, Kecamatan Bojongloa",
         city="Kota Bandung",
         urgency="URGENT",
-        world_truth={"category": "DRAINAGE_FLOOD", "risk": "URGENT", "flood_depth_cm": 80},
+        world_truth={
+            "category": "DRAINAGE_FLOOD",
+            "risk": "URGENT",
+            "flood_depth_cm": 80,
+        },
     ),
     ScenarioTemplate(
         family_id="drainage-stagnant-ditch",
@@ -94,7 +110,11 @@ DEFAULT_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Sukamulya, Kecamatan Semampir",
         city="Kota Surabaya",
         urgency="MEDIUM",
-        world_truth={"category": "DRAINAGE_FLOOD", "risk": "MEDIUM", "flood_depth_cm": 20},
+        world_truth={
+            "category": "DRAINAGE_FLOOD",
+            "risk": "MEDIUM",
+            "flood_depth_cm": 20,
+        },
     ),
     ScenarioTemplate(
         family_id="waste-illegal-dumping",
@@ -124,7 +144,11 @@ DEFAULT_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Kalirungkut, Kecamatan Rungkut",
         city="Kota Surabaya",
         urgency="URGENT",
-        world_truth={"category": "WASTE", "risk": "URGENT", "waste_type": "OPEN_BURNING"},
+        world_truth={
+            "category": "WASTE",
+            "risk": "URGENT",
+            "waste_type": "OPEN_BURNING",
+        },
     ),
     ScenarioTemplate(
         family_id="water-pipe-burst-main",
@@ -174,7 +198,11 @@ DEFAULT_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Sidorejo, Kecamatan Tuban",
         city="Kabupaten Tuban",
         urgency="HIGH",
-        world_truth={"category": "CIVIL_ADMIN", "risk": "HIGH", "document": "SURAT_PINDAH"},
+        world_truth={
+            "category": "CIVIL_ADMIN",
+            "risk": "HIGH",
+            "document": "SURAT_PINDAH",
+        },
     ),
     ScenarioTemplate(
         family_id="admin-online-queue-crash",
@@ -184,7 +212,11 @@ DEFAULT_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Kejuron, Kecamatan Taman",
         city="Kota Madiun",
         urgency="HIGH",
-        world_truth={"category": "CIVIL_ADMIN", "risk": "HIGH", "document": "ANTREAN_ONLINE"},
+        world_truth={
+            "category": "CIVIL_ADMIN",
+            "risk": "HIGH",
+            "document": "ANTREAN_ONLINE",
+        },
     ),
     ScenarioTemplate(
         family_id="health-doctor-absent-puskesmas",
@@ -194,7 +226,11 @@ DEFAULT_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Karanganyar, Kecamatan Kawalu",
         city="Kota Tasikmalaya",
         urgency="HIGH",
-        world_truth={"category": "HEALTH_SERVICE", "risk": "HIGH", "facility": "PUSKESMAS"},
+        world_truth={
+            "category": "HEALTH_SERVICE",
+            "risk": "HIGH",
+            "facility": "PUSKESMAS",
+        },
     ),
     ScenarioTemplate(
         family_id="health-ambulance-unresponsive",
@@ -204,7 +240,11 @@ DEFAULT_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Tlogomas, Kecamatan Lowokwaru",
         city="Kota Malang",
         urgency="URGENT",
-        world_truth={"category": "HEALTH_SERVICE", "risk": "URGENT", "facility": "AMBULANCE"},
+        world_truth={
+            "category": "HEALTH_SERVICE",
+            "risk": "URGENT",
+            "facility": "AMBULANCE",
+        },
     ),
     ScenarioTemplate(
         family_id="health-essential-medicine-empty",
@@ -214,12 +254,16 @@ DEFAULT_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         jurisdiction="Kelurahan Labukkang, Kecamatan Ujung",
         city="Kota Parepare",
         urgency="HIGH",
-        world_truth={"category": "HEALTH_SERVICE", "risk": "HIGH", "facility": "FARMASI"},
+        world_truth={
+            "category": "HEALTH_SERVICE",
+            "risk": "HIGH",
+            "facility": "FARMASI",
+        },
     ),
     ScenarioTemplate(
         family_id="order-illegal-parking-extortion",
         category=Category.PUBLIC_ORDER,
-        issue="juru parkir liar memeras pengendara motor dan mengancam kekerasan fisik",
+        issue="parkir liar trotoar memeras pengendara motor dan mengancam kekerasan fisik",
         landmark="deretan ruko pasar simpang lima",
         jurisdiction="Kelurahan Mugassari, Kecamatan Semarang Selatan",
         city="Kota Semarang",
@@ -229,37 +273,49 @@ DEFAULT_TEMPLATES: tuple[ScenarioTemplate, ...] = (
     ScenarioTemplate(
         family_id="order-street-brawl-youth",
         category=Category.PUBLIC_ORDER,
-        issue="tawuran antarkelompok remaja bersenjata tajam di jalan pemukiman warga",
+        issue="gangguan ketertiban umum akibat tawuran antarkelompok remaja bersenjata tajam di jalan pemukiman warga",
         landmark="sekitar tugu perbatasan gapura selamat datang",
         jurisdiction="Kelurahan Tanah Tinggi, Kecamatan Johar Baru",
         city="Jakarta Pusat",
         urgency="URGENT",
-        world_truth={"category": "PUBLIC_ORDER", "risk": "URGENT", "incident": "TAWURAN"},
+        world_truth={
+            "category": "PUBLIC_ORDER",
+            "risk": "URGENT",
+            "incident": "TAWURAN",
+        },
     ),
     ScenarioTemplate(
         family_id="order-night-noise-disturbance",
         category=Category.PUBLIC_ORDER,
-        issue="suara musik sound system liar bervolume keras hingga larut malam",
+        issue="kebisingan tempat hiburan akibat suara musik sound system liar bervolume keras hingga larut malam",
         landmark="lapangan serbaguna rukun tetangga tujuh",
         jurisdiction="Kelurahan Babakan, Kecamatan Babakan Ciparay",
         city="Kota Bandung",
         urgency="MEDIUM",
-        world_truth={"category": "PUBLIC_ORDER", "risk": "MEDIUM", "incident": "KEBISINGAN"},
+        world_truth={
+            "category": "PUBLIC_ORDER",
+            "risk": "MEDIUM",
+            "incident": "KEBISINGAN",
+        },
     ),
     ScenarioTemplate(
         family_id="transport-traffic-light-failure",
         category=Category.TRANSPORTATION,
-        issue="lampu pengatur lalu lintas di persimpangan padat padam total memicu macet",
+        issue="lampu pengatur lalu lintas padam di persimpangan padat memicu macet",
         landmark="perempatan tugu jam pahlawan",
         jurisdiction="Kelurahan Pandean, Kecamatan Taman",
         city="Kota Madiun",
         urgency="HIGH",
-        world_truth={"category": "TRANSPORTATION", "risk": "HIGH", "facility": "TRAFFIC_LIGHT"},
+        world_truth={
+            "category": "TRANSPORTATION",
+            "risk": "HIGH",
+            "facility": "TRAFFIC_LIGHT",
+        },
     ),
     ScenarioTemplate(
         family_id="transport-reckless-minibus-speeding",
         category=Category.TRANSPORTATION,
-        issue="sopir bus kota ugal-ugalan menerobos pembatas jalan membahayakan penumpang",
+        issue="armada angkutan umum sopir bus kota ugal-ugalan menerobos pembatas jalan membahayakan penumpang",
         landmark="pintu keluar terminal bus terpadu",
         jurisdiction="Kelurahan Kedungdoro, Kecamatan Tegalsari",
         city="Kota Surabaya",
@@ -269,27 +325,35 @@ DEFAULT_TEMPLATES: tuple[ScenarioTemplate, ...] = (
     ScenarioTemplate(
         family_id="transport-broken-bus-shelter",
         category=Category.TRANSPORTATION,
-        issue="atap tempat perhentian bus roboh dan kaca shelter pecah berserakan",
+        issue="halte bus rusak atap tempat perhentian bus roboh dan kaca shelter pecah berserakan",
         landmark="depan kantor pos pembantu utama",
         jurisdiction="Kelurahan Malabar, Kecamatan Lengkong",
         city="Kota Bandung",
         urgency="MEDIUM",
-        world_truth={"category": "TRANSPORTATION", "risk": "MEDIUM", "facility": "SHELTER"},
+        world_truth={
+            "category": "TRANSPORTATION",
+            "risk": "MEDIUM",
+            "facility": "SHELTER",
+        },
     ),
     ScenarioTemplate(
         family_id="rescue-house-fire-electrical",
         category=Category.FIRE_RESCUE,
-        issue="kebakaran kobaran api merambat di rumah tinggal akibat korsleting listrik",
+        issue="kebakaran rumah warga akibat korsleting listrik, kobaran api merambat",
         landmark="gang masjid baiturrahman nomor dua",
         jurisdiction="Kelurahan Balimester, Kecamatan Jatinegara",
         city="Jakarta Timur",
         urgency="URGENT",
-        world_truth={"category": "FIRE_RESCUE", "risk": "URGENT", "incident": "KEBAKARAN"},
+        world_truth={
+            "category": "FIRE_RESCUE",
+            "risk": "URGENT",
+            "incident": "KEBAKARAN",
+        },
     ),
     ScenarioTemplate(
         family_id="rescue-venomous-hornet-nest",
         category=Category.FIRE_RESCUE,
-        issue="sarang tawon vespa besar di atap permukiman membahayakan warga sekitar",
+        issue="sarang tawon membahayakan warga sekitar, sarang vespa besar di atap permukiman",
         landmark="belakang gedung posyandu dahlia",
         jurisdiction="Kelurahan Sindangrasa, Kecamatan Ciamis",
         city="Kabupaten Ciamis",
@@ -299,27 +363,35 @@ DEFAULT_TEMPLATES: tuple[ScenarioTemplate, ...] = (
     ScenarioTemplate(
         family_id="rescue-kitten-trapped-pipe",
         category=Category.FIRE_RESCUE,
-        issue="anak kucing terjepit di dalam saluran pipa sempit butuh evakuasi",
+        issue="evakuasi hewan terjebak, anak kucing terjepit di dalam saluran pipa sempit",
         landmark="halaman taman bermain balita bahagia",
         jurisdiction="Kelurahan Grogol, Kecamatan Grogol Petamburan",
         city="Jakarta Barat",
         urgency="MEDIUM",
-        world_truth={"category": "FIRE_RESCUE", "risk": "MEDIUM", "incident": "EVAKUASI"},
+        world_truth={
+            "category": "FIRE_RESCUE",
+            "risk": "MEDIUM",
+            "incident": "EVAKUASI",
+        },
     ),
     ScenarioTemplate(
         family_id="social-abandoned-elderly-sick",
         category=Category.SOCIAL_AFFAIRS,
-        issue="lansia sebatang kara telantar dalam kondisi sakit parah tanpa perawatan",
+        issue="lansia terlantar butuh penanganan, sebatang kara dalam kondisi sakit parah tanpa perawatan",
         landmark="emperan toko pojok dekat stasiun",
         jurisdiction="Kelurahan Kauman, Kecamatan Klojen",
         city="Kota Malang",
         urgency="URGENT",
-        world_truth={"category": "SOCIAL_AFFAIRS", "risk": "URGENT", "service": "LANSIA"},
+        world_truth={
+            "category": "SOCIAL_AFFAIRS",
+            "risk": "URGENT",
+            "service": "LANSIA",
+        },
     ),
     ScenarioTemplate(
         family_id="social-welfare-aid-misallocated",
         category=Category.SOCIAL_AFFAIRS,
-        issue="bantuan sembako pangan keluarga prasejahtera dipotong sepihak oleh oknum lingkungan",
+        issue="data bansos tidak tepat sasaran, bantuan sembako keluarga prasejahtera dipotong sepihak",
         landmark="depan kantor sekretariat warga rukun warga enam",
         jurisdiction="Kelurahan Cijagra, Kecamatan Lengkong",
         city="Kota Bandung",
@@ -329,17 +401,21 @@ DEFAULT_TEMPLATES: tuple[ScenarioTemplate, ...] = (
     ScenarioTemplate(
         family_id="social-homeless-child-vagrant",
         category=Category.SOCIAL_AFFAIRS,
-        issue="anak jalanan berkostum badut mengemis di persimpangan saat jam sekolah",
+        issue="anak terlantar putus sekolah, anak jalanan berkostum badut mengemis di persimpangan",
         landmark="kolong jembatan layang persimpangan barat",
         jurisdiction="Kelurahan Bungur, Kecamatan Senen",
         city="Jakarta Pusat",
         urgency="MEDIUM",
-        world_truth={"category": "SOCIAL_AFFAIRS", "risk": "MEDIUM", "service": "ANAK_JALANAN"},
+        world_truth={
+            "category": "SOCIAL_AFFAIRS",
+            "risk": "MEDIUM",
+            "service": "ANAK_JALANAN",
+        },
     ),
     ScenarioTemplate(
         family_id="edu-classroom-ceiling-collapse",
         category=Category.EDUCATION,
-        issue="plafon ruang kelas sekolah dasar negeri ambruk menimpa bangku belajar",
+        issue="atap plafon kelas ambrol menimpa bangku belajar sekolah dasar negeri",
         landmark="gedung serbaguna sekolah dasar empat",
         jurisdiction="Kelurahan Sukamaju, Kecamatan Cilodong",
         city="Kota Depok",
@@ -349,7 +425,7 @@ DEFAULT_TEMPLATES: tuple[ScenarioTemplate, ...] = (
     ScenarioTemplate(
         family_id="edu-school-illegal-levy",
         category=Category.EDUCATION,
-        issue="pungutan liar berkedok sumbangan sukarela dan lembar kerja bernilai jutaan rupiah",
+        issue="pungutan liar biaya sekolah berkedok sumbangan sukarela dan lembar kerja bernilai jutaan rupiah",
         landmark="gerbang depan sekolah menengah pertama negeri satu",
         jurisdiction="Kelurahan Gunung Anyar, Kecamatan Gunung Anyar",
         city="Kota Surabaya",
@@ -359,7 +435,7 @@ DEFAULT_TEMPLATES: tuple[ScenarioTemplate, ...] = (
     ScenarioTemplate(
         family_id="edu-broken-toilet-facility",
         category=Category.EDUCATION,
-        issue="fasilitas toilet murid sekolah rusak kotor dan ketiadaan air bersih mengalir",
+        issue="toilet sekolah rusak kotor dan ketiadaan air bersih mengalir",
         landmark="area kantin sayap utara sekolah",
         jurisdiction="Kelurahan Cipinang, Kecamatan Pulogadung",
         city="Jakarta Timur",
@@ -369,17 +445,21 @@ DEFAULT_TEMPLATES: tuple[ScenarioTemplate, ...] = (
     ScenarioTemplate(
         family_id="parks-rusunawa-elevator-outage",
         category=Category.PARKS_HOUSING,
-        issue="lift rumah susun sederhana sewa mati total warga lanjut usia terisolasi di lantai atas",
+        issue="lift rumah susun mati total, warga lanjut usia terisolasi di lantai atas",
         landmark="lobi blok melati rusunawa harapan",
         jurisdiction="Kelurahan Semper Barat, Kecamatan Cilincing",
         city="Jakarta Utara",
         urgency="URGENT",
-        world_truth={"category": "PARKS_HOUSING", "risk": "URGENT", "facility": "RUSUNAWA"},
+        world_truth={
+            "category": "PARKS_HOUSING",
+            "risk": "URGENT",
+            "facility": "RUSUNAWA",
+        },
     ),
     ScenarioTemplate(
         family_id="parks-fallen-tree-playground",
         category=Category.PARKS_HOUSING,
-        issue="pohon peneduh tua keropos tumbang menimpa wahana bermain anak di taman kota",
+        issue="pohon peneduh taman rapuh tumbang menimpa wahana bermain anak di taman kota",
         landmark="pintu gerbang taman rekreasi warga",
         jurisdiction="Kelurahan Karangbesuki, Kecamatan Sukun",
         city="Kota Malang",
@@ -389,12 +469,16 @@ DEFAULT_TEMPLATES: tuple[ScenarioTemplate, ...] = (
     ScenarioTemplate(
         family_id="parks-damaged-public-benches",
         category=Category.PARKS_HOUSING,
-        issue="fasilitas bangku taman umum patah berkarat dan lampu penerangan padam",
+        issue="bangku taman rusak patah berkarat dan lampu penerangan padam",
         landmark="jalur pedestrian lingkar taman barat",
         jurisdiction="Kelurahan Bendungan Hilir, Kecamatan Tanah Abang",
         city="Jakarta Pusat",
         urgency="MEDIUM",
-        world_truth={"category": "PARKS_HOUSING", "risk": "MEDIUM", "facility": "BANGKU"},
+        world_truth={
+            "category": "PARKS_HOUSING",
+            "risk": "MEDIUM",
+            "facility": "BANGKU",
+        },
     ),
 )
 
@@ -460,7 +544,9 @@ class TrajectoryGenerator:
         self,
         templates: Sequence[ScenarioTemplate] | None = None,
     ) -> None:
-        self._templates = tuple(templates) if templates is not None else DEFAULT_TEMPLATES
+        self._templates = (
+            tuple(templates) if templates is not None else DEFAULT_TEMPLATES
+        )
         self._family_map: dict[str, ScenarioTemplate] = {
             t.family_id: t for t in self._templates
         }
@@ -539,14 +625,18 @@ class TrajectoryGenerator:
             )
 
             t1_b1_text = f"Lapor: {issue_text}"
-            t1_b2_text = f"Titik patokannya di {landmark_text}, mohon bantuan unit terkait"
+            t1_b2_text = (
+                f"Titik patokannya di {landmark_text}, mohon bantuan unit terkait"
+            )
 
             if persona == "FORMAL":
                 t1_b1_text = f"Yth petugas kami laporkan: {issue_text}"
                 t1_b2_text = f"Keterangan patokan lokasi yaitu di {landmark_text}"
             elif persona == "FRUSTRATED_RAMBLING":
                 t1_b1_text = f"Laporan sangat mendesak: {issue_text}"
-                t1_b2_text = f"Kondisi parah patokan di {landmark_text} segera ditangani"
+                t1_b2_text = (
+                    f"Kondisi parah patokan di {landmark_text} segera ditangani"
+                )
             elif persona == "PANICKED":
                 t1_b1_text = f"Darurat berbahaya: {issue_text}"
                 t1_b2_text = f"Lokasi patokan persis di {landmark_text} tolong cepat"
@@ -606,9 +696,7 @@ class TrajectoryGenerator:
                 strategy="CREATE_TICKET",
             )
             t1_b1_text = f"Laporan: {issue_text}"
-            t1_b2_text = (
-                f"Lokasi berada di {landmark_text}, wilayah {jurisdiction_text}, {selected_template.city}"
-            )
+            t1_b2_text = f"Lokasi berada di {landmark_text}, wilayah {jurisdiction_text}, {selected_template.city}"
 
             if persona == "FORMAL":
                 t1_b1_text = f"Yth petugas kami laporkan: {issue_text}"
@@ -680,7 +768,9 @@ class TrajectoryGenerator:
     ) -> list[ComplaintTrajectory]:
         active_templates = self._templates
         if categories is not None:
-            active_templates = tuple(t for t in self._templates if t.category in categories)
+            active_templates = tuple(
+                t for t in self._templates if t.category in categories
+            )
             if not active_templates:
                 raise ValueError("No templates match the requested categories")
 
@@ -778,7 +868,9 @@ def trajectory_to_replay_fixture(
     conversation_id: str | None = None,
 ) -> ReplayFixture:
     if not (0 <= turn_index < len(trajectory.turns)):
-        raise IndexError(f"turn_index {turn_index} out of range (total turns: {len(trajectory.turns)})")
+        raise IndexError(
+            f"turn_index {turn_index} out of range (total turns: {len(trajectory.turns)})"
+        )
 
     turn = trajectory.turns[turn_index]
     conv_id = conversation_id or f"conv-{trajectory.scenario_id}-t{turn.turn}"
@@ -815,11 +907,13 @@ def export_trajectories_to_jsonl(
                 f.write(json.dumps(item) + "\n")
 
 
-ALLOWED_WORLD_TRUTH_METADATA_FIELDS: frozenset[str] = frozenset({
-    "concept_id",
-    "risk_evidence_kind",
-    "style_family",
-})
+ALLOWED_WORLD_TRUTH_METADATA_FIELDS: frozenset[str] = frozenset(
+    {
+        "concept_id",
+        "risk_evidence_kind",
+        "style_family",
+    }
+)
 
 
 def _prepare_trajectory_record(record: dict[str, Any]) -> dict[str, Any]:
@@ -841,8 +935,7 @@ def _prepare_trajectory_record(record: dict[str, Any]) -> dict[str, Any]:
 
     if top_spans and not wt_spans:
         wt["canonical_spans"] = [
-            list(s) if isinstance(s, (list, tuple)) else s
-            for s in top_spans
+            list(s) if isinstance(s, (list, tuple)) else s for s in top_spans
         ]
     elif wt_spans and not top_spans:
         record["canonical_spans"] = wt_spans
@@ -855,7 +948,9 @@ def _prepare_trajectory_record(record: dict[str, Any]) -> dict[str, Any]:
                     bubbles = turn.get("bubbles", [])
                     if isinstance(bubbles, (list, tuple)):
                         for bubble in bubbles:
-                            if isinstance(bubble, dict) and bubble.get("canonical_spans"):
+                            if isinstance(bubble, dict) and bubble.get(
+                                "canonical_spans"
+                            ):
                                 b_spans = bubble["canonical_spans"]
                                 record["canonical_spans"] = b_spans
                                 wt["canonical_spans"] = [
@@ -875,7 +970,9 @@ def _prepare_trajectory_record(record: dict[str, Any]) -> dict[str, Any]:
                     bubbles = turn.get("bubbles", [])
                     if isinstance(bubbles, (list, tuple)):
                         for b_idx, bubble in enumerate(bubbles):
-                            if isinstance(bubble, dict) and bubble.get("canonical_spans"):
+                            if isinstance(bubble, dict) and bubble.get(
+                                "canonical_spans"
+                            ):
                                 b_spans = [
                                     list(s) if isinstance(s, (list, tuple)) else s
                                     for s in bubble["canonical_spans"]
