@@ -103,8 +103,9 @@ full pipeline and are not reused.
 - Semantic matching was not exercised live because the deterministic fallback
   disables it. Unit tests exercise the semantic path with the fallback
   explicitly enabled, but a real IndoBERT threshold calibration is still needed.
-- The Postgres/pgvector integration test is marked `integration` and was not run
-  in this evaluation.
+- The Postgres/pgvector path was validated separately: the integration test,
+  HNSW planner check, and a `--inner rule` smoke run passed. The LLM evaluation
+  above used the in-memory store.
 - The dataset is small and class-imbalanced.
 - Live LLM decisions can vary between independent passes on non-cacheable posts.
 - Evidence spans and embeddings are sensitive local data even though the full

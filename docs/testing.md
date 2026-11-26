@@ -18,7 +18,7 @@ for the `test` job.
 Last local result after M6:
 
 ```text
-672 passed, 43 skipped, 84 deselected
+679 passed, 43 skipped, 85 deselected
 ```
 
 ## Research and integration lane
@@ -32,7 +32,7 @@ blockers in [`tests/quarantine.txt`](../tests/quarantine.txt). It unsets the
 OpenRouter key because these tests must stay offline. Last local result:
 
 ```text
-52 passed, 3 skipped, 29 quarantined
+52 passed, 4 skipped, 29 quarantined
 ```
 
 The third skip is the pgvector integration test when no test database is
@@ -66,14 +66,21 @@ The pgvector path is covered by `tests/test_harness_cache_pgvector_integration.p
 and marked `integration`. It skips unless `KAWAL_TEST_DATABASE_URL` is set.
 
 ```bash
-podman compose up -d postgres
-psql "$KAWAL_TEST_DATABASE_URL" -f infra/migrations/014_m6_harness_semantic_cache.sql
+podman-compose up -d postgres
+podman exec -i kawal-postgres psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
+  -f - < infra/migrations/014_m6_harness_semantic_cache.sql
 KAWAL_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres \
   pytest -q tests/test_harness_cache_pgvector_integration.py
+podman-compose down
 ```
 
-The compose Postgres image is `pgvector/pgvector:pg16`; the legacy
+The integration test also checks that the planner selects
+`ix_harness_cache_hnsw` when sequential scans are disabled. The compose
+Postgres image is `docker.io/pgvector/pgvector:pg16`; the legacy
 `postgres:16-alpine` image does not provide the `vector` extension.
+
+A local `--inner rule` smoke run against Postgres produced 3 cache-eligible
+posts, 3 exact hits, and 0 false reuse on the 18-post fixture set.
 
 ## Markers
 

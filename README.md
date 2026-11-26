@@ -12,7 +12,7 @@ not the current evaluation target.
 
 | Area | State |
 |---|---|
-| Core CI | `672 passed, 43 skipped, 84 deselected` |
+| Core CI | `679 passed, 43 skipped, 85 deselected` |
 | Research/integration lane | Green with an explicit quarantine of 29 known failures |
 | Harness X | M1 through M6 implemented |
 | WhatsApp pipeline | Experimental, still present, not the current focus |
@@ -199,7 +199,7 @@ python scripts/evaluate_harness_cache.py \
 
 Use `--inner llm` for the live LLM path. Use `--cache-store postgres` with
 `--cache-dsn` for pgvector. The compose Postgres image is
-`pgvector/pgvector:pg16`; run migration
+`docker.io/pgvector/pgvector:pg16`; run migration
 `infra/migrations/014_m6_harness_semantic_cache.sql` before a Postgres evaluation.
 
 Live X collection through Agent-Reach is optional:

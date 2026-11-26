@@ -39,7 +39,7 @@ Production store: `harness_case_cache` in PostgreSQL with pgvector.
 
 The migration is `infra/migrations/014_m6_harness_semantic_cache.sql`, mirrored
 to `supabase/migrations/20261126000000_m6_harness_semantic_cache.sql`.
-Compose uses `pgvector/pgvector:pg16`.
+Compose uses `docker.io/pgvector/pgvector:pg16`.
 
 The table stores:
 
@@ -165,7 +165,9 @@ python scripts/evaluate_harness_cache.py \
   --inner llm
 ```
 
-`--inner rule` runs offline and needs no API key. `--inner llm` supports the
+`--analysis-version` is required so a changed model, prompt, or policy cannot
+silently reuse an old cache entry. `--inner rule` runs offline and needs no API
+key. `--inner llm` supports the
 shared cassette flags from `scripts/harness_llm_cli.py`. The cache evaluation
 runs a baseline, warmup, and evaluation pass, so a cassette with one response
 per prompt can be exhausted. Use live calls or a cassette that contains repeated
@@ -228,7 +230,10 @@ exist while still exercising non-complaint posts.
   fallback explicitly enabled.
 - Semantic thresholds are not calibrated against a large real near-duplicate
   set.
-- Postgres integration is marked `integration` and is not part of core CI.
+- Postgres integration is marked `integration` and is not part of core CI. It
+  was run locally against compose: the round-trip test and the HNSW planner
+  check passed, and a `--inner rule` smoke run produced 3 exact hits with zero
+  false reuse.
 - Cache entries are treated as immutable during lookup. Re-recording the same
   cache key upserts a fresh analysis; stale entries are invalidated by version.
 - The cache does not replace deterministic location or source-intent guards.
