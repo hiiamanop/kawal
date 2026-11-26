@@ -80,6 +80,10 @@ NEWS_CUES = (
     "tewas terperosok",
     "satpol pp",
     "warga minta pemerintah",
+    "reporter:",
+    "editor:",
+    "protes warga",
+    "turun tangan",
 )
 PROBLEM_CUES = (
     "rusak",
