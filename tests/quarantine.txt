@@ -1,8 +1,7 @@
 # Research-lane quarantine.
 #
-# These are the remaining tests with a real content or model gap. Missing
-# prerequisites (Postgres, M3 artifacts, thesis artifacts) are now skipped by
-# the tests themselves instead of being quarantined here.
+# These are the remaining tests with a real content gap. Missing prerequisites
+# (Postgres, M3 artifacts, thesis artifacts) are skipped by the tests themselves.
 #
 # Remove an entry only after the underlying gap is fixed.
 
@@ -10,13 +9,3 @@
 # dataset requirement is twelve per category.
 tests/test_m3_data_export.py::test_exported_dataset_scale_and_family_diversity
 tests/test_m3_dataset.py::test_family_diversity_per_category_at_least_12
-
-# The independent holdout generator covers the six core categories, while the
-# test expects all twelve.
-tests/test_m3_independent_holdout.py::test_holdout_coverage_all_labels
-tests/test_m3_independent_holdout.py::test_m3_independent_holdout_pipeline
-
-# Base IndoBERT reaches similarity 0.758 on the legacy pair, below the 0.85/0.88
-# duplicate thresholds. A domain-adapted sentence encoder is still needed.
-tests/test_pipeline_semantic_cache.py::test_pipeline_semantic_deduplication_avoids_duplicate_tickets
-tests/test_semantic_cache.py::test_indobert_semantic_similarity_real_model

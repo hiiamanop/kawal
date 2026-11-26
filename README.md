@@ -12,8 +12,8 @@ not the current evaluation target.
 
 | Area | State |
 |---|---|
-| Core CI | `686 passed, 42 skipped, 85 deselected` |
-| Research/integration lane | Green with 6 explicit content/model gaps quarantined |
+| Core CI | `687 passed, 42 skipped, 85 deselected` |
+| Research/integration lane | Green with 2 explicit content gaps quarantined |
 | Harness X | M1 through M6 implemented |
 | WhatsApp pipeline | Experimental, still present, not the current focus |
 | Production readiness | Not production-ready |
@@ -70,8 +70,8 @@ fails, the full pipeline runs.
 The live 18-post evaluation produced 2 exact hits, 0 false reuse, and reduced LLM
 calls from 36 to 32. A duplicate stream that keeps the 15 non-complaints produced
 6 exact hits out of 24 posts and reduced LLM calls from 48 to 36. A five-scenario
-sweep with base IndoBERT found threshold 0.85 gives perfect precision and recall;
-the default 0.92 missed one paraphrase. See
+sweep with base IndoBERT using CLS pooling found thresholds 0.80 through 0.92
+give perfect precision and recall; 0.95 lost one paraphrase. See
 [docs/evaluations/2026-11-26-harness-x-m6-cache.md](docs/evaluations/2026-11-26-harness-x-m6-cache.md).
 
 ## Repository layout
@@ -230,15 +230,14 @@ Research and integration lane with the documented quarantine:
 bash scripts/research_ci.sh
 ```
 
-The full, unquarantined research lane currently has 6 known failures:
+The full, unquarantined research lane currently has 2 known failures:
 
 ```bash
 pytest -q -m "research or integration"
 ```
 
 The blockers are listed in [tests/quarantine.txt](tests/quarantine.txt). They
-cover extended-category family diversity, independent-holdout coverage, and the
-legacy semantic-cache model threshold. Missing Postgres, M3, and thesis artifacts
+cover extended-category family diversity. Missing Postgres, M3, and thesis artifacts
 now produce skips instead of failures.
 
 ## Legacy WhatsApp pipeline

@@ -23,7 +23,12 @@ def test_deterministic_embedder_identity() -> None:
 def test_indobert_missing_artifact_reports_fallback(tmp_path: Path) -> None:
     embedder = IndoBertEmbedder(model_path=tmp_path / "missing")
     assert embedder.is_fallback is True
-    assert embedder.model_id == "indobert-fallback-768"
+    assert embedder.model_id == "indobert-fallback-768-cls"
+
+
+def test_indobert_pooling_changes_identity(tmp_path: Path) -> None:
+    embedder = IndoBertEmbedder(model_path=tmp_path / "missing", pooling="mean")
+    assert embedder.model_id == "indobert-fallback-768-mean"
 
 
 def test_artifact_fingerprint_changes_with_weights(tmp_path: Path) -> None:

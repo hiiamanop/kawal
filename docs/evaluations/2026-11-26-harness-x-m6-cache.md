@@ -103,9 +103,9 @@ full pipeline and are not reused.
 - The live 18-post and duplicate-stream runs used exact matching with the
   deterministic fallback.
 - A separate five-scenario sweep with `indobenchmark/indobert-base-p1` found
-  threshold 0.85 gives precision 1.0 and recall 1.0; threshold 0.92 gives
-  precision 1.0 and recall 0.5. This is a small synthetic set and the model is
-  base IndoBERT, not the trained DAPT artifact.
+  threshold 0.92 gives precision 1.0 and recall 1.0 after CLS pooling. This is a
+  small synthetic set and the model is base IndoBERT, not the trained DAPT
+  artifact.
 - The Postgres/pgvector path was validated separately: the integration test,
   HNSW planner check, and a `--inner rule` smoke run passed. The LLM evaluation
   above used the in-memory store.

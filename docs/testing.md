@@ -18,7 +18,7 @@ for the `test` job.
 Last local result after M6:
 
 ```text
-686 passed, 42 skipped, 85 deselected
+687 passed, 42 skipped, 85 deselected
 ```
 
 ## Research and integration lane
@@ -32,7 +32,7 @@ blockers in [`tests/quarantine.txt`](../tests/quarantine.txt). It unsets the
 OpenRouter key because these tests must stay offline. Last local result:
 
 ```text
-71 passed, 8 skipped, 6 quarantined
+75 passed, 8 skipped, 2 quarantined
 ```
 
 The skips are missing prerequisites: PostgreSQL, generated M3 artifacts,
@@ -50,8 +50,6 @@ python -m pytest -q -m "research or integration"
 | Group | Tests | Blocker |
 |---|---:|---|
 | Extended category diversity | 2 | Six extended categories have 3 families; the requirement is 12 |
-| Independent holdout coverage | 2 | The holdout generator covers 6 core categories, not all 12 |
-| Legacy semantic cache | 2 | Base IndoBERT similarity is 0.758, below the 0.85/0.88 thresholds |
 
 These are content/model gaps, not infrastructure failures. Remove a line from
 `tests/quarantine.txt` only after the underlying gap is fixed and the test passes

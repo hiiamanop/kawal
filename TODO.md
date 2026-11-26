@@ -51,5 +51,6 @@
 - [x] M7: add source-type labels and document X expansion blocker <!-- id=49 priority=medium done=2026-11-26 created=2026-11-26 -->
 - [x] Research: reduce quarantine and add prerequisite skips <!-- id=50 priority=low done=2026-11-26 created=2026-11-26 -->
 - [ ] M7b: capture more real X posts when X search/tweets is healthy <!-- id=51 priority=medium created=2026-11-26 -->
-- [ ] M8: add nine families for six extended categories and holdout coverage <!-- id=52 priority=medium created=2026-11-26 -->
-- [ ] M8b: evaluate a domain-adapted sentence encoder for legacy semantic cache <!-- id=53 priority=medium created=2026-11-26 -->
+- [x] M8a: extend holdout coverage to all 12 categories <!-- id=52 priority=medium done=2026-11-26 created=2026-11-26 -->
+- [x] M8c: evaluate a domain-adapted sentence encoder for legacy semantic cache <!-- id=53 priority=medium done=2026-11-26 created=2026-11-26 -->
+- [ ] M8b: add nine curated families per extended category <!-- id=54 priority=medium created=2026-11-26 -->
