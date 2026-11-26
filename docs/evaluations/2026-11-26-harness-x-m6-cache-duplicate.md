@@ -19,7 +19,10 @@
 | False reuse | 0 |
 | False reuse rate | 0.000 |
 
-## Baseline vs cached
+## Baseline vs evaluation pass
+
+The baseline is a separate no-cache pass. Warmup cost is not included in
+the saved values below.
 
 | Metric | Baseline | Cached |
 |---|---:|---:|
