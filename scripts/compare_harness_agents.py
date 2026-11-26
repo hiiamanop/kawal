@@ -16,14 +16,14 @@ from services.harness.agents import (
     RuleTriageAgent,
     RuleVerifierAgent,
 )
-from services.harness.cassette import CassetteChatClient, CassetteError
+from scripts.harness_llm_cli import add_llm_arguments, build_chat_client
+from services.harness.cassette import CassetteError
 from services.harness.compare import HarnessComparisonRunner
 from services.harness.llm import (
     LLMArbiterAgent,
     LLMExtractionAgent,
     LLMTriageAgent,
     LLMVerifierAgent,
-    OpenRouterChatClient,
 )
 from services.harness.orchestrator import HarnessOrchestrator
 from services.harness.sources import ReplayXSource, SourceError
@@ -40,9 +40,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--max-cost-usd", type=float, default=0.05, help="Budget per case"
     )
-    parser.add_argument("--model", default=None, help="OpenRouter model id")
-    parser.add_argument("--input-price-per-million", type=float, default=0.0)
-    parser.add_argument("--output-price-per-million", type=float, default=0.0)
     parser.add_argument("--comparison-id", default=None)
     parser.add_argument(
         "--llm-extraction",
@@ -54,55 +51,8 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Use LLMArbiterAgent instead of the rule arbiter",
     )
-    parser.add_argument(
-        "--no-reasoning",
-        action="store_true",
-        help="Disable model reasoning (useful for reasoning models that emit no content)",
-    )
-    parser.add_argument(
-        "--cassette",
-        default=None,
-        help="Path to a cassette JSON file for recording or replay",
-    )
-    parser.add_argument(
-        "--replay-cassette",
-        action="store_true",
-        help="Replay --cassette without calling the live model",
-    )
-    parser.add_argument(
-        "--cassette-overwrite",
-        action="store_true",
-        help="Replace an existing cassette when recording",
-    )
+    add_llm_arguments(parser)
     return parser
-
-
-def _build_client(
-    args: argparse.Namespace,
-) -> CassetteChatClient | OpenRouterChatClient:
-    live = OpenRouterChatClient(
-        model_id=args.model,
-        input_price_per_million=args.input_price_per_million,
-        output_price_per_million=args.output_price_per_million,
-        reasoning_enabled=False if args.no_reasoning else None,
-    )
-    if not args.cassette:
-        return live
-    if args.replay_cassette:
-        return CassetteChatClient(
-            args.cassette,
-            mode="replay",
-            input_price_per_million=args.input_price_per_million,
-            output_price_per_million=args.output_price_per_million,
-        )
-    return CassetteChatClient(
-        args.cassette,
-        mode="record",
-        inner=live,
-        input_price_per_million=args.input_price_per_million,
-        output_price_per_million=args.output_price_per_million,
-        overwrite=args.cassette_overwrite,
-    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -131,7 +81,7 @@ def main(argv: list[str] | None = None) -> int:
         max_cost_usd=args.max_cost_usd,
     )
     try:
-        client = _build_client(args)
+        client = build_chat_client(args)
     except CassetteError as exc:
         print(f"Cassette error [{exc.code}]: {exc}", file=sys.stderr)
         return 2
