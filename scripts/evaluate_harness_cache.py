@@ -49,7 +49,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--out", default="runs/m6", help="Output directory")
     parser.add_argument("--limit", type=int, default=50, help="Maximum posts")
-    parser.add_argument("--analysis-version", default="harness-x-m6-v1")
+    parser.add_argument("--analysis-version", required=True)
     parser.add_argument(
         "--cache-store", choices=("memory", "postgres"), default="memory"
     )
