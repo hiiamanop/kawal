@@ -30,8 +30,18 @@ from services.dataset.splits import (
 PROVENANCE_SYNTHETIC_INDEPENDENT = "synthetic_independent"
 
 CATEGORIES: list[Category] = [
-    Category.ROAD, Category.DRAINAGE_FLOOD, Category.WASTE,
-    Category.CLEAN_WATER, Category.CIVIL_ADMIN, Category.HEALTH_SERVICE,
+    Category.ROAD,
+    Category.DRAINAGE_FLOOD,
+    Category.WASTE,
+    Category.CLEAN_WATER,
+    Category.CIVIL_ADMIN,
+    Category.HEALTH_SERVICE,
+    Category.PUBLIC_ORDER,
+    Category.TRANSPORTATION,
+    Category.FIRE_RESCUE,
+    Category.SOCIAL_AFFAIRS,
+    Category.EDUCATION,
+    Category.PARKS_HOUSING,
 ]
 INTENTS = ["COMPLAINT", "INQUIRY", "FEEDBACK"]
 RISKS = ["LOW", "MEDIUM", "HIGH", "URGENT"]
@@ -39,9 +49,12 @@ COMPLETENESS_LEVELS = ["SUFFICIENT", "INCOMPLETE", "AMBIGUOUS"]
 
 INDEPENDENT_OBJECTS: dict[Category, list[str]] = {
     Category.ROAD: [
-        "aspal ambles cukup dalam", "trotoar patah membahayakan pejalan kaki",
-        "lampu jalan mati total", "jalan berlubang besar yang mengganggu arus",
-        "bahu jalan amblas parah di tikungan tajam", "pembatas jalan roboh miring ke jalur",
+        "aspal ambles cukup dalam",
+        "trotoar patah membahayakan pejalan kaki",
+        "lampu jalan mati total",
+        "jalan berlubang besar yang mengganggu arus",
+        "bahu jalan amblas parah di tikungan tajam",
+        "pembatas jalan roboh miring ke jalur",
     ],
     Category.DRAINAGE_FLOOD: [
         "gorong-gorong air tersumbat endapan lumpur pekat",
@@ -83,45 +96,133 @@ INDEPENDENT_OBJECTS: dict[Category, list[str]] = {
         "jadwal pemeriksaan dokter jaga puskesmas sering tertunda",
         "layanan rujukan medis puskesmas ke rumah sakit dipersulit",
     ],
+    Category.PUBLIC_ORDER: [
+        "juru parkir nakal menutup jalur pejalan kaki",
+        "musik hiburan malam mengganggu tidur warga",
+        "keributan massa memicu ketegangan di pasar",
+        "pondasi bangunan liar menutup aliran kali",
+        "lapak pedagang memakan badan trotoar",
+        "balapan motor liar membahayakan pengendara lain",
+    ],
+    Category.TRANSPORTATION: [
+        "mikrolet berhenti lama menutup lajur jalan",
+        "papan rambu tertutup dedaunan rimbun",
+        "atap halte roboh menimpa penunggu",
+        "bus menaikkan penumpang di tengah jalan",
+        "pesepeda terdesak kendaraan bermotor",
+        "cat zebra cross sudah pudar",
+    ],
+    Category.FIRE_RESCUE: [
+        "rumah warga dilalap api akibat arus pendek",
+        "kabel listrik memercikkan bunga api",
+        "koloni lebah bersengat membuat warga takut",
+        "pohon tumbang menutup akses jalan",
+        "gas bocor dari tabung dapur",
+        "panel listrik mengeluarkan percikan api",
+    ],
+    Category.SOCIAL_AFFAIRS: [
+        "dana bantuan sosial tertahan belum dicairkan",
+        "warga rentan terlantar tanpa pendampingan",
+        "lansia sakit tanpa keluarga butuh bantuan",
+        "penerima bansos tidak sesuai data",
+        "anak putus sekolah terlantar di jalan",
+        "beras bantuan belum sampai ke penerima",
+    ],
+    Category.EDUCATION: [
+        "ruang kelas rusak berat atap bocor",
+        "biaya sekolah liar membebani orang tua",
+        "guru kelas kurang sejak awal semester",
+        "laboratorium sekolah tidak layak pakai",
+        "buku pelajaran belum dibagikan",
+        "plafon kelas runtuh menimpa meja",
+    ],
+    Category.PARKS_HOUSING: [
+        "lampu taman mati sejak sepekan",
+        "ayunan dan perosotan rusak membahayakan",
+        "bangunan liar menutup bantaran",
+        "permukiman kumuh tanpa drainase",
+        "pohon taman keropos rawan tumbang",
+        "kursi taman retak dan berkarat",
+    ],
 }
 
 STREETS = [
-    "Jalan Mahoni Rindang", "Jalan Meranti Teduh", "Jalan Gaharu Sentosa",
-    "Jalan Ebony Harmoni", "Jalan Trembesi Lestari", "Jalan Damar Sejuk",
-    "Jalan Rasamala Wibawa", "Jalan Akasia Teduh", "Jalan Kemuning Rindang",
+    "Jalan Mahoni Rindang",
+    "Jalan Meranti Teduh",
+    "Jalan Gaharu Sentosa",
+    "Jalan Ebony Harmoni",
+    "Jalan Trembesi Lestari",
+    "Jalan Damar Sejuk",
+    "Jalan Rasamala Wibawa",
+    "Jalan Akasia Teduh",
+    "Jalan Kemuning Rindang",
     "Jalan Cendana Sentosa",
 ]
 RT_RW = ["RT 01 RW 02", "RT 03 RW 04", "RT 05 RW 06", "RT 07 RW 08", "RT 09 RW 10"]
 KELURAHANS = [
-    "Kelurahan Sukadamai", "Kelurahan Harapanjaya", "Kelurahan Sambiroto",
-    "Kelurahan Tegalmulyo", "Kelurahan Sidomukti", "Kelurahan Sumberagung",
-    "Kelurahan Candisari", "Kelurahan Kertomulyo", "Kelurahan Sindumartani",
+    "Kelurahan Sukadamai",
+    "Kelurahan Harapanjaya",
+    "Kelurahan Sambiroto",
+    "Kelurahan Tegalmulyo",
+    "Kelurahan Sidomukti",
+    "Kelurahan Sumberagung",
+    "Kelurahan Candisari",
+    "Kelurahan Kertomulyo",
+    "Kelurahan Sindumartani",
     "Kelurahan Widyasari",
 ]
 KECAMATANS = [
-    "Kecamatan Argomulyo", "Kecamatan Tingkir", "Kecamatan Sidorejo",
-    "Kecamatan Banyudono", "Kecamatan Sawit", "Kecamatan Teras",
-    "Kecamatan Mojosongo", "Kecamatan Delanggu", "Kecamatan Ceper",
+    "Kecamatan Argomulyo",
+    "Kecamatan Tingkir",
+    "Kecamatan Sidorejo",
+    "Kecamatan Banyudono",
+    "Kecamatan Sawit",
+    "Kecamatan Teras",
+    "Kecamatan Mojosongo",
+    "Kecamatan Delanggu",
+    "Kecamatan Ceper",
     "Kecamatan Bayat",
 ]
 CITIES = [
-    "Kota Salatiga", "Kota Magelang", "Kota Bukittinggi", "Kota Singkawang",
-    "Kota Palopo", "Kabupaten Purworejo", "Kabupaten Boyolali",
-    "Kabupaten Wonosobo", "Kabupaten Sragen", "Kabupaten Klaten",
+    "Kota Salatiga",
+    "Kota Magelang",
+    "Kota Bukittinggi",
+    "Kota Singkawang",
+    "Kota Palopo",
+    "Kabupaten Purworejo",
+    "Kabupaten Boyolali",
+    "Kabupaten Wonosobo",
+    "Kabupaten Sragen",
+    "Kabupaten Klaten",
 ]
 LANDMARKS = [
-    "dekat gardu pos ronda", "seberang balai warga", "samping gapura masuk",
-    "depan lapangan olahraga", "dekat ruko perbelanjaan", "seberang pos keamanan",
-    "samping taman bermain", "depan gerbang perumahan",
+    "dekat gardu pos ronda",
+    "seberang balai warga",
+    "samping gapura masuk",
+    "depan lapangan olahraga",
+    "dekat ruko perbelanjaan",
+    "seberang pos keamanan",
+    "samping taman bermain",
+    "depan gerbang perumahan",
 ]
 TIMES = [
-    "sejak kemarin pagi", "pagi ini sekitar jam 08:00", "saat ini kondisinya mendesak",
-    "sudah 3 hari ini", "kemarin sore sekitar jam 16:00", "siang ini pada pukul 13:00",
-    "tadi pagi sekitar jam 07:00", "hari ini dari pagi", "sejak 2 hari yang lalu",
+    "sejak kemarin pagi",
+    "pagi ini sekitar jam 08:00",
+    "saat ini kondisinya mendesak",
+    "sudah 3 hari ini",
+    "kemarin sore sekitar jam 16:00",
+    "siang ini pada pukul 13:00",
+    "tadi pagi sekitar jam 07:00",
+    "hari ini dari pagi",
+    "sejak 2 hari yang lalu",
 ]
 GREETINGS = [
-    "Selamat pagi", "Selamat siang", "Selamat sore",
-    "Halo admin", "Mohon perhatian", "Lapor petugas",
+    "Selamat pagi",
+    "Selamat siang",
+    "Selamat sore",
+    "Halo admin",
+    "Mohon perhatian",
+    "Lapor petugas",
 ]
 INTENT_TEMPLATES: dict[str, list[str]] = {
     "COMPLAINT": [
@@ -197,14 +298,20 @@ def compute_file_sha256(path: Path | str) -> str:
     return hasher.hexdigest().lower()
 
 
-def audit_source_contamination(trajectories: list[ComplaintTrajectory], source_dir: Path) -> None:
+def audit_source_contamination(
+    trajectories: list[ComplaintTrajectory], source_dir: Path
+) -> None:
     if not source_dir.is_dir():
         return
     source_files = [
-        source_dir / "trajectories.jsonl", source_dir / "train.jsonl",
-        source_dir / "dev.jsonl", source_dir / "test.jsonl",
+        source_dir / "trajectories.jsonl",
+        source_dir / "train.jsonl",
+        source_dir / "dev.jsonl",
+        source_dir / "test.jsonl",
     ]
-    source_files = [f for f in source_files if f.is_file()] or list(source_dir.glob("*.jsonl"))
+    source_files = [f for f in source_files if f.is_file()] or list(
+        source_dir.glob("*.jsonl")
+    )
     if not source_files:
         return
 
@@ -239,7 +346,9 @@ def audit_source_contamination(trajectories: list[ComplaintTrajectory], source_d
                                 norm = re.sub(r"\s+", " ", text_raw.strip().lower())
                                 if len(norm) > 15:
                                     source_normalized_texts.add(norm)
-                                tokens = re.findall(r"[a-zA-Z0-9_\-]+", text_raw.lower())
+                                tokens = re.findall(
+                                    r"[a-zA-Z0-9_\-]+", text_raw.lower()
+                                )
                                 for size in (3, 4, 5):
                                     for ng in _extract_ngrams(tokens, size):
                                         if not _is_common_language_ngram(ng):
@@ -248,13 +357,19 @@ def audit_source_contamination(trajectories: list[ComplaintTrajectory], source_d
     holdout_scenarios = {t.scenario_id for t in trajectories}
     holdout_families = {t.family_id for t in trajectories}
     if holdout_scenarios & source_scenarios:
-        raise ValueError(f"Scenario ID contamination: {holdout_scenarios & source_scenarios}")
+        raise ValueError(
+            f"Scenario ID contamination: {holdout_scenarios & source_scenarios}"
+        )
     if holdout_families & source_families:
-        raise ValueError(f"Family ID contamination: {holdout_families & source_families}")
+        raise ValueError(
+            f"Family ID contamination: {holdout_families & source_families}"
+        )
 
     holdout_normalized_texts = {
         re.sub(r"\s+", " ", b.text.strip().lower())
-        for t in trajectories for turn in t.turns for b in turn.bubbles
+        for t in trajectories
+        for turn in t.turns
+        for b in turn.bubbles
         if len(b.text.strip()) > 15
     }
     overlap = holdout_normalized_texts & source_normalized_texts
@@ -267,7 +382,9 @@ def audit_source_contamination(trajectories: list[ComplaintTrajectory], source_d
                 b_lower = b.text.lower()
                 for sid in list(source_scenarios)[:100]:
                     if sid.lower() in b_lower:
-                        raise ValueError(f"Source scenario_id '{sid}' leaked into holdout bubble text")
+                        raise ValueError(
+                            f"Source scenario_id '{sid}' leaked into holdout bubble text"
+                        )
 
     holdout_ngrams: set[tuple[str, ...]] = set()
     for t in trajectories:
@@ -299,7 +416,9 @@ def build_trajectory(idx: int, rng: random.Random) -> ComplaintTrajectory:
     risk = RISKS[idx % len(RISKS)]
     completeness = COMPLETENESS_LEVELS[idx % len(COMPLETENESS_LEVELS)]
 
-    obj = INDEPENDENT_OBJECTS[category][(idx // len(CATEGORIES)) % len(INDEPENDENT_OBJECTS[category])]
+    obj = INDEPENDENT_OBJECTS[category][
+        (idx // len(CATEGORIES)) % len(INDEPENDENT_OBJECTS[category])
+    ]
     street = STREETS[idx % len(STREETS)]
     rtrw = RT_RW[idx % len(RT_RW)]
     kel = KELURAHANS[idx % len(KELURAHANS)]
@@ -309,7 +428,9 @@ def build_trajectory(idx: int, rng: random.Random) -> ComplaintTrajectory:
     time_str = TIMES[idx % len(TIMES)]
     greeting = GREETINGS[idx % len(GREETINGS)]
     action_phrase = INTENT_TEMPLATES[intent][idx % len(INTENT_TEMPLATES[intent])]
-    risk_evidence_raw = INDEPENDENT_RISK_EVIDENCE[risk][(idx // len(RISKS)) % len(INDEPENDENT_RISK_EVIDENCE[risk])]
+    risk_evidence_raw = INDEPENDENT_RISK_EVIDENCE[risk][
+        (idx // len(RISKS)) % len(INDEPENDENT_RISK_EVIDENCE[risk])
+    ]
     risk_evidence = risk_evidence_raw[0].upper() + risk_evidence_raw[1:]
 
     scenario_id = f"indep_holdout_{idx + 1:04d}"
@@ -320,30 +441,56 @@ def build_trajectory(idx: int, rng: random.Random) -> ComplaintTrajectory:
             f"{greeting}, {action_phrase} {obj} di {street}, {rtrw}, {kel}, {kec}, {city}, "
             f"kejadiannya {time_str}. {risk_evidence}."
         )
-        bubble2_text = (
-            f"Patokan lokasi persis {landmark} {street}. Mohon bantuan tindak lanjutnya, terima kasih."
-        )
+        bubble2_text = f"Patokan lokasi persis {landmark} {street}. Mohon bantuan tindak lanjutnya, terima kasih."
         turn1_action = TurnExpectedAction(
-            turn=1, allowed_actions=(DecisionMode.EXECUTE,), missing=(), strategy="DISPATCH",
+            turn=1,
+            allowed_actions=(DecisionMode.EXECUTE,),
+            missing=(),
+            strategy="DISPATCH",
         )
         turn1 = TrajectoryTurn(
             turn=1,
-            bubbles=(TrajectoryBubble(source_message_id=f"msg_{scenario_id}_t1_b1", text=bubble1_text, offset_seconds=0),),
-            observable_facts=(f"Jalan {street}", f"Kelurahan {kel}", f"Kecamatan {kec}"),
+            bubbles=(
+                TrajectoryBubble(
+                    source_message_id=f"msg_{scenario_id}_t1_b1",
+                    text=bubble1_text,
+                    offset_seconds=0,
+                ),
+            ),
+            observable_facts=(
+                f"Jalan {street}",
+                f"Kelurahan {kel}",
+                f"Kecamatan {kec}",
+            ),
             hidden_facts=(),
             expected_action=turn1_action,
         )
         turn2_action = TurnExpectedAction(
-            turn=2, allowed_actions=(DecisionMode.EXECUTE,), missing=(), strategy="CONFIRM",
+            turn=2,
+            allowed_actions=(DecisionMode.EXECUTE,),
+            missing=(),
+            strategy="CONFIRM",
         )
         turn2 = TrajectoryTurn(
             turn=2,
-            bubbles=(TrajectoryBubble(source_message_id=f"msg_{scenario_id}_t2_b1", text=bubble2_text, offset_seconds=30),),
+            bubbles=(
+                TrajectoryBubble(
+                    source_message_id=f"msg_{scenario_id}_t2_b1",
+                    text=bubble2_text,
+                    offset_seconds=30,
+                ),
+            ),
             observable_facts=(f"Jalan {street}",),
             hidden_facts=(),
             expected_action=turn2_action,
         )
-        observable_facts = (obj, f"Jalan {street}", f"Kelurahan {kel}", f"Kecamatan {kec}", city)
+        observable_facts = (
+            obj,
+            f"Jalan {street}",
+            f"Kelurahan {kel}",
+            f"Kecamatan {kec}",
+            city,
+        )
         hidden_facts = ()
 
     elif completeness == "INCOMPLETE":
@@ -351,27 +498,57 @@ def build_trajectory(idx: int, rng: random.Random) -> ComplaintTrajectory:
             f"{greeting}, {action_phrase} {obj}, "
             f"kejadiannya {time_str}. {risk_evidence}."
         )
-        incomp_tmpl = INCOMPLETE_LOCATION_TEMPLATES[(idx // len(COMPLETENESS_LEVELS)) % len(INCOMPLETE_LOCATION_TEMPLATES)]
+        incomp_tmpl = INCOMPLETE_LOCATION_TEMPLATES[
+            (idx // len(COMPLETENESS_LEVELS)) % len(INCOMPLETE_LOCATION_TEMPLATES)
+        ]
         bubble2_text = incomp_tmpl.format(landmark=landmark)
 
         turn1_action = TurnExpectedAction(
-            turn=1, allowed_actions=(DecisionMode.REQUEST_CLARIFICATION,), missing=("jurisdiction",), strategy="REQUEST_LOCATION",
+            turn=1,
+            allowed_actions=(DecisionMode.REQUEST_CLARIFICATION,),
+            missing=("jurisdiction",),
+            strategy="REQUEST_LOCATION",
         )
         turn1 = TrajectoryTurn(
             turn=1,
-            bubbles=(TrajectoryBubble(source_message_id=f"msg_{scenario_id}_t1_b1", text=bubble1_text, offset_seconds=0),),
+            bubbles=(
+                TrajectoryBubble(
+                    source_message_id=f"msg_{scenario_id}_t1_b1",
+                    text=bubble1_text,
+                    offset_seconds=0,
+                ),
+            ),
             observable_facts=(obj,),
-            hidden_facts=(f"Jalan {street}", f"Kelurahan {kel}", f"Kecamatan {kec}", city),
+            hidden_facts=(
+                f"Jalan {street}",
+                f"Kelurahan {kel}",
+                f"Kecamatan {kec}",
+                city,
+            ),
             expected_action=turn1_action,
         )
         turn2_action = TurnExpectedAction(
-            turn=2, allowed_actions=(DecisionMode.REQUEST_CLARIFICATION,), missing=("jurisdiction",), strategy="REQUEST_LOCATION",
+            turn=2,
+            allowed_actions=(DecisionMode.REQUEST_CLARIFICATION,),
+            missing=("jurisdiction",),
+            strategy="REQUEST_LOCATION",
         )
         turn2 = TrajectoryTurn(
             turn=2,
-            bubbles=(TrajectoryBubble(source_message_id=f"msg_{scenario_id}_t2_b1", text=bubble2_text, offset_seconds=30),),
+            bubbles=(
+                TrajectoryBubble(
+                    source_message_id=f"msg_{scenario_id}_t2_b1",
+                    text=bubble2_text,
+                    offset_seconds=30,
+                ),
+            ),
             observable_facts=(landmark,),
-            hidden_facts=(f"Jalan {street}", f"Kelurahan {kel}", f"Kecamatan {kec}", city),
+            hidden_facts=(
+                f"Jalan {street}",
+                f"Kelurahan {kel}",
+                f"Kecamatan {kec}",
+                city,
+            ),
             expected_action=turn2_action,
         )
         observable_facts = (obj, landmark)
@@ -384,30 +561,54 @@ def build_trajectory(idx: int, rng: random.Random) -> ComplaintTrajectory:
             f"{greeting}, {action_phrase} {obj} di sekitar {street}, "
             f"kejadiannya {time_str}. {risk_evidence}."
         )
-        ambig_tmpl = AMBIGUOUS_LOCATION_TEMPLATES[(idx // len(COMPLETENESS_LEVELS)) % len(AMBIGUOUS_LOCATION_TEMPLATES)]
+        ambig_tmpl = AMBIGUOUS_LOCATION_TEMPLATES[
+            (idx // len(COMPLETENESS_LEVELS)) % len(AMBIGUOUS_LOCATION_TEMPLATES)
+        ]
         bubble2_text = ambig_tmpl.format(landmark_a=landmark_a, landmark_b=landmark_b)
 
         turn1_action = TurnExpectedAction(
-            turn=1, allowed_actions=(DecisionMode.REQUEST_CLARIFICATION,), missing=("location_ambiguity",), strategy="REQUEST_CLARIFICATION",
+            turn=1,
+            allowed_actions=(DecisionMode.REQUEST_CLARIFICATION,),
+            missing=("location_ambiguity",),
+            strategy="REQUEST_CLARIFICATION",
         )
         turn1 = TrajectoryTurn(
             turn=1,
-            bubbles=(TrajectoryBubble(source_message_id=f"msg_{scenario_id}_t1_b1", text=bubble1_text, offset_seconds=0),),
+            bubbles=(
+                TrajectoryBubble(
+                    source_message_id=f"msg_{scenario_id}_t1_b1",
+                    text=bubble1_text,
+                    offset_seconds=0,
+                ),
+            ),
             observable_facts=(f"Jalan {street}",),
             hidden_facts=(),
             expected_action=turn1_action,
         )
         turn2_action = TurnExpectedAction(
-            turn=2, allowed_actions=(DecisionMode.REQUEST_CLARIFICATION,), missing=("location_ambiguity",), strategy="REQUEST_CLARIFICATION",
+            turn=2,
+            allowed_actions=(DecisionMode.REQUEST_CLARIFICATION,),
+            missing=("location_ambiguity",),
+            strategy="REQUEST_CLARIFICATION",
         )
         turn2 = TrajectoryTurn(
             turn=2,
-            bubbles=(TrajectoryBubble(source_message_id=f"msg_{scenario_id}_t2_b1", text=bubble2_text, offset_seconds=30),),
+            bubbles=(
+                TrajectoryBubble(
+                    source_message_id=f"msg_{scenario_id}_t2_b1",
+                    text=bubble2_text,
+                    offset_seconds=30,
+                ),
+            ),
             observable_facts=(f"antara {landmark_a} atau {landmark_b}",),
             hidden_facts=(),
             expected_action=turn2_action,
         )
-        observable_facts = (obj, f"Jalan {street}", f"antara {landmark_a} atau {landmark_b}")
+        observable_facts = (
+            obj,
+            f"Jalan {street}",
+            f"antara {landmark_a} atau {landmark_b}",
+        )
         hidden_facts = ()
 
     world_truth = {
@@ -480,7 +681,9 @@ def generate_independent_holdout(
             "categories": {cat.value: count // len(CATEGORIES) for cat in CATEGORIES},
             "intents": {intent: count // len(INTENTS) for intent in INTENTS},
             "risks": {risk: count // len(RISKS) for risk in RISKS},
-            "completeness": {comp: count // len(COMPLETENESS_LEVELS) for comp in COMPLETENESS_LEVELS},
+            "completeness": {
+                comp: count // len(COMPLETENESS_LEVELS) for comp in COMPLETENESS_LEVELS
+            },
         },
     }
     meta_file = output_path / "metadata.jsonl"
@@ -563,11 +766,30 @@ run = generate_independent_holdout
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Generate independent held-out M3 evaluation dataset.")
-    parser.add_argument("--output-dir", type=Path, default=Path("artifacts/m3_independent_holdout"), help="Directory to write holdout dataset and manifest")
-    parser.add_argument("--source-dir", type=Path, default=Path("artifacts/m3_synthetic"), help="Source training artifacts directory for anti-contamination audit")
-    parser.add_argument("--seed", type=int, default=9001, help="Deterministic pseudo-random seed")
-    parser.add_argument("--count", type=int, default=300, help="Number of holdout trajectories to generate")
+    parser = argparse.ArgumentParser(
+        description="Generate independent held-out M3 evaluation dataset."
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("artifacts/m3_independent_holdout"),
+        help="Directory to write holdout dataset and manifest",
+    )
+    parser.add_argument(
+        "--source-dir",
+        type=Path,
+        default=Path("artifacts/m3_synthetic"),
+        help="Source training artifacts directory for anti-contamination audit",
+    )
+    parser.add_argument(
+        "--seed", type=int, default=9001, help="Deterministic pseudo-random seed"
+    )
+    parser.add_argument(
+        "--count",
+        type=int,
+        default=300,
+        help="Number of holdout trajectories to generate",
+    )
     return parser
 
 
