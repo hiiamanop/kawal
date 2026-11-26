@@ -492,7 +492,7 @@ Expected: FAIL because the router does not exist.
 
 - [ ] **Step 4: Implement location helpers and guards**
 
-Use the generic-token list from the spec. Require exact normalized equality, two significant token overlaps, or one distinctive token of at least five characters. Never count `stasiun`, `terminal`, `pasar`, `kecamatan`, `kelurahan`, `kota`, or `kabupaten` as distinctive.
+Use the generic-token list from the spec. Require exact normalized equality, two significant token overlaps, or one distinctive token of at least four characters. Never count `stasiun`, `terminal`, `pasar`, `kecamatan`, `kelurahan`, `kota`, or `kabupaten` as distinctive.
 
 - [ ] **Step 5: Implement the runner**
 

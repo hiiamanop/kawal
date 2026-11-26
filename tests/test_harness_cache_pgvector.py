@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 import json
 from unittest.mock import MagicMock
 
+import pytest
+
 from contracts.harness import (
     ExtractionOutput,
     TriageOutput,
@@ -14,6 +16,7 @@ from services.harness.cache import (
     CachedAnalysis,
     CacheEntry,
     CacheQuery,
+    HarnessCacheStoreError,
     compute_cache_key,
     compute_text_hash,
 )
@@ -172,6 +175,10 @@ def test_pgvector_errors_fail_closed() -> None:
     store = PgVectorHarnessCacheStore(failing_connection)
     assert store.find_exact("harness-x", "v1", "model", "a" * 64) is None
     assert store.find_similar(_query()) == []
-    store.save(_entry())
+    with pytest.raises(HarnessCacheStoreError) as write_error:
+        store.save(_entry())
+    assert write_error.value.code == "CACHE_STORE_WRITE_FAILED"
     store.increment_hit("cache-key")
-    assert store.reset("harness-x", "v1") == 0
+    with pytest.raises(HarnessCacheStoreError) as reset_error:
+        store.reset("harness-x", "v1")
+    assert reset_error.value.code == "CACHE_STORE_RESET_FAILED"

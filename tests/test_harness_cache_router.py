@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
 
@@ -26,8 +27,13 @@ from services.harness.cache import (
 )
 from services.harness.cache_router import CacheFirstRunner, locations_overlap
 from services.harness.cache_store import InMemoryHarnessCacheStore
+from services.harness.metrics import load_labels
 from services.harness.orchestrator import HarnessOrchestrator
+from services.harness.sources import ReplayXSource
 from services.intelligence.embedder import DeterministicFallbackEmbedder
+
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 TEXT = "Min, jalan di Jl. Kopo Bandung rusak parah, ada lubang besar. Tolong segera diperbaiki."
@@ -156,6 +162,7 @@ def test_generic_place_tokens_do_not_overlap() -> None:
 def test_street_prefixes_are_normalized() -> None:
     assert locations_overlap("Jl. Merdeka", ["jalan merdeka"]) is True
     assert locations_overlap("Terusan Buah Batu", ["buah batu"]) is True
+    assert locations_overlap("Kopo", ["kopo sayati"]) is True
 
 
 def test_exact_cache_hit_skips_inner_orchestrator() -> None:
@@ -192,6 +199,26 @@ def test_location_mismatch_falls_back() -> None:
     assert inner.called is True
     assert run.cache is not None
     assert run.cache.reused is False
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Dilansir, Min, di Jl. Kopo rusak parah, tolong segera diperbaiki.",
+        "Menurut saya, Min, di Jl. Kopo rusak parah, tolong segera diperbaiki.",
+        "Min, ada yang tahu jalan di Jl. Kopo rusak parah? Tolong info.",
+        "Pengumuman: Min, di Jl. Kopo rusak parah, tolong segera diperbaiki.",
+    ],
+)
+def test_non_citizen_cues_block_reuse_even_with_complaint_cues(text: str) -> None:
+    cache = _cache()
+    _seed(cache)
+    inner = RecordingInner()
+    run = _runner(inner, cache).run(_post(text))
+    assert inner.called is True
+    assert run.cache is not None
+    assert run.cache.reused is False
+    assert "CACHE_NON_ACTIONABLE_SOURCE" in run.cache.reason_codes
 
 
 def test_source_intent_mismatch_falls_back() -> None:
@@ -263,6 +290,46 @@ def test_inner_accepted_run_is_recorded() -> None:
     assert run.cache is not None
     assert run.cache.recorded is True
     assert cache.store.count == 1
+
+
+def test_non_complaint_fixtures_are_never_reused() -> None:
+    cache = _cache()
+    _seed(cache)
+    labels = load_labels(REPO_ROOT / "fixtures" / "x_labels.json")
+    posts = ReplayXSource(REPO_ROOT / "fixtures" / "x_posts").fetch(limit=100)
+    non_complaints = [
+        post
+        for post in posts
+        if labels.labels.get(post.post_id) is not None
+        and not labels.labels[post.post_id].is_complaint
+    ]
+    assert len(non_complaints) == 13
+    runner = _runner(RecordingInner(status="REJECTED"), cache)
+    for post in non_complaints:
+        run = runner.run(post)
+        assert run.cache is not None
+        assert run.cache.reused is False, post.post_id
+        assert run.status != "COMPLETED", post.post_id
+
+
+def test_inner_accepted_records_rule_location_not_inner_location() -> None:
+    cache = _cache()
+    inner_case = _case()
+    inner_case = inner_case.model_copy(
+        update={
+            "extraction": inner_case.extraction.model_copy(
+                update={"location": "Dago", "evidence_spans": ("Dago",)}
+            )
+        }
+    )
+    inner = RecordingInner(case=inner_case)
+    run = _runner(inner, cache).run(_post())
+    assert run.cache is not None
+    assert run.cache.recorded is True
+    entries = list(cache.store._entries.values())  # type: ignore[attr-defined]
+    assert len(entries) == 1
+    assert "kopo" in entries[0].location_entities
+    assert "Dago" not in entries[0].evidence_spans
 
 
 def test_inner_rejected_run_is_not_recorded() -> None:

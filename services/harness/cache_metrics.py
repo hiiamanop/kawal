@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pydantic import BaseModel, ConfigDict, Field
 
 from contracts.harness import HarnessRun
+from services.harness.cache import compute_text_hash
 from services.harness.metrics import LabelSet
 
 
@@ -93,20 +94,21 @@ def score_cache_evaluation(
     eval_runs: list[HarnessRun],
     labels: LabelSet,
     *,
-    baseline_runs: list[HarnessRun] | None = None,
+    baseline_runs: list[HarnessRun],
     namespace: str = "",
     analysis_version: str = "",
     threshold: float = 0.92,
 ) -> CacheEvaluationReport:
-    recorded_post_ids = {
-        run.post.post_id
+    recorded_text_hashes = {
+        compute_text_hash(run.post.text)
         for run in warmup_runs
         if run.post is not None and run.cache is not None and run.cache.recorded
     }
     cache_eligible = sum(
         1
         for run in eval_runs
-        if run.post is not None and run.post.post_id in recorded_post_ids
+        if run.post is not None
+        and compute_text_hash(run.post.text) in recorded_text_hashes
     )
     exact_hits = 0
     semantic_hits = 0
@@ -137,9 +139,7 @@ def score_cache_evaluation(
             misses += 1
 
     total = len(eval_runs)
-    baseline = _score_mode(
-        baseline_runs if baseline_runs is not None else warmup_runs, labels
-    )
+    baseline = _score_mode(baseline_runs, labels)
     cached = _score_mode(eval_runs, labels)
     return CacheEvaluationReport(
         namespace=namespace,
@@ -152,9 +152,9 @@ def score_cache_evaluation(
         rejected_hits=rejected_hits,
         misses=misses,
         overall_hit_rate=(reused_count / total) if total else 0.0,
-        cache_eligible_hit_rate=(reused_count / cache_eligible)
-        if cache_eligible
-        else 0.0,
+        cache_eligible_hit_rate=min(
+            1.0, (reused_count / cache_eligible) if cache_eligible else 0.0
+        ),
         false_reuse=false_reuse,
         false_reuse_rate=(false_reuse / reused_count) if reused_count else 0.0,
         baseline=baseline,

@@ -179,7 +179,10 @@ The cache uses the existing `TextEmbedder` contract. Add `model_id` to each
 embedder so entries cannot be reused across embedding versions:
 
 - deterministic fallback: `deterministic-hash-768-v1`;
-- IndoBERT: the resolved artifact name, or `indobert-fallback-768`.
+- IndoBERT: the resolved artifact name plus a fingerprint of its config,
+  tokenizer, and weight metadata and edge bytes, or `indobert-fallback-768`.
+
+The cache rejects an embedder whose `model_id` is still `unknown`.
 
 Semantic reuse is disabled by default when the embedder is the deterministic
 fallback. Exact reuse still works. Tests may explicitly enable fallback semantic

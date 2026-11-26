@@ -13,7 +13,7 @@ from contracts.harness import (
     VerificationOutput,
 )
 from contracts.models import Category, RiskLevel
-from services.harness.cache import HarnessAnalysisCache
+from services.harness.cache import HarnessAnalysisCache, HarnessCacheStoreError
 from services.harness.cache_store import InMemoryHarnessCacheStore
 from services.intelligence.embedder import DeterministicFallbackEmbedder
 
@@ -185,6 +185,85 @@ def test_lookup_filters_analysis_version() -> None:
         allow_fallback_semantic=True,
     )
     assert other.lookup(TEXT, Category.ROAD, "CITIZEN_COMPLAINT").hit is False
+
+
+def test_record_rejects_full_body_in_evidence_spans() -> None:
+    cache = _cache()
+    case = _case()
+    case = case.model_copy(
+        update={
+            "extraction": case.extraction.model_copy(update={"evidence_spans": (TEXT,)})
+        }
+    )
+    result = cache.record(
+        case=case,
+        rule_triage=_rule_outputs().triage,
+        rule_verification=_rule_outputs().verification,
+        run_id="run-1",
+        location_entities=("Kopo",),
+    )
+    assert result.stored is False
+    assert "CACHE_FULL_TEXT_BLOCKED" in result.reason_codes
+
+
+def test_recorded_entry_does_not_contain_full_post_text() -> None:
+    cache = _cache()
+    case = _case()
+    result = cache.record(
+        case=case,
+        rule_triage=_rule_outputs().triage,
+        rule_verification=_rule_outputs().verification,
+        run_id="run-1",
+        location_entities=("Kopo",),
+    )
+    assert result.stored is True
+    assert result.entry is not None
+    assert TEXT not in result.entry.model_dump_json()
+
+
+class FailingStore(InMemoryHarnessCacheStore):
+    def save(self, entry) -> None:
+        raise HarnessCacheStoreError("CACHE_STORE_WRITE_FAILED", "database down")
+
+
+def test_record_reports_store_write_failure() -> None:
+    cache = HarnessAnalysisCache(
+        store=FailingStore(),
+        embedder=DeterministicFallbackEmbedder(dim=768),
+        namespace="harness-x",
+        analysis_version="v1",
+    )
+    result = cache.record(
+        case=_case(),
+        rule_triage=_rule_outputs().triage,
+        rule_verification=_rule_outputs().verification,
+        run_id="run-1",
+        location_entities=("Kopo",),
+    )
+    assert result.stored is False
+    assert "CACHE_STORE_WRITE_FAILED" in result.reason_codes
+
+
+def test_record_rejects_accepted_case_with_non_complaint_outputs() -> None:
+    cache = _cache()
+    case = _case()
+    case = case.model_copy(
+        update={
+            "triage": case.triage.model_copy(update={"is_complaint": False}),
+            "verification": case.verification.model_copy(
+                update={"is_complaint": False}
+            ),
+        }
+    )
+    result = cache.record(
+        case=case,
+        rule_triage=_rule_outputs().triage,
+        rule_verification=_rule_outputs().verification,
+        run_id="run-1",
+        location_entities=("Kopo",),
+    )
+    assert result.stored is False
+    assert "CACHE_NOT_COMPLAINT" in result.reason_codes
 
 
 def test_record_rejects_needs_review_case() -> None:

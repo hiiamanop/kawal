@@ -1,7 +1,10 @@
 # Harness X — M6 Semantic Cache Evaluation (2026-11-26)
 
 This evaluation measures cache-first routing on the 18 real X fixtures and on a
-synthetic duplicate stream.
+synthetic duplicate stream that keeps the original non-complaints.
+
+Cost savings compare the separate no-cache baseline with the evaluation pass.
+Warmup cost is not included in the saved values.
 
 ## Setup
 
@@ -25,11 +28,11 @@ the deterministic rule category. Two posts were therefore cacheable.
 |---|---:|---:|
 | Posts | 18 | 18 |
 | Accepted | 3 | 3 |
-| Decision accuracy | 0.944 | 0.944 |
+| Decision accuracy | 0.944 | 0.889 |
 | False accepts | 0 | 0 |
 | LLM calls | 36 | 32 |
-| Cost USD | 0.001066 | 0.000509 |
-| Latency ms | 45,890 | 39,047 |
+| Cost USD | 0.000536 | 0.000475 |
+| Latency ms | 47,090 | 47,780 |
 
 Cache-specific:
 
@@ -42,27 +45,29 @@ Cache-specific:
 | Cache-eligible hit rate | 1.000 |
 | False reuse | 0 |
 | LLM calls saved | 4 |
-| Cost saved USD | 0.000557 |
-| Latency saved ms | 6,843 |
+| Cost saved USD | 0.000061 |
+| Latency saved ms | -690 |
 
-The decisions are unchanged. The cache removed the LLM calls for the two
-cacheable posts; the other 16 posts still ran the full pipeline.
+The decision-accuracy difference comes from LLM nondeterminism on the 16
+non-cacheable posts between the independent baseline and cache passes. The two
+cache hits themselves had zero false reuse. The latency difference is noise at
+this cost scale.
 
 ## Duplicate stream
 
-The duplicate stream repeats accepted labeled posts three times. Two posts were
-cacheable, so six of the nine evaluation posts matched exactly. The third
-accepted post was not cacheable because of the rule/LLM category mismatch.
+The duplicate stream repeats the two cacheable accepted posts three times and
+keeps all 15 non-complaints. That gives 24 evaluation posts: 6 cacheable repeats
+and 18 non-cacheable posts.
 
 | Metric | Baseline (no cache) | Cache-first |
 |---|---:|---:|
-| Posts | 9 | 9 |
+| Posts | 24 | 24 |
 | Accepted | 9 | 9 |
-| Decision accuracy | 1.000 | 1.000 |
+| Decision accuracy | 0.958 | 0.958 |
 | False accepts | 0 | 0 |
-| LLM calls | 18 | 6 |
-| Cost USD | 0.000281 | 0.000067 |
-| Latency ms | 20,336 | 5,788 |
+| LLM calls | 48 | 36 |
+| Cost USD | 0.000738 | 0.000514 |
+| Latency ms | 73,819 | 58,759 |
 
 Cache-specific:
 
@@ -70,26 +75,28 @@ Cache-specific:
 |---|---:|
 | Cache-eligible posts | 6 |
 | Exact hits | 6 |
-| Overall hit rate | 0.667 |
+| Semantic hits | 0 |
+| Overall hit rate | 0.250 |
 | Cache-eligible hit rate | 1.000 |
 | False reuse | 0 |
 | LLM calls saved | 12 |
-| Cost saved USD | 0.000214 |
-| Latency saved ms | 14,548 |
+| Cost saved USD | 0.000224 |
+| Latency saved ms | 15,060 |
 
 The duplicate stream shows the intended savings: once an accepted case is
-cached, repeated exact reports cost zero LLM calls.
+cached, repeated exact reports cost zero LLM calls. Non-complaints still run the
+full pipeline and are not reused.
 
-## Interpretation
+## Safety checks
 
-- The record gate is conservative. One of three accepted LLM cases was not
-  cacheable because deterministic Triage/Verifier categories disagreed with the
-  accepted category.
-- No cache false reuse occurred in either run.
-- The 18-post dataset is not duplicate-heavy, so its overall hit rate is low by
-  design. The cache-eligible hit rate is 100%, and the duplicate stream shows
-  what happens when repeats exist.
-- The cache does not change the decision accuracy of the baseline.
+- The cache records only accepted, rule-consistent, PII-free cases.
+- A full post body in an evidence span or other free-text field is rejected.
+- News, opinion, question, and announcement cues block reuse even when the text
+  also contains citizen words such as `lapor` or `tolong`.
+- Current rule Triage, Extraction, and Verifier guards run on every hit.
+- Stale analysis versions and embedding model identities cannot reuse entries.
+- The 13 non-complaint X fixtures were seeded into the cache and replayed in the
+  test suite; none was reused.
 
 ## Limitations
 
@@ -97,8 +104,9 @@ cached, repeated exact reports cost zero LLM calls.
   disables it. Unit tests exercise the semantic path with the fallback
   explicitly enabled, but a real IndoBERT threshold calibration is still needed.
 - The Postgres/pgvector integration test is marked `integration` and was not run
-  in this evaluation unless a local migrated database was available.
+  in this evaluation.
 - The dataset is small and class-imbalanced.
+- Live LLM decisions can vary between independent passes on non-cacheable posts.
 - Evidence spans and embeddings are sensitive local data even though the full
   post body is not stored.
 

@@ -24,12 +24,12 @@
 | Metric | Baseline | Cached |
 |---|---:|---:|
 | Accepted | 3 | 3 |
-| Decision accuracy | 0.944 | 0.944 |
+| Decision accuracy | 0.944 | 0.889 |
 | False accepts | 0 | 0 |
 | LLM calls | 36 | 32 |
-| Cost USD | 0.001066 | 0.000509 |
-| Latency ms | 45889.7 | 39047.1 |
+| Cost USD | 0.000536 | 0.000475 |
+| Latency ms | 47089.5 | 47779.6 |
 
 - LLM calls saved: 4
-- Cost saved USD: 0.000557
-- Latency saved ms: 6842.6
+- Cost saved USD: 0.000061
+- Latency saved ms: -690.1

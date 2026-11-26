@@ -12,6 +12,7 @@ from services.harness.cache import (
     CacheCandidate,
     CacheEntry,
     CacheQuery,
+    HarnessCacheStoreError,
     _lookup_key,
 )
 
@@ -285,6 +286,9 @@ class PgVectorHarnessCacheStore:
                     conn.commit()
         except Exception as exc:
             logger.warning("PgVectorHarnessCacheStore save error: %s", exc)
+            raise HarnessCacheStoreError(
+                "CACHE_STORE_WRITE_FAILED", "Failed to write cache entry"
+            ) from exc
 
     def increment_hit(self, cache_key: str) -> None:
         try:
@@ -319,7 +323,9 @@ class PgVectorHarnessCacheStore:
                     return deleted
         except Exception as exc:
             logger.warning("PgVectorHarnessCacheStore reset error: %s", exc)
-            return 0
+            raise HarnessCacheStoreError(
+                "CACHE_STORE_RESET_FAILED", "Failed to reset cache namespace"
+            ) from exc
 
     @staticmethod
     def _row_to_entry(row: Sequence[Any]) -> CacheEntry:

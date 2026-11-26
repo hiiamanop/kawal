@@ -18,22 +18,22 @@
     "decision_correct": 17,
     "decision_accuracy": 0.9444444444444444,
     "false_accepts": 0,
-    "total_cost_usd": 0.001066474,
-    "total_latency_ms": 45889.70583999799,
+    "total_cost_usd": 0.0005364244999999999,
+    "total_latency_ms": 47089.502232000086,
     "llm_calls": 36
   },
   "cached": {
     "total": 18,
     "accepted": 3,
-    "decision_correct": 17,
-    "decision_accuracy": 0.9444444444444444,
+    "decision_correct": 16,
+    "decision_accuracy": 0.8888888888888888,
     "false_accepts": 0,
-    "total_cost_usd": 0.0005092005,
-    "total_latency_ms": 39047.075134002625,
+    "total_cost_usd": 0.00047512350000000005,
+    "total_latency_ms": 47779.58464200128,
     "llm_calls": 32
   },
   "llm_calls_saved": 4,
-  "cost_saved_usd": 0.0005572735,
-  "latency_saved_ms": 6842.6307059953615,
-  "created_at": "2026-11-26T00:29:34.705822Z"
+  "cost_saved_usd": 6.130099999999988e-05,
+  "latency_saved_ms": -690.082410001196,
+  "created_at": "2026-11-26T01:08:44.732989Z"
 }

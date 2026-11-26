@@ -3,7 +3,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scripts.evaluate_harness_cache import main
+from datetime import datetime, timezone
+
+from contracts.harness import SocialPost
+from scripts.evaluate_harness_cache import _build_stream, main
+from services.harness.metrics import FixtureLabel, LabelSet
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "x_posts"
@@ -68,3 +72,37 @@ def test_cache_cli_rule_two_passes(tmp_path: Path, capsys: object) -> None:
     assert report["baseline"]["total"] == 1
     assert report["cached"]["total"] == 1
     assert report["cache_eligible_hit_rate"] == 1.0
+
+
+def test_duplicate_stream_keeps_non_complaints() -> None:
+    accepted = SocialPost(
+        post_id="accepted",
+        platform="x",
+        text="Jalan rusak di Kopo",
+        collected_at=datetime(2026, 11, 26, tzinfo=timezone.utc),
+    )
+    non_complaint = SocialPost(
+        post_id="news",
+        platform="x",
+        text="Dilansir, jalan rusak di Kopo",
+        collected_at=datetime(2026, 11, 26, tzinfo=timezone.utc),
+    )
+    labels = LabelSet(
+        labels={
+            "accepted": FixtureLabel(
+                is_complaint=True,
+                location_quality="SPECIFIC",
+                acceptable_statuses=("COMPLETED",),
+            ),
+            "news": FixtureLabel(
+                is_complaint=False,
+                location_quality="SPECIFIC",
+                acceptable_statuses=("REJECTED",),
+            ),
+        }
+    )
+
+    stream = _build_stream([accepted, non_complaint], labels, repeat_accepted=3)
+    assert [post.post_id for post in stream].count("accepted") == 3
+    assert [post.post_id for post in stream].count("news") == 1
+    assert len(stream) == 4

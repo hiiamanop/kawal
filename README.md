@@ -12,7 +12,7 @@ not the current evaluation target.
 
 | Area | State |
 |---|---|
-| Core CI | `656 passed, 43 skipped, 84 deselected` |
+| Core CI | `672 passed, 43 skipped, 84 deselected` |
 | Research/integration lane | Green with an explicit quarantine of 29 known failures |
 | Harness X | M1 through M6 implemented |
 | WhatsApp pipeline | Experimental, still present, not the current focus |
@@ -68,8 +68,8 @@ current deterministic Triage, Extraction, and Verifier guards. If any guard
 fails, the full pipeline runs.
 
 The live 18-post evaluation produced 2 exact hits, 0 false reuse, and reduced LLM
-calls from 36 to 32. A synthetic duplicate stream produced 6 exact hits out of 9
-posts and reduced LLM calls from 18 to 6. See
+calls from 36 to 32. A duplicate stream that keeps the 15 non-complaints produced
+6 exact hits out of 24 posts and reduced LLM calls from 48 to 36. See
 [docs/evaluations/2026-11-26-harness-x-m6-cache.md](docs/evaluations/2026-11-26-harness-x-m6-cache.md).
 
 ## Repository layout

@@ -9,6 +9,31 @@ import numpy as np
 
 logger = logging.getLogger("embedder")
 
+_FINGERPRINT_FILES = (
+    "config.json",
+    "model.safetensors",
+    "pytorch_model.bin",
+    "tokenizer.json",
+    "vocab.txt",
+)
+
+
+def _artifact_fingerprint(path: Path) -> str:
+    digest = hashlib.sha256()
+    for name in _FINGERPRINT_FILES:
+        artifact = path / name
+        if not artifact.is_file():
+            continue
+        size = artifact.stat().st_size
+        digest.update(name.encode("utf-8"))
+        digest.update(str(size).encode("ascii"))
+        with artifact.open("rb") as handle:
+            digest.update(handle.read(1024 * 1024))
+            if size > 2 * 1024 * 1024:
+                handle.seek(-1024 * 1024, 2)
+                digest.update(handle.read(1024 * 1024))
+    return digest.hexdigest()[:12]
+
 
 class TextEmbedder:
     """Interface for complaint embedding generators."""
@@ -95,7 +120,7 @@ class IndoBertEmbedder(TextEmbedder):
             self._model = AutoModel.from_pretrained(str(chosen_path))
             self._model.eval()
             self._fallback = None
-            self.model_id = chosen_path.name
+            self.model_id = f"{chosen_path.name}-{_artifact_fingerprint(chosen_path)}"
             self.is_fallback = False
             logger.info("IndoBertEmbedder initialized from %s", chosen_path)
         except Exception as exc:

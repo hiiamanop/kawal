@@ -18,7 +18,7 @@ from services.harness.agents import (
     RuleTriageAgent,
     RuleVerifierAgent,
 )
-from services.harness.cache import HarnessAnalysisCache
+from services.harness.cache import HarnessAnalysisCache, HarnessCacheStoreError
 from services.harness.cache_metrics import CacheEvaluationReport, score_cache_evaluation
 from services.harness.cache_router import CacheFirstRunner
 from services.harness.cache_store import (
@@ -102,7 +102,15 @@ def _build_stream(posts: list, labels: LabelSet, repeat_accepted: int) -> list:
     ]
     if not accepted:
         return []
-    return [post for _ in range(repeat_accepted) for post in accepted]
+    others = [post for post in posts if post not in accepted]
+    repeated = [post for _ in range(repeat_accepted) for post in accepted]
+    stream: list = []
+    for index, post in enumerate(repeated):
+        stream.append(post)
+        if index < len(others):
+            stream.append(others[index])
+    stream.extend(others[len(repeated) :])
+    return stream
 
 
 def _build_store(args: argparse.Namespace):
@@ -168,7 +176,10 @@ def _render_markdown(report: CacheEvaluationReport) -> str:
         f"| False reuse | {report.false_reuse} |",
         f"| False reuse rate | {report.false_reuse_rate:.3f} |",
         "",
-        "## Baseline vs cached",
+        "## Baseline vs evaluation pass",
+        "",
+        "The baseline is a separate no-cache pass. Warmup cost is not included in",
+        "the saved values below.",
         "",
         "| Metric | Baseline | Cached |",
         "|---|---:|---:|",
@@ -228,7 +239,11 @@ def main(argv: list[str] | None = None) -> int:
         allow_fallback_semantic=args.allow_fallback_semantic,
     )
     if args.cache_reset:
-        cache.reset()
+        try:
+            cache.reset()
+        except HarnessCacheStoreError as exc:
+            print(f"Cache error [{exc.code}]: {exc}", file=sys.stderr)
+            return 2
 
     try:
         inner = _build_inner(args)

@@ -129,6 +129,12 @@ class CacheRecordResult(BaseModel):
     reason_codes: tuple[str, ...] = ()
 
 
+class HarnessCacheStoreError(RuntimeError):
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+
+
 class HarnessCacheStore(Protocol):
     def find_exact(
         self,
@@ -153,6 +159,45 @@ def _lookup_key(
     return (namespace, analysis_version, embedding_model, text_hash)
 
 
+_MAX_CACHE_TEXT_LENGTH = 200
+
+
+def _entry_free_text(entry: CacheEntry) -> tuple[str, ...]:
+    analysis = entry.analysis
+    values: list[str] = list(entry.location_entities) + list(entry.evidence_spans)
+    values.extend(analysis.triage.reason_codes)
+    values.extend(analysis.reason_codes)
+    for value in (
+        analysis.extraction.location,
+        analysis.extraction.object,
+        analysis.extraction.time,
+    ):
+        if value:
+            values.append(value)
+    values.extend(analysis.extraction.evidence_spans)
+    values.extend(analysis.verification.issues)
+    if analysis.arbitration is not None:
+        values.append(analysis.arbitration.rationale)
+    return tuple(value for value in values if value)
+
+
+def _contains_full_post_body(entry: CacheEntry, post_text: str) -> bool:
+    normalized_post = normalize_text(post_text)
+    if not normalized_post:
+        return False
+    for value in _entry_free_text(entry):
+        normalized_value = normalize_text(value)
+        if normalized_value == normalized_post:
+            return True
+        if len(normalized_post) >= 20 and normalized_post in normalized_value:
+            return True
+    return False
+
+
+def _has_oversized_text(entry: CacheEntry) -> bool:
+    return any(len(value) > _MAX_CACHE_TEXT_LENGTH for value in _entry_free_text(entry))
+
+
 class HarnessAnalysisCache:
     """Versioned semantic cache for accepted harness analyses."""
 
@@ -170,6 +215,8 @@ class HarnessAnalysisCache:
             raise ValueError("namespace must not be empty")
         if not analysis_version:
             raise ValueError("analysis_version must not be empty")
+        if getattr(embedder, "model_id", "unknown") == "unknown":
+            raise ValueError("embedder.model_id must identify the embedding model")
         if not 0.0 <= semantic_threshold <= 1.0:
             raise ValueError("semantic_threshold must be between 0 and 1")
         self._store = store
@@ -261,11 +308,14 @@ class HarnessAnalysisCache:
         rule_verification: VerificationOutput,
         run_id: str,
         location_entities: Sequence[str],
+        rule_extraction: ExtractionOutput | None = None,
     ) -> CacheRecordResult:
         reasons: list[str] = []
 
         if case.status != "ACCEPTED" or case.trust_decision != "AGREED":
             reasons.append("CACHE_NOT_ACCEPTED")
+        if not case.triage.is_complaint or not case.verification.is_complaint:
+            reasons.append("CACHE_NOT_COMPLAINT")
         if case.location_quality != "SPECIFIC":
             reasons.append("CACHE_NOT_SPECIFIC")
         if case.source_intent != "CITIZEN_COMPLAINT":
@@ -282,6 +332,7 @@ class HarnessAnalysisCache:
         if not case.verification.evidence_supported:
             reasons.append("CACHE_EVIDENCE_UNSUPPORTED")
 
+        source_extraction = rule_extraction or case.extraction
         normalized_locations = tuple(
             sorted(
                 {
@@ -291,6 +342,8 @@ class HarnessAnalysisCache:
                 }
             )
         )
+        if not normalized_locations and source_extraction.location:
+            normalized_locations = (normalize_text(source_extraction.location),)
         if not normalized_locations:
             reasons.append("CACHE_NO_LOCATION")
 
@@ -327,7 +380,7 @@ class HarnessAnalysisCache:
             source_intent=case.source_intent,
             location_quality=case.location_quality,
             location_entities=normalized_locations,
-            evidence_spans=case.extraction.evidence_spans,
+            evidence_spans=source_extraction.evidence_spans,
             analysis=CachedAnalysis(
                 triage=case.triage,
                 extraction=case.extraction,
@@ -350,7 +403,23 @@ class HarnessAnalysisCache:
                 "pii_free": pii_free,
             },
         )
-        self._store.save(entry)
+        if _contains_full_post_body(entry, case.post.text):
+            return CacheRecordResult(
+                stored=False,
+                reason_codes=("CACHE_FULL_TEXT_BLOCKED",),
+            )
+        if _has_oversized_text(entry):
+            return CacheRecordResult(
+                stored=False,
+                reason_codes=("CACHE_TEXT_FIELD_TOO_LONG",),
+            )
+        try:
+            self._store.save(entry)
+        except HarnessCacheStoreError as exc:
+            return CacheRecordResult(
+                stored=False,
+                reason_codes=(exc.code,),
+            )
         return CacheRecordResult(
             stored=True,
             entry=entry,
@@ -373,6 +442,7 @@ __all__ = [
     "CacheRecordResult",
     "HarnessAnalysisCache",
     "HarnessCacheStore",
+    "HarnessCacheStoreError",
     "compute_cache_key",
     "compute_text_hash",
     "normalize_text",

@@ -76,7 +76,9 @@ Only cases that pass all record gates:
 - rule Triage and Verifier categories equal the accepted category;
 - Verifier says evidence is supported;
 - at least one location entity exists;
-- no PII in the case payload or location entities.
+- no PII in the case payload or location entities;
+- no stored free-text field contains the full complaint body;
+- no stored free-text field exceeds 200 characters.
 
 A case where the LLM accepted one category and the rule agents reported another
 is deliberately not cached.
@@ -93,6 +95,8 @@ Every lookup runs current deterministic agents first:
 A hit is reusable only when:
 
 - current source intent is a citizen complaint;
+- no strong news, opinion, question, or announcement cue is present, even when
+  the post also contains citizen words such as `lapor` or `tolong`;
 - both rule agents say complaint;
 - rule categories equal the cached category;
 - current location is `SPECIFIC`;
@@ -112,7 +116,7 @@ as `jl` and `jalan`. Generic place words such as `stasiun`, `terminal`, `pasar`,
 `kecamatan`, `kelurahan`, `kota`, and `kabupaten` are removed.
 
 Reuse requires exact normalized equality, two significant token overlaps, or
-one distinctive token of at least five characters. This rejects
+one distinctive token of at least four characters. This rejects
 `Stasiun Bandung` vs `Stasiun Cimahi` while accepting
 `Jl. Merdeka` vs `Jalan Merdeka`.
 
@@ -185,6 +189,9 @@ The report includes:
 - cost and latency saved.
 
 Baseline is a separate no-cache pass. Warmup is not used as the cost baseline.
+The saved cost and latency compare baseline with the evaluation pass; warmup
+cost is reported separately by the run artifacts and is not folded into the
+saved value.
 
 ## Evaluation
 
@@ -197,18 +204,19 @@ The live 18-post run produced:
 - 2 exact hits;
 - 0 false reuse;
 - 36 to 32 LLM calls;
-- $0.001066 to $0.000509 cost.
+- $0.000536 to $0.000475 cost.
 
-The duplicate stream produced:
+The duplicate stream, which keeps all 15 non-complaints and repeats the two
+cacheable complaints three times, produced:
 
-- 6 exact hits out of 9 posts;
+- 6 exact hits out of 24 posts;
 - 0 false reuse;
-- 18 to 6 LLM calls;
-- $0.000281 to $0.000067 cost.
+- 48 to 36 LLM calls;
+- $0.000738 to $0.000514 cost.
 
 The 18-post number is intentionally small: only accepted, rule-consistent cases
 are cacheable. The duplicate stream measures the savings when repeats actually
-exist.
+exist while still exercising non-complaint posts.
 
 ## Limits
 
@@ -218,8 +226,8 @@ exist.
 - Semantic thresholds are not calibrated against a large real near-duplicate
   set.
 - Postgres integration is marked `integration` and is not part of core CI.
-- Cache entries are immutable analyses; stale entries are invalidated by
-  version, not edited in place.
+- Cache entries are treated as immutable during lookup. Re-recording the same
+  cache key upserts a fresh analysis; stale entries are invalidated by version.
 - The cache does not replace deterministic location or source-intent guards.
 - The table stores short evidence spans and embeddings. Treat it as sensitive
   local data.

@@ -27,7 +27,10 @@ from services.harness.agents import (
 from services.harness.cache import CacheEntry, HarnessAnalysisCache
 from services.harness.location import assess_location
 from services.harness.ports import Agent, AgentResult, AgentTask
-from services.harness.source_intent import assess_source_intent
+from services.harness.source_intent import (
+    assess_source_intent,
+    has_non_actionable_cue,
+)
 from services.harness.trace import TraceRecorder
 
 
@@ -93,7 +96,7 @@ def locations_overlap(current: str | None, cached: Sequence[str]) -> bool:
         overlap = current_tokens.intersection(candidate_normalized.split())
         if len(overlap) >= 2:
             return True
-        if any(len(token) >= 5 for token in overlap):
+        if any(len(token) >= 4 for token in overlap):
             return True
     return False
 
@@ -265,17 +268,15 @@ class CacheFirstRunner:
         recorded = False
         record_reasons: tuple[str, ...] = ()
         if inner_run.case is not None:
-            record_location = inner_run.case.extraction.location
             record_result = self._cache.record(
                 case=inner_run.case,
                 rule_triage=prefilter.triage,
                 rule_verification=prefilter.verification,
                 run_id=resolved_run_id,
-                location_entities=(record_location,)
-                if record_location
-                else (prefilter.extraction.location,)
+                location_entities=(prefilter.extraction.location,)
                 if prefilter.extraction.location
                 else (),
+                rule_extraction=prefilter.extraction,
             )
             recorded = record_result.stored
             record_reasons = record_result.reason_codes
@@ -405,6 +406,8 @@ class CacheFirstRunner:
             or entry.source_intent != "CITIZEN_COMPLAINT"
         ):
             reasons.append("CACHE_SOURCE_INTENT_MISMATCH")
+        if has_non_actionable_cue(post.text):
+            reasons.append("CACHE_NON_ACTIONABLE_SOURCE")
         if not rule_triage.is_complaint or not rule_verification.is_complaint:
             reasons.append("CACHE_RULE_NOT_COMPLAINT")
         if (

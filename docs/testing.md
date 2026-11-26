@@ -18,7 +18,7 @@ for the `test` job.
 Last local result after M6:
 
 ```text
-656 passed, 43 skipped, 84 deselected
+672 passed, 43 skipped, 84 deselected
 ```
 
 ## Research and integration lane
