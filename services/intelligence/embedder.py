@@ -13,6 +13,9 @@ logger = logging.getLogger("embedder")
 class TextEmbedder:
     """Interface for complaint embedding generators."""
 
+    model_id = "unknown"
+    is_fallback = False
+
     def embed_text(self, text: str) -> list[float]:
         raise NotImplementedError
 
@@ -28,6 +31,8 @@ class DeterministicFallbackEmbedder(TextEmbedder):
 
     def __init__(self, dim: int = 768) -> None:
         self.dim = dim
+        self.model_id = f"deterministic-hash-{dim}-v1"
+        self.is_fallback = True
 
     def embed_text(self, text: str) -> list[float]:
         tokens = [t.strip().lower() for t in text.split() if t.strip()]
@@ -71,10 +76,14 @@ class IndoBertEmbedder(TextEmbedder):
                 break
 
         if chosen_path is None:
-            logger.warning("No IndoBERT artifact directory found; falling back to deterministic embedder")
+            logger.warning(
+                "No IndoBERT artifact directory found; falling back to deterministic embedder"
+            )
             self._fallback = DeterministicFallbackEmbedder(dim=768)
             self._model = None
             self._tokenizer = None
+            self.model_id = "indobert-fallback-768"
+            self.is_fallback = True
             return
 
         try:
@@ -86,12 +95,19 @@ class IndoBertEmbedder(TextEmbedder):
             self._model = AutoModel.from_pretrained(str(chosen_path))
             self._model.eval()
             self._fallback = None
+            self.model_id = chosen_path.name
+            self.is_fallback = False
             logger.info("IndoBertEmbedder initialized from %s", chosen_path)
         except Exception as exc:
-            logger.warning("Failed to load PyTorch/Transformers embedder (%s); using deterministic fallback", exc)
+            logger.warning(
+                "Failed to load PyTorch/Transformers embedder (%s); using deterministic fallback",
+                exc,
+            )
             self._fallback = DeterministicFallbackEmbedder(dim=768)
             self._model = None
             self._tokenizer = None
+            self.model_id = "indobert-fallback-768"
+            self.is_fallback = True
 
     @classmethod
     def get_instance(cls, model_path: str | Path | None = None) -> IndoBertEmbedder:
@@ -120,7 +136,12 @@ class IndoBertEmbedder(TextEmbedder):
             )
             out = self._model(**inputs)
             # Attention-weighted mean pooling
-            mask = inputs["attention_mask"].unsqueeze(-1).expand(out.last_hidden_state.size()).float()
+            mask = (
+                inputs["attention_mask"]
+                .unsqueeze(-1)
+                .expand(out.last_hidden_state.size())
+                .float()
+            )
             sum_embeddings = self._torch.sum(out.last_hidden_state * mask, 1)
             sum_mask = self._torch.clamp(mask.sum(1), min=1e-9)
             mean_pooled = sum_embeddings / sum_mask
@@ -138,7 +159,7 @@ def cosine_similarity(vec_a: Sequence[float], vec_b: Sequence[float]) -> float:
     """
     a = np.asarray(vec_a, dtype=np.float32)
     b = np.asarray(vec_b, dtype=np.float32)
-    denom = (np.linalg.norm(a) * np.linalg.norm(b))
+    denom = np.linalg.norm(a) * np.linalg.norm(b)
     if denom <= 1e-9:
         return 0.0
     return float(np.dot(a, b) / denom)
