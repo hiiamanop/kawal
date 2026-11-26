@@ -15,6 +15,7 @@ CITIZEN_CUES = (
     "mohon",
     "bantu",
     "perbaiki",
+    "benerin atuh",
     "segera",
 )
 OPINION_CUES = (
@@ -34,6 +35,8 @@ ANNOUNCEMENT_CUES = (
     "peringatan",
     "pengumuman",
     "imbauan",
+    "ditata",
+    "penataan trotoar",
 )
 QUESTION_CUES = (
     "mau nanya",
@@ -72,6 +75,8 @@ NEWS_CUES = (
     "memaksa warga",
     "pengendara diuji",
     "antrean kendaraan",
+    "tewas terperosok",
+    "satpol pp",
 )
 PROBLEM_CUES = (
     "rusak",

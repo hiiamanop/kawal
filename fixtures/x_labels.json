@@ -179,6 +179,56 @@
       ],
       "notes": "Earthquake information bulletin; not a complaint.",
       "source_type": "ANNOUNCEMENT"
+    },
+    "2067364825471361417": {
+      "is_complaint": false,
+      "category": null,
+      "location_quality": "SPECIFIC",
+      "acceptable_statuses": [
+        "REJECTED"
+      ],
+      "notes": "News report about a fatal accident after an ojol fell into a drain hole on Jalan Pasteur; not a citizen request.",
+      "source_type": "NEWS_REPORT"
+    },
+    "2066315447985910003": {
+      "is_complaint": false,
+      "category": null,
+      "location_quality": "SPECIFIC",
+      "acceptable_statuses": [
+        "REJECTED"
+      ],
+      "notes": "News report about Satpol PP demolishing a garage built over the trotoar on Jalan Ambon.",
+      "source_type": "NEWS_REPORT"
+    },
+    "2109917602961354968": {
+      "is_complaint": false,
+      "category": null,
+      "location_quality": "SPECIFIC",
+      "acceptable_statuses": [
+        "REJECTED"
+      ],
+      "notes": "Government announcement about tidying the trotoar and drainage near Pasar Kiaracondong.",
+      "source_type": "ANNOUNCEMENT"
+    },
+    "2071102573483053232": {
+      "is_complaint": false,
+      "category": null,
+      "location_quality": "SPECIFIC",
+      "acceptable_statuses": [
+        "REJECTED"
+      ],
+      "notes": "Ambiguous video commentary about the condition of the trotoar in Dipati Ukur after enforcement.",
+      "source_type": "UNKNOWN"
+    },
+    "1925164524103151818": {
+      "is_complaint": true,
+      "category": "ROAD",
+      "location_quality": "VAGUE",
+      "acceptable_statuses": [
+        "NEEDS_REVIEW"
+      ],
+      "notes": "Complaint about the poor condition of trotoar in Bandung; no specific street or administrative area.",
+      "source_type": "CITIZEN_COMPLAINT"
     }
   }
 }
