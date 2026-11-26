@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KAWAL Monitor</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">KAWAL <span>Monitor</span></div>
+      <button class="primary" id="scan-button">Scan sekarang</button>
+      <nav>
+        <button class="nav active" data-view="feed">Live Feed</button>
+        <button class="nav" data-view="monitoring">Monitoring</button>
+        <button class="nav" data-view="ready">Siap Diteruskan</button>
+        <button class="nav" data-view="forwarded">Forwarded</button>
+        <button class="nav" data-view="archive">Archive</button>
+      </nav>
+      <div class="filters">
+        <label>Kategori <select id="category-filter"><option value="">Semua</option></select></label>
+        <label>Risiko <select id="risk-filter"><option value="">Semua</option></select></label>
+        <label>Status <select id="status-filter"><option value="">Semua</option></select></label>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1>Keluhan viral</h1>
+          <p>Pantau aduan publik, cek bukti, lalu siapkan penerusan ke dinas terkait.</p>
+        </div>
+        <button class="ghost" id="refresh-button">Refresh</button>
+      </header>
+      <section class="stats" id="stats"></section>
+      <section class="feed" id="feed">
+        <div class="empty">Belum ada data. Klik <b>Scan sekarang</b> untuk mulai.</div>
+      </section>
+      <div class="composer">
+        <input id="query-input" placeholder="Tanya atau scan keluhan..." />
+        <button class="primary" id="composer-scan">Scan</button>
+      </div>
+    </main>
+    <aside class="detail-panel" id="detail-panel" hidden>
+      <button class="ghost close" id="close-detail">Tutup</button>
+      <div id="detail-content"></div>
+    </aside>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>
