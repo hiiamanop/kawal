@@ -166,7 +166,10 @@ python scripts/evaluate_harness_cache.py \
 ```
 
 `--inner rule` runs offline and needs no API key. `--inner llm` supports the
-shared cassette flags from `scripts/harness_llm_cli.py`.
+shared cassette flags from `scripts/harness_llm_cli.py`. The cache evaluation
+runs a baseline, warmup, and evaluation pass, so a cassette with one response
+per prompt can be exhausted. Use live calls or a cassette that contains repeated
+entries for a full multi-pass replay.
 
 For Postgres:
 
