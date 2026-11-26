@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from contracts.models import Category
 from services.harness.agents import (
     PricedStubAgent,
@@ -25,6 +27,38 @@ def test_triage_detects_road_complaint() -> None:
     assert result.output["is_complaint"] is True
     assert result.output["category"] == Category.ROAD.value
     assert result.output["confidence"] >= 0.5
+
+
+@pytest.mark.parametrize("text,expected", [
+    ("Min, jalan di Jl. Kopo rusak parah.", Category.ROAD),
+    ("Banjir dan drainase mampet.", Category.DRAINAGE_FLOOD),
+    ("Sampah menumpuk di TPS.", Category.WASTE),
+    ("Pipa PDAM bocor, air keruh.", Category.CLEAN_WATER),
+    ("Kartu keluarga belum diproses.", Category.CIVIL_ADMIN),
+    ("Puskesmas kekurangan obat.", Category.HEALTH_SERVICE),
+    ("Pungli parkir liar di trotoar.", Category.PUBLIC_ORDER),
+    ("Angkot ngetem dan lampu lalu lintas mati.", Category.TRANSPORTATION),
+    ("Kebakaran rumah dan pohon tumbang.", Category.FIRE_RESCUE),
+    ("Bansos belum cair untuk lansia.", Category.SOCIAL_AFFAIRS),
+    ("Atap sekolah rusak.", Category.EDUCATION),
+    ("Lampu taman mati dan bangku rusak.", Category.PARKS_HOUSING),
+])
+def test_triage_covers_all_categories(text: str, expected: Category) -> None:
+    result = RuleTriageAgent().run(_task(text))
+    assert result.output is not None
+    assert result.output["category"] == expected.value
+
+
+def test_triage_marks_unknown_category() -> None:
+    result = RuleTriageAgent().run(_task("Tolong tindak lanjuti laporan warga."))
+    assert result.output is not None
+    assert "CATEGORY_UNKNOWN" in result.output["reason_codes"]
+
+
+def test_triage_marks_ambiguous_category() -> None:
+    result = RuleTriageAgent().run(_task("Pungli parkir liar di trotoar yang rusak dan jalan berlubang."))
+    assert result.output is not None
+    assert "AMBIGUOUS_CATEGORY" in result.output["reason_codes"]
 
 
 def test_triage_rejects_greeting() -> None:

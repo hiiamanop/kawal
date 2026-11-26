@@ -13,6 +13,7 @@ from contracts.harness import (
     VerificationOutput,
 )
 from contracts.models import Category, RiskLevel
+from services.harness.category_lexicon import match_category, match_object
 from services.harness.ports import AgentTask
 
 
@@ -60,6 +61,20 @@ class RuleTriageAgent:
         "sampah",
         "macet",
         "bahaya",
+        "bocor",
+        "mati",
+        "mampet",
+        "menumpuk",
+        "kekurangan",
+        "terhambat",
+        "belum",
+        "antrean",
+        "mahal",
+        "kotor",
+        "terlantar",
+        "tumbang",
+        "pungli",
+        "parkir liar",
     )
     _ROAD_CUES = ("jalan", "jl", "lubang", "aspal", "trotoar", "berlubang")
     _WASTE_CUES = ("sampah", "limbah", "tps")
@@ -80,23 +95,29 @@ class RuleTriageAgent:
         if not text:
             is_complaint = False
 
-        if any(cue in lower for cue in self._WASTE_CUES):
-            category = Category.WASTE
-        elif any(cue in lower for cue in self._DRAINAGE_CUES):
-            category = Category.DRAINAGE_FLOOD
-        else:
+        category, ambiguous = match_category(lower)
+        category_unknown = category is None
+        if category is None:
             category = Category.ROAD
 
         hazard_hit = any(cue in lower for cue in self._HAZARD_CUES)
         risk = RiskLevel.HIGH if hazard_hit and is_complaint else RiskLevel.MEDIUM
-        confidence = 0.9 if is_complaint and any(
-            cue in lower for cue in self._ROAD_CUES + self._WASTE_CUES + self._DRAINAGE_CUES
-        ) else 0.55 if is_complaint else 0.2
+        confidence = (
+            0.55
+            if is_complaint and (category_unknown or ambiguous)
+            else 0.9
+            if is_complaint
+            else 0.2
+        )
 
         reason_codes: list[str] = []
         if is_complaint:
             reason_codes.append("COMPLAINT_CUE")
-        if any(cue in lower for cue in self._ROAD_CUES):
+        if category_unknown:
+            reason_codes.append("CATEGORY_UNKNOWN")
+        if ambiguous:
+            reason_codes.append("AMBIGUOUS_CATEGORY")
+        if category == Category.ROAD:
             reason_codes.append("ROAD_DAMAGE")
         if hazard_hit:
             reason_codes.append("HAZARD_CUE")
@@ -166,7 +187,7 @@ class RuleExtractionAgent:
                 location = label_match.group(0)
                 evidence.append(label_match.group(0))
 
-        object_value = next((cue for cue in self._OBJECT_CUES if cue in lower), None)
+        object_value, _ = match_object(lower)
         if object_value is not None:
             evidence.append(object_value)
 
@@ -190,9 +211,29 @@ class RuleVerifierAgent:
     role = "verifier"
 
     _COMPLAINT_VERBS = ("lapor", "aduan", "keluhan", "tolong", "mohon")
-    _DAMAGE_CUES = ("rusak", "lubang", "berlubang", "ambles", "hancur", "banjir", "sampah")
-    _WASTE_CUES = ("sampah", "limbah")
-    _DRAINAGE_CUES = ("banjir", "drainase", "selokan", "tergenang")
+    _DAMAGE_CUES = (
+        "rusak",
+        "lubang",
+        "berlubang",
+        "ambles",
+        "hancur",
+        "banjir",
+        "sampah",
+        "bocor",
+        "mati",
+        "mampet",
+        "menumpuk",
+        "kekurangan",
+        "terhambat",
+        "belum",
+        "antrean",
+        "mahal",
+        "kotor",
+        "terlantar",
+        "tumbang",
+        "pungli",
+        "parkir liar",
+    )
 
     def estimate_cost(self, task: AgentTask) -> float:
         del task
@@ -213,14 +254,19 @@ class RuleVerifierAgent:
         has_damage = any(cue in lower for cue in self._DAMAGE_CUES)
         is_complaint = bool(text.strip()) and (has_verb or has_damage)
 
-        if any(cue in lower for cue in self._WASTE_CUES):
-            category = Category.WASTE
-        elif any(cue in lower for cue in self._DRAINAGE_CUES):
-            category = Category.DRAINAGE_FLOOD
-        else:
-            category = Category.ROAD
+        category, ambiguous = match_category(lower)
+        _, object_category = match_object(lower)
 
         issues: list[str] = []
+        if category is None:
+            category = object_category or Category.ROAD
+            issues.append("CATEGORY_UNKNOWN")
+        elif object_category is not None and object_category != category:
+            category = object_category
+            issues.append("CATEGORY_CONFLICT")
+        if ambiguous:
+            issues.append("AMBIGUOUS_CATEGORY")
+
         evidence_supported = True
         if not extraction.evidence_spans:
             evidence_supported = False

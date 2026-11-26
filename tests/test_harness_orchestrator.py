@@ -49,6 +49,43 @@ def _orchestrator(**kwargs: object) -> HarnessOrchestrator:
     )
 
 
+def test_orchestrator_passes_all_categories_to_agents(monkeypatch) -> None:
+    seen: list[list[str]] = []
+    original_triage = RuleTriageAgent.run
+    original_verifier = RuleVerifierAgent.run
+
+    def capture_triage(self, task):
+        seen.append(list(task.context.get("allowed_categories", [])))
+        return original_triage(self, task)
+
+    def capture_verifier(self, task):
+        seen.append(list(task.context.get("allowed_categories", [])))
+        return original_verifier(self, task)
+
+    monkeypatch.setattr(RuleTriageAgent, "run", capture_triage)
+    monkeypatch.setattr(RuleVerifierAgent, "run", capture_verifier)
+    post = _post("Jl. Kopo rusak parah, tolong diperbaiki.")
+    _orchestrator().run(post)
+    assert set(seen[0]) == {category.value for category in Category}
+    assert set(seen[1]) == {category.value for category in Category}
+
+
+def test_unknown_category_requires_review() -> None:
+    post = _post("Tolong tindak lanjut laporan warga di Bandung.")
+    run = _orchestrator().run(post)
+    assert run.status == "NEEDS_REVIEW"
+    assert run.case is not None
+    assert "CATEGORY_UNKNOWN" in run.case.reason_codes
+
+
+def test_ambiguous_category_requires_review() -> None:
+    post = _post("Pungli parkir liar di trotoar yang rusak dan jalan berlubang di Jl. Kopo.")
+    run = _orchestrator().run(post)
+    assert run.status == "NEEDS_REVIEW"
+    assert run.case is not None
+    assert "AMBIGUOUS_CATEGORY" in run.case.reason_codes
+
+
 def test_agreement_produces_accepted_case() -> None:
     run = _orchestrator().run(_post())
     assert run.status == "COMPLETED"
