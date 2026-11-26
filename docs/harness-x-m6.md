@@ -242,14 +242,14 @@ python scripts/evaluate_cache_scenarios.py \
 
 With `indobenchmark/indobert-base-p1`:
 
-- threshold 0.80 and 0.85: precision 1.0, recall 1.0;
-- threshold 0.90 and above: precision 1.0, recall 0.5;
-- the missed positive was the Kopo paraphrase with similarity 0.860.
+- thresholds 0.80 through 0.92: precision 1.0, recall 1.0;
+- threshold 0.95: precision 1.0, recall 0.5;
+- the Kopo paraphrase similarity is 0.934 with CLS pooling.
 
-The scenario set is small and uses a base IndoBERT model, not the trained DAPT
-artifact. Treat 0.85 as the starting point for this base model, not as a
-production default. Recalibrate against the real DAPT artifact and a larger
-near-duplicate set before lowering the default 0.92.
+The scenario set is small and uses a base IndoBERT model with CLS pooling, not
+the trained DAPT artifact. The default 0.92 is supported by this set; recalibrate
+against the real DAPT artifact and a larger near-duplicate set before changing
+it.
 
 ## Limits
 
@@ -257,8 +257,8 @@ near-duplicate set before lowering the default 0.92.
   disables semantic matching. Semantic routing is covered by tests with the
   fallback explicitly enabled.
 - Semantic thresholds are calibrated only on five synthetic scenarios with a
-  base IndoBERT model. The trained DAPT artifact and a larger real
-  near-duplicate set still need calibration.
+  base IndoBERT model using CLS pooling. The trained DAPT artifact and a larger
+  real near-duplicate set still need calibration.
 - Postgres integration is marked `integration` and is not part of core CI. It
   was run locally against compose: the round-trip test and the HNSW planner
   check passed, and a `--inner rule` smoke run produced 3 exact hits with zero

@@ -3,9 +3,9 @@
 Before this pass, the unquarantined research/integration lane had **29 failures**.
 After the pass:
 
-- **73 passed**
+- **75 passed**
 - **8 skipped** for missing prerequisites
-- **4 quarantined** for real content/model gaps
+- **2 quarantined** for real content gaps
 
 ## Fixed
 
@@ -25,7 +25,5 @@ After the pass:
 ## Remaining quarantine
 
 - Six extended categories still have 3 families instead of 12.
-- Base IndoBERT reaches 0.758 similarity on the legacy semantic pair, below the
-  0.85/0.88 thresholds.
 
 These are content/model work, not infrastructure failures.

@@ -1,6 +1,6 @@
 {
   "evaluation_version": "1.0.0",
-  "timestamp": "2026-11-26T02:44:08.792253+00:00",
+  "timestamp": "2026-11-26T03:52:42.074406+00:00",
   "seed": 42,
   "status": "PASSED",
   "pipeline_status": "PASSED",
@@ -154,11 +154,11 @@
     "cross_split_text_duplicates_count": 0
   },
   "benchmark": {
-    "mean_latency_ms": 0.02,
+    "mean_latency_ms": 0.01,
     "p50_latency_ms": 0.01,
-    "p95_latency_ms": 0.02,
-    "p99_latency_ms": 0.03,
-    "throughput_qps": 62505.47,
+    "p95_latency_ms": 0.01,
+    "p99_latency_ms": 0.02,
+    "throughput_qps": 67858.26,
     "target_p95_ms": 5000.0,
     "sla_met": true,
     "samples_count": 20,
