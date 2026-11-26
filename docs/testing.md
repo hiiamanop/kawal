@@ -18,7 +18,7 @@ for the `test` job.
 Last local result after the monitor console:
 
 ```text
-719 passed, 42 skipped, 86 deselected
+731 passed, 41 skipped, 85 deselected
 ```
 
 ### Monitor console
@@ -52,7 +52,7 @@ listed in [`tests/quarantine.txt`](../tests/quarantine.txt). It unsets the
 OpenRouter key because these tests must stay offline. Last local result:
 
 ```text
-78 passed, 8 skipped, 0 quarantined
+78 passed, 7 skipped, 0 quarantined
 ```
 
 The skips are missing prerequisites: PostgreSQL, generated M3 artifacts,
