@@ -229,6 +229,46 @@
       ],
       "notes": "Complaint about the poor condition of trotoar in Bandung; no specific street or administrative area.",
       "source_type": "CITIZEN_COMPLAINT"
+    },
+    "2060576242433450181": {
+      "is_complaint": true,
+      "category": "ROAD",
+      "location_quality": "VAGUE",
+      "acceptable_statuses": [
+        "NEEDS_REVIEW"
+      ],
+      "notes": "Citizen complaint about damaged trotoar and ignored pedestrian rights in Bandung; no specific street.",
+      "source_type": "CITIZEN_COMPLAINT"
+    },
+    "2107732996271001795": {
+      "is_complaint": true,
+      "category": "ROAD",
+      "location_quality": "VAGUE",
+      "acceptable_statuses": [
+        "NEEDS_REVIEW"
+      ],
+      "notes": "Citizen complaint listing road, traffic-light, lighting, and extortion problems in Bandung; no specific location.",
+      "source_type": "CITIZEN_COMPLAINT"
+    },
+    "2120782368684556339": {
+      "is_complaint": false,
+      "category": null,
+      "location_quality": "SPECIFIC",
+      "acceptable_statuses": [
+        "REJECTED"
+      ],
+      "notes": "News report about severe road damage on Cihideung-Gombong, Bandung Barat.",
+      "source_type": "NEWS_REPORT"
+    },
+    "2122292838826398059": {
+      "is_complaint": false,
+      "category": null,
+      "location_quality": "SPECIFIC",
+      "acceptable_statuses": [
+        "REJECTED"
+      ],
+      "notes": "News report about a fallen tree damaging a car at Jalan Gelap Nyawang, Bandung.",
+      "source_type": "NEWS_REPORT"
     }
   }
 }

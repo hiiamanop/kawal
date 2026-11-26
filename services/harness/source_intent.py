@@ -16,6 +16,8 @@ CITIZEN_CUES = (
     "bantu",
     "perbaiki",
     "benerin atuh",
+    "diabaikan",
+    "pungli merajalela",
     "segera",
 )
 OPINION_CUES = (
@@ -77,6 +79,7 @@ NEWS_CUES = (
     "antrean kendaraan",
     "tewas terperosok",
     "satpol pp",
+    "warga minta pemerintah",
 )
 PROBLEM_CUES = (
     "rusak",
