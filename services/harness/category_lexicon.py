@@ -132,8 +132,9 @@ def _matches(lower: str, cues: tuple[str, ...]) -> list[str]:
 def match_category(text: str) -> tuple[Category | None, bool]:
     """Return the best category and whether multiple categories matched.
 
-    Ambiguity means cues from more than one category appear. The conservative
-    trust model sends those cases to review instead of letting one keyword win.
+    Ambiguity means the second-best category score is at least 60% of the best
+    score. The conservative trust model sends those cases to review instead of
+    letting one keyword win.
     """
 
     lower = text.strip().lower()

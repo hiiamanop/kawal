@@ -26,6 +26,21 @@ class FailingOrchestrator:
         )
 
 
+class RaisingOrchestrator:
+    def run(self, post: SocialPost, run_id: str | None = None) -> HarnessRun:
+        raise RuntimeError("boom")
+
+
+class MissingCaseOrchestrator:
+    def run(self, post: SocialPost, run_id: str | None = None) -> HarnessRun:
+        return HarnessRun(
+            run_id=run_id or "missing-case-run",
+            post=post,
+            status="NEEDS_REVIEW",
+            cost=CostReport(),
+        )
+
+
 def _store(tmp_path) -> MonitorStore:
     store = MonitorStore(tmp_path / "monitor.db")
     store.create_schema()
@@ -80,3 +95,55 @@ def test_source_failure_returns_error_without_cases(tmp_path) -> None:
             _store(tmp_path),
             source=FailingSource(),
         )
+
+
+def test_failed_duplicate_scan_preserves_existing_analysis(tmp_path) -> None:
+    fixture_dir = _write_fixture(
+        tmp_path / "fixtures", "post-1", "Min, jalan di Jl. Kopo rusak parah."
+    )
+    store = _store(tmp_path)
+    first = run_scan(_request(fixture_dir, "jalan rusak"), store)
+    original = store.get_case(first.cases[0].case_id)
+    assert original is not None
+    assert original.analysis_status == "OK"
+    second = run_scan(
+        _request(fixture_dir, "trotoar rusak"),
+        store,
+        orchestrator=FailingOrchestrator(),
+    )
+    saved = store.get_case(first.cases[0].case_id)
+    assert saved is not None
+    assert second.failed == 0
+    assert saved.analysis_status == "OK"
+    assert saved.run == original.run
+    assert saved.operator_status == original.operator_status
+
+
+def test_orchestrator_exception_counts_failure_once(tmp_path) -> None:
+    fixture_dir = _write_fixture(
+        tmp_path / "fixtures", "post-1", "Min, jalan di Jl. Kopo rusak parah."
+    )
+    result = run_scan(
+        _request(fixture_dir, "jalan rusak"),
+        _store(tmp_path),
+        orchestrator=RaisingOrchestrator(),
+    )
+    assert result.failed == 1
+    assert result.cases[0].analysis_status == "FAILED"
+    assert len(result.errors) == 1
+
+
+def test_needs_review_without_case_is_a_failed_analysis(tmp_path) -> None:
+    fixture_dir = _write_fixture(
+        tmp_path / "fixtures", "post-1", "Min, jalan di Jl. Kopo rusak parah."
+    )
+    store = _store(tmp_path)
+    result = run_scan(
+        _request(fixture_dir, "jalan rusak"),
+        store,
+        orchestrator=MissingCaseOrchestrator(),
+    )
+    assert result.failed == 1
+    assert result.cases[0].analysis_status == "FAILED"
+    assert store.list_cases() == []
+    assert len(store.list_cases(analysis_status="FAILED")) == 1

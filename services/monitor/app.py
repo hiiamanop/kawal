@@ -28,7 +28,11 @@ class ForwardRequest(BaseModel):
 
 
 def _case_payload(case: MonitorCase) -> dict:
-    return case.model_dump(mode="json")
+    payload = case.model_dump(mode="json")
+    payload["case"] = (
+        case.run.case.model_dump(mode="json") if case.run.case is not None else None
+    )
+    return payload
 
 
 def create_monitor_app(db_path: str | Path | None = None) -> FastAPI:
@@ -140,13 +144,20 @@ def create_monitor_app(db_path: str | Path | None = None) -> FastAPI:
         if case is None:
             raise HTTPException(status_code=404, detail="Case not found")
         try:
-            updated = store.update_case(case_id, CaseUpdate(status="READY_TO_FORWARD"))
+            store.validate_transition(case_id, "READY_TO_FORWARD")
         except InvalidTransition as exc:
             raise HTTPException(
                 status_code=409,
                 detail={"code": "INVALID_TRANSITION", "message": str(exc)},
             ) from None
-        packet = write_forward_packet(updated, request.note, app.state.forward_dir)
+        packet_case = case.model_copy(update={"operator_status": "READY_TO_FORWARD"})
+        packet = write_forward_packet(packet_case, request.note, app.state.forward_dir)
+        try:
+            updated = store.update_case(case_id, CaseUpdate(status="READY_TO_FORWARD"))
+        except Exception:
+            Path(packet.markdown_path).unlink(missing_ok=True)
+            Path(packet.json_path).unlink(missing_ok=True)
+            raise
         return {
             **packet.model_dump(mode="json"),
             "case": _case_payload(updated),

@@ -17,6 +17,7 @@
         <button class="nav" data-view="ready">Siap Diteruskan</button>
         <button class="nav" data-view="forwarded">Forwarded</button>
         <button class="nav" data-view="archive">Archive</button>
+        <button class="nav" data-view="errors">Errors</button>
       </nav>
       <div class="filters">
         <label>Kategori
@@ -57,6 +58,15 @@
       </section>
       <div class="composer">
         <input id="query-input" placeholder="Tanya atau scan keluhan..." />
+        <select id="source-mode" title="Sumber data">
+          <option value="live">Live X</option>
+          <option value="replay">Replay</option>
+        </select>
+        <select id="analysis-mode" title="Mode analisis">
+          <option value="rule">Rule</option>
+          <option value="llm">LLM</option>
+        </select>
+        <input id="fixture-dir" placeholder="Folder fixture (replay)" hidden />
         <button class="primary" id="composer-scan">Scan</button>
       </div>
     </main>

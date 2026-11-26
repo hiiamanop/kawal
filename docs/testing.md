@@ -18,7 +18,7 @@ for the `test` job.
 Last local result after the monitor console:
 
 ```text
-731 passed, 41 skipped, 85 deselected
+766 passed, 41 skipped, 85 deselected
 ```
 
 ### Monitor console
@@ -31,7 +31,7 @@ pytest tests/test_monitor_api.py tests/test_monitor_store.py tests/test_monitor_
   tests/test_monitor_scoring.py tests/test_monitor_forwarding.py -q
 ```
 
-Last local result: `16 passed`.
+Last local result: `26 passed`.
 
 Run the console locally with:
 

@@ -17,3 +17,7 @@ def test_forward_packet_is_a_local_draft(tmp_path: Path) -> None:
     assert case.case_id in md
     assert data["case_id"] == case.case_id
     assert data["department"] == case.department
+    assert data["trust_decision"] == case.run.case.trust_decision
+    assert data["evidence_spans"] == list(case.run.case.extraction.evidence_spans)
+    assert "Evidence spans" in md
+    assert "Trust decision" in md

@@ -199,9 +199,11 @@ class HarnessOrchestrator:
         arbitration: ArbitrationOutput | None = None
         arbiter_calls = 0
         category_review_codes = tuple(
-            code
-            for code in triage.reason_codes
-            if code in ("CATEGORY_UNKNOWN", "AMBIGUOUS_CATEGORY")
+            dict.fromkeys(
+                code
+                for code in (*triage.reason_codes, *verification.issues)
+                if code in ("CATEGORY_UNKNOWN", "AMBIGUOUS_CATEGORY")
+            )
         )
         agreed = (
             triage.is_complaint == verification.is_complaint
@@ -223,6 +225,7 @@ class HarnessOrchestrator:
             status = "REJECTED"
         elif not agreed:
             reason_codes.append("TRIAGE_VERIFIER_DISAGREEMENT")
+            reason_codes.extend(category_review_codes)
             if self._arbiter is not None:
                 arbiter_result, exceeded = self._call_agent(
                     self._arbiter,

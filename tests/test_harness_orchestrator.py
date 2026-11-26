@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import pytest
+
 from contracts.harness import (
     ArbitrationOutput,
     ExtractionOutput,
@@ -253,3 +255,69 @@ def test_opinion_is_rejected_as_non_actionable() -> None:
     assert run.case.source_intent == "OPINION"
     assert run.case.status == "REJECTED"
     assert "SOURCE_NOT_ACTIONABLE" in run.case.reason_codes
+
+
+def test_verifier_ambiguity_warning_forces_review() -> None:
+    triage = PricedStubAgent(
+        "triage",
+        {
+            "is_complaint": True,
+            "category": "ROAD",
+            "risk": "HIGH",
+            "confidence": 0.9,
+            "reason_codes": [],
+        },
+    )
+    extraction = PricedStubAgent(
+        "extraction",
+        {
+            "location": "Kopo",
+            "object": "jalan rusak",
+            "time": None,
+            "evidence_spans": ["Kopo", "rusak"],
+            "confidence": 0.9,
+        },
+    )
+    verifier = PricedStubAgent(
+        "verifier",
+        {
+            "is_complaint": True,
+            "category": "ROAD",
+            "evidence_supported": True,
+            "issues": ["AMBIGUOUS_CATEGORY"],
+            "confidence": 0.8,
+        },
+    )
+    run = _orchestrator(
+        triage=triage,
+        extraction=extraction,
+        verifier=verifier,
+        arbiter=RuleArbiterAgent(),
+    ).run(_post("Jl. Kopo rusak parah, tolong diperbaiki."))
+    assert run.status == "NEEDS_REVIEW"
+    assert run.case is not None
+    assert "AMBIGUOUS_CATEGORY" in run.case.reason_codes
+
+
+AMBIGUOUS_CASES = [
+    "Pungli parkir liar di trotoar yang rusak dan jalan berlubang.",
+    "Banjir, drainase, dan gorong-gorong mampet karena tumpukan sampah di TPS.",
+    "Tumpukan sampah, limbah, dan TPS penuh karena banjir, drainase, dan selokan mampet.",
+    "Pipa bocor dan air keruh membasahi jalan rusak berlubang.",
+    "Kartu keluarga dan akta terhambat karena parkir liar.",
+    "Rumah sakit kekurangan obat, dokter, dan ambulans karena tumpukan sampah di TPS.",
+    "Kartu keluarga terhambat karena pungli dan parkir liar.",
+    "Angkot ngetem, bus, dan lampu lalu lintas mati di trotoar jalan rusak.",
+    "Kebakaran rumah, pemadam, dan pohon tumbang menutup trotoar jalan rusak.",
+    "Bansos belum cair untuk lansia yang sakit di puskesmas.",
+    "Atap sekolah rusak, guru, dan buku di kelas karena jalan rusak.",
+    "Lampu taman mati, bangku rusak, dan jalan rusak di taman.",
+]
+
+
+@pytest.mark.parametrize("text", AMBIGUOUS_CASES)
+def test_every_category_ambiguity_requires_review(text: str) -> None:
+    run = _orchestrator().run(_post(text))
+    assert run.status == "NEEDS_REVIEW"
+    assert run.case is not None
+    assert "AMBIGUOUS_CATEGORY" in run.case.reason_codes

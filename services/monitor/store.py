@@ -238,16 +238,23 @@ class MonitorStore:
             ).fetchall()
         return [self._row_to_case(row) for row in rows]
 
+    def validate_transition(self, case_id: str, new_status: str) -> MonitorCase:
+        current = self.get_case(case_id)
+        if current is None:
+            raise KeyError(case_id)
+        if new_status != current.operator_status:
+            allowed = _ALLOWED_TRANSITIONS.get(current.operator_status, set())
+            if new_status not in allowed:
+                raise InvalidTransition(case_id, current.operator_status, new_status)
+        return current
+
     def update_case(self, case_id: str, update: CaseUpdate) -> MonitorCase:
         current = self.get_case(case_id)
         if current is None:
             raise KeyError(case_id)
         new_status = update.status or current.operator_status
         new_note = current.notes if update.note is None else update.note
-        if new_status != current.operator_status:
-            allowed = _ALLOWED_TRANSITIONS.get(current.operator_status, set())
-            if new_status not in allowed:
-                raise InvalidTransition(case_id, current.operator_status, new_status)
+        self.validate_transition(case_id, new_status)
         now = datetime.now(timezone.utc)
         with self._connect() as connection:
             connection.execute(

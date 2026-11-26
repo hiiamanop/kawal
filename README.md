@@ -4,15 +4,15 @@ KAWAL is a research prototype for processing Indonesian citizen complaints with
 auditable, multi-agent decisions. The current focus is an X-only harness that
 compares rule-based and LLM-backed agents on recorded public posts.
 
-The repository still contains an earlier WhatsApp pipeline and its dashboard,
-simulator, outbox, and policy components. That pipeline is experimental and is
+The repository still contains an earlier WhatsApp pipeline, simulator, outbox,
+and policy components. That pipeline is experimental and is
 not the current evaluation target.
 
 ## Status
 
 | Area | State |
 |---|---|
-| Core CI | `731 passed, 41 skipped, 85 deselected` |
+| Core CI | `766 passed, 41 skipped, 85 deselected` |
 | Research/integration lane | Green, no quarantine |
 | Harness X | M1 through M8 implemented; monitor console added |
 | WhatsApp pipeline | Experimental, still present, not the current focus |

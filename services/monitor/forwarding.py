@@ -34,6 +34,10 @@ def write_forward_packet(
     location = complaint.extraction.location if complaint is not None else None
     source_intent = complaint.source_intent if complaint is not None else None
     trust = complaint.status if complaint is not None else None
+    trust_decision = complaint.trust_decision if complaint is not None else None
+    evidence_spans = (
+        list(complaint.extraction.evidence_spans) if complaint is not None else []
+    )
     operator_note = note.strip() or case.notes.strip()
 
     lines = [
@@ -44,6 +48,8 @@ def write_forward_packet(
         f"- Case ID: `{case.case_id}`",
         f"- Department: {case.department or '-'}",
         f"- Trust status: {trust or '-'}",
+        f"- Trust decision: {trust_decision or '-'}",
+        f"- Evidence spans: {', '.join(evidence_spans) or '-'}",
         f"- Category: {category or '-'}",
         f"- Risk: {risk or '-'}",
         f"- Location: {location or '-'}",
@@ -75,6 +81,8 @@ def write_forward_packet(
                 "draft": True,
                 "department": case.department,
                 "trust_status": trust,
+                "trust_decision": trust_decision,
+                "evidence_spans": evidence_spans,
                 "category": category,
                 "risk": risk,
                 "location": location,

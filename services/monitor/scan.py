@@ -85,11 +85,27 @@ def run_scan(
     failed = 0
 
     for post in posts:
+        existing = store.get_case(deterministic_case_id(post))
+        if existing is not None and existing.analysis_status == "OK":
+            now = datetime.now(timezone.utc)
+            refreshed = existing.model_copy(
+                update={
+                    "post": post,
+                    "viral_score": viral_score(post, existing.run.case, now),
+                    "last_seen_at": now,
+                    "updated_at": now,
+                }
+            )
+            store.upsert_case(refreshed, request.query)
+            updated_cases += 1
+            cases.append(refreshed)
+            continue
+
+        error_reason: str | None = None
         try:
             run = selected_orchestrator.run(post)
         except Exception as exc:
-            failed += 1
-            errors.append(f"{post.post_id}: {type(exc).__name__}")
+            error_reason = type(exc).__name__
             run = HarnessRun(
                 run_id=f"failed-{uuid4().hex[:8]}",
                 post=post,
@@ -97,10 +113,18 @@ def run_scan(
                 cost=CostReport(),
             )
 
-        analysis_status = _ANALYSIS_STATUS.get(run.status, "FAILED")
+        if run.case is None:
+            if run.status == "BUDGET_EXCEEDED":
+                analysis_status = "BUDGET_EXCEEDED"
+            else:
+                analysis_status = "FAILED"
+                error_reason = error_reason or "ANALYSIS_INCOMPLETE"
+        else:
+            analysis_status = _ANALYSIS_STATUS.get(run.status, "FAILED")
+
         if analysis_status != "OK":
             failed += 1
-            errors.append(f"{post.post_id}: {run.status}")
+            errors.append(f"{post.post_id}: {error_reason or run.status}")
 
         now = datetime.now(timezone.utc)
         if run.case is None:
