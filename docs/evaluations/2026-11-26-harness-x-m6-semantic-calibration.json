@@ -18,7 +18,7 @@
           "actual_reuse": true,
           "seed_stored": true,
           "match_type": "SEMANTIC",
-          "similarity": 0.8597773313522339,
+          "similarity": 0.9337214827537537,
           "decision": "COMPLETED",
           "inner_called": false,
           "passed": true,
@@ -32,7 +32,7 @@
           "actual_reuse": true,
           "seed_stored": true,
           "match_type": "SEMANTIC",
-          "similarity": 0.9696657657623291,
+          "similarity": 0.9896989464759827,
           "decision": "COMPLETED",
           "inner_called": false,
           "passed": true,
@@ -46,7 +46,7 @@
           "actual_reuse": false,
           "seed_stored": true,
           "match_type": "SEMANTIC",
-          "similarity": 0.8158652782440186,
+          "similarity": 0.9267285466194153,
           "decision": "REJECTED",
           "inner_called": true,
           "passed": true,
@@ -75,7 +75,7 @@
           "actual_reuse": false,
           "seed_stored": true,
           "match_type": "SEMANTIC",
-          "similarity": 0.8456187844276428,
+          "similarity": 0.9402574896812439,
           "decision": "REJECTED",
           "inner_called": true,
           "passed": true,
@@ -103,7 +103,7 @@
           "actual_reuse": true,
           "seed_stored": true,
           "match_type": "SEMANTIC",
-          "similarity": 0.8597773313522339,
+          "similarity": 0.9337214827537537,
           "decision": "COMPLETED",
           "inner_called": false,
           "passed": true,
@@ -117,7 +117,7 @@
           "actual_reuse": true,
           "seed_stored": true,
           "match_type": "SEMANTIC",
-          "similarity": 0.9696657657623291,
+          "similarity": 0.9896989464759827,
           "decision": "COMPLETED",
           "inner_called": false,
           "passed": true,
@@ -130,13 +130,14 @@
           "expected_reuse": false,
           "actual_reuse": false,
           "seed_stored": true,
-          "match_type": "NONE",
-          "similarity": 0.0,
+          "match_type": "SEMANTIC",
+          "similarity": 0.9267285466194153,
           "decision": "REJECTED",
           "inner_called": true,
           "passed": true,
           "reason_codes": [
-            "CACHE_MISS"
+            "CACHE_SEMANTIC",
+            "CACHE_LOCATION_MISMATCH"
           ]
         },
         {
@@ -158,13 +159,14 @@
           "expected_reuse": false,
           "actual_reuse": false,
           "seed_stored": true,
-          "match_type": "NONE",
-          "similarity": 0.0,
+          "match_type": "SEMANTIC",
+          "similarity": 0.9402574896812439,
           "decision": "REJECTED",
           "inner_called": true,
           "passed": true,
           "reason_codes": [
-            "CACHE_MISS"
+            "CACHE_SEMANTIC",
+            "CACHE_NON_ACTIONABLE_SOURCE"
           ]
         }
       ]
@@ -172,26 +174,26 @@
     {
       "threshold": 0.9,
       "total": 5,
-      "true_positive": 1,
+      "true_positive": 2,
       "false_positive": 0,
-      "false_negative": 1,
+      "false_negative": 0,
       "true_negative": 3,
       "precision": 1.0,
-      "recall": 0.5,
-      "accuracy": 0.8,
+      "recall": 1.0,
+      "accuracy": 1.0,
       "results": [
         {
           "scenario_id": "road-kopo-paraphrase",
           "expected_reuse": true,
-          "actual_reuse": false,
+          "actual_reuse": true,
           "seed_stored": true,
-          "match_type": "NONE",
-          "similarity": 0.0,
-          "decision": "REJECTED",
-          "inner_called": true,
-          "passed": false,
+          "match_type": "SEMANTIC",
+          "similarity": 0.9337214827537537,
+          "decision": "COMPLETED",
+          "inner_called": false,
+          "passed": true,
           "reason_codes": [
-            "CACHE_MISS"
+            "CACHE_SEMANTIC"
           ]
         },
         {
@@ -200,7 +202,7 @@
           "actual_reuse": true,
           "seed_stored": true,
           "match_type": "SEMANTIC",
-          "similarity": 0.9696657657623291,
+          "similarity": 0.9896989464759827,
           "decision": "COMPLETED",
           "inner_called": false,
           "passed": true,
@@ -213,13 +215,14 @@
           "expected_reuse": false,
           "actual_reuse": false,
           "seed_stored": true,
-          "match_type": "NONE",
-          "similarity": 0.0,
+          "match_type": "SEMANTIC",
+          "similarity": 0.9267285466194153,
           "decision": "REJECTED",
           "inner_called": true,
           "passed": true,
           "reason_codes": [
-            "CACHE_MISS"
+            "CACHE_SEMANTIC",
+            "CACHE_LOCATION_MISMATCH"
           ]
         },
         {
@@ -241,13 +244,14 @@
           "expected_reuse": false,
           "actual_reuse": false,
           "seed_stored": true,
-          "match_type": "NONE",
-          "similarity": 0.0,
+          "match_type": "SEMANTIC",
+          "similarity": 0.9402574896812439,
           "decision": "REJECTED",
           "inner_called": true,
           "passed": true,
           "reason_codes": [
-            "CACHE_MISS"
+            "CACHE_SEMANTIC",
+            "CACHE_NON_ACTIONABLE_SOURCE"
           ]
         }
       ]
@@ -255,26 +259,26 @@
     {
       "threshold": 0.92,
       "total": 5,
-      "true_positive": 1,
+      "true_positive": 2,
       "false_positive": 0,
-      "false_negative": 1,
+      "false_negative": 0,
       "true_negative": 3,
       "precision": 1.0,
-      "recall": 0.5,
-      "accuracy": 0.8,
+      "recall": 1.0,
+      "accuracy": 1.0,
       "results": [
         {
           "scenario_id": "road-kopo-paraphrase",
           "expected_reuse": true,
-          "actual_reuse": false,
+          "actual_reuse": true,
           "seed_stored": true,
-          "match_type": "NONE",
-          "similarity": 0.0,
-          "decision": "REJECTED",
-          "inner_called": true,
-          "passed": false,
+          "match_type": "SEMANTIC",
+          "similarity": 0.9337214827537537,
+          "decision": "COMPLETED",
+          "inner_called": false,
+          "passed": true,
           "reason_codes": [
-            "CACHE_MISS"
+            "CACHE_SEMANTIC"
           ]
         },
         {
@@ -283,7 +287,7 @@
           "actual_reuse": true,
           "seed_stored": true,
           "match_type": "SEMANTIC",
-          "similarity": 0.9696657657623291,
+          "similarity": 0.9896989464759827,
           "decision": "COMPLETED",
           "inner_called": false,
           "passed": true,
@@ -296,13 +300,14 @@
           "expected_reuse": false,
           "actual_reuse": false,
           "seed_stored": true,
-          "match_type": "NONE",
-          "similarity": 0.0,
+          "match_type": "SEMANTIC",
+          "similarity": 0.9267285466194153,
           "decision": "REJECTED",
           "inner_called": true,
           "passed": true,
           "reason_codes": [
-            "CACHE_MISS"
+            "CACHE_SEMANTIC",
+            "CACHE_LOCATION_MISMATCH"
           ]
         },
         {
@@ -324,13 +329,14 @@
           "expected_reuse": false,
           "actual_reuse": false,
           "seed_stored": true,
-          "match_type": "NONE",
-          "similarity": 0.0,
+          "match_type": "SEMANTIC",
+          "similarity": 0.9402574896812439,
           "decision": "REJECTED",
           "inner_called": true,
           "passed": true,
           "reason_codes": [
-            "CACHE_MISS"
+            "CACHE_SEMANTIC",
+            "CACHE_NON_ACTIONABLE_SOURCE"
           ]
         }
       ]
@@ -366,7 +372,7 @@
           "actual_reuse": true,
           "seed_stored": true,
           "match_type": "SEMANTIC",
-          "similarity": 0.9696657657623291,
+          "similarity": 0.9896989464759827,
           "decision": "COMPLETED",
           "inner_called": false,
           "passed": true,
@@ -419,6 +425,6 @@
       ]
     }
   ],
-  "best_threshold": 0.85,
-  "created_at": "2026-11-26T01:43:14.347240Z"
+  "best_threshold": 0.92,
+  "created_at": "2026-11-26T03:49:44.283668Z"
 }
