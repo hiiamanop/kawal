@@ -5,6 +5,7 @@ import json
 from typing import Any
 from uuid import uuid4
 
+from contracts.models import Category
 from contracts.harness import (
     ArbitrationOutput,
     ComplaintCase,
@@ -66,7 +67,10 @@ class HarnessOrchestrator:
                 role="triage",
                 source_text=post.text,
                 source_media=post.media_urls,
-                context={"allowed_categories": ["ROAD"], "city": "Bandung"},
+                context={
+                    "allowed_categories": [category.value for category in Category],
+                    "city": "Bandung",
+                },
                 budget_remaining_usd=budget.remaining_usd,
             ),
             trace,
@@ -151,7 +155,7 @@ class HarnessOrchestrator:
                 source_media=post.media_urls,
                 context={
                     "extraction": extraction.model_dump(mode="json"),
-                    "allowed_categories": ["ROAD"],
+                    "allowed_categories": [category.value for category in Category],
                 },
                 budget_remaining_usd=budget.remaining_usd,
             ),
@@ -194,6 +198,13 @@ class HarnessOrchestrator:
 
         arbitration: ArbitrationOutput | None = None
         arbiter_calls = 0
+        category_review_codes = tuple(
+            dict.fromkeys(
+                code
+                for code in (*triage.reason_codes, *verification.issues)
+                if code in ("CATEGORY_UNKNOWN", "AMBIGUOUS_CATEGORY")
+            )
+        )
         agreed = (
             triage.is_complaint == verification.is_complaint
             and triage.category == verification.category
@@ -214,6 +225,7 @@ class HarnessOrchestrator:
             status = "REJECTED"
         elif not agreed:
             reason_codes.append("TRIAGE_VERIFIER_DISAGREEMENT")
+            reason_codes.extend(category_review_codes)
             if self._arbiter is not None:
                 arbiter_result, exceeded = self._call_agent(
                     self._arbiter,
@@ -255,6 +267,7 @@ class HarnessOrchestrator:
                 reason_codes.append("EVIDENCE_NOT_SUPPORTED")
             if not location_specific:
                 reason_codes.extend(location_assessment.reason_codes)
+            reason_codes.extend(category_review_codes)
             if reason_codes:
                 trust_decision = "NEEDS_REVIEW"
                 status = "NEEDS_REVIEW"

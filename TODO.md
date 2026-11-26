@@ -50,7 +50,17 @@
 - [x] M6.2: calibrate semantic cache with real IndoBERT and near-duplicates <!-- id=48 priority=medium done=2026-11-26 created=2026-11-26 -->
 - [x] M7: add source-type labels and document X expansion blocker <!-- id=49 priority=medium done=2026-11-26 created=2026-11-26 -->
 - [x] Research: reduce quarantine and add prerequisite skips <!-- id=50 priority=low done=2026-11-26 created=2026-11-26 -->
-- [ ] M7b: capture more real X posts when X search/tweets is healthy <!-- id=51 priority=medium created=2026-11-26 -->
+- [x] M7b: capture more real X posts when X search/tweets is healthy <!-- id=51 priority=medium done=2026-11-26 created=2026-11-26 -->
 - [x] M8a: extend holdout coverage to all 12 categories <!-- id=52 priority=medium done=2026-11-26 created=2026-11-26 -->
 - [x] M8c: evaluate a domain-adapted sentence encoder for legacy semantic cache <!-- id=53 priority=medium done=2026-11-26 created=2026-11-26 -->
 - [x] M8b: add nine curated families per extended category <!-- id=54 priority=medium done=2026-11-26 created=2026-11-26 -->
+- [x] UI: finalize monitor console design and get approval <!-- id=55 priority=high done=2026-11-26 created=2026-11-26 -->
+- [x] UI: implement monitor models, SQLite store, and audit log <!-- id=56 priority=high done=2026-11-26 created=2026-11-26 -->
+- [x] UI: implement live/replay scan service with dedupe and error states <!-- id=57 priority=high done=2026-11-26 created=2026-11-26 -->
+- [x] UI: implement viral scoring, department routing, status workflow, and forwarding packet <!-- id=58 priority=high done=2026-11-26 created=2026-11-26 -->
+- [x] UI: implement FastAPI monitor API and replace legacy dashboard backend <!-- id=59 priority=high done=2026-11-26 created=2026-11-26 -->
+- [x] UI: build ChatGPT-style console shell, feed, detail panel, and composer <!-- id=60 priority=high done=2026-11-26 created=2026-11-26 -->
+- [x] UI: add monitor tests, remove legacy dashboard tests, and update docs <!-- id=61 priority=high done=2026-11-26 created=2026-11-26 -->
+- [•] UI: run core/research CI and open PR <!-- id=62 priority=high created=2026-11-26 -->
+- [ ] M7c: second-review new labels and add category-balanced complaints <!-- id=63 priority=medium created=2026-11-26 -->
+- [x] Harness: extend rule triage, extraction, and verifier to all 12 complaint categories <!-- id=64 priority=high done=2026-11-26 created=2026-11-26 -->

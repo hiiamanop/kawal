@@ -15,11 +15,31 @@ artifacts, or generated thesis reports. The script also unsets
 lane into an integration or live-model run. GitHub Actions uses the same script
 for the `test` job.
 
-Last local result after M6:
+Last local result after the monitor console:
 
 ```text
-687 passed, 42 skipped, 85 deselected
+766 passed, 41 skipped, 85 deselected
 ```
+
+### Monitor console
+
+The monitor console tests use temporary SQLite databases and replay fixtures; they
+do not call live X.
+
+```bash
+pytest tests/test_monitor_api.py tests/test_monitor_store.py tests/test_monitor_scan.py \
+  tests/test_monitor_scoring.py tests/test_monitor_forwarding.py -q
+```
+
+Last local result: `26 passed`.
+
+Run the console locally with:
+
+```bash
+python scripts/run_monitor.py --port 8088
+```
+
+It binds to `127.0.0.1`; live scans require an Agent Reach X session.
 
 ## Research and integration lane
 
@@ -32,7 +52,7 @@ listed in [`tests/quarantine.txt`](../tests/quarantine.txt). It unsets the
 OpenRouter key because these tests must stay offline. Last local result:
 
 ```text
-78 passed, 8 skipped, 0 quarantined
+78 passed, 7 skipped, 0 quarantined
 ```
 
 The skips are missing prerequisites: PostgreSQL, generated M3 artifacts,
