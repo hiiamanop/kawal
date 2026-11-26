@@ -51,14 +51,35 @@ function renderStats(stats) {
     .join("");
 }
 
+function filteredCases() {
+  const viewStatus = {
+    monitoring: "MONITORING",
+    ready: "READY_TO_FORWARD",
+    forwarded: "FORWARDED",
+    archive: "DISMISSED",
+  }[state.view];
+  const status = $("status-filter").value || viewStatus;
+  const category = $("category-filter").value;
+  const risk = $("risk-filter").value;
+  return state.cases.filter((item) => {
+    const c = item.case;
+    const triage = c ? c.triage : null;
+    if (status && item.operator_status !== status) return false;
+    if (category && triage?.category !== category) return false;
+    if (risk && triage?.risk !== risk) return false;
+    return true;
+  });
+}
+
 function renderFeed() {
   const feed = $("feed");
-  if (!state.cases.length) {
+  const cases = filteredCases();
+  if (!cases.length) {
     feed.innerHTML =
-      '<div class="empty">Belum ada data. Klik <b>Scan sekarang</b> untuk mulai.</div>';
+      '<div class="empty">Belum ada data yang cocok. Klik <b>Scan sekarang</b> untuk mulai.</div>';
     return;
   }
-  feed.innerHTML = state.cases
+  feed.innerHTML = cases
     .map((item) => {
       const c = item.case;
       const triage = c ? c.triage : null;
@@ -146,16 +167,42 @@ async function openDetail(caseId) {
     <p>
       <button class="ghost" data-action="MONITORING">Monitor</button>
       <button class="primary" data-action="READY_TO_FORWARD">Siap Diteruskan</button>
+      <button class="ghost" data-action="forward">Buat Draft</button>
     </p>
   `;
   $("detail-panel").hidden = false;
   $("detail-content").querySelectorAll("[data-action]").forEach((button) => {
     button.addEventListener("click", async () => {
-      await fetch(`/api/monitor/cases/${caseId}`, {
+      const action = button.dataset.action;
+      if (action === "forward") {
+        const note = prompt("Catatan operator untuk draft penerusan:", "Mohon diteruskan ke dinas terkait.");
+        if (note === null) return;
+        const response = await fetch(`/api/monitor/cases/${caseId}/forward`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ note }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          alert(data.detail?.message || "Gagal membuat draft");
+          return;
+        }
+        const filename = data.markdown_path.split("/").pop();
+        window.location.href = `/api/monitor/forwards/${filename}`;
+        await openDetail(caseId);
+        await load();
+        return;
+      }
+      const response = await fetch(`/api/monitor/cases/${caseId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: button.dataset.action }),
+        body: JSON.stringify({ status: action }),
       });
+      if (!response.ok) {
+        const data = await response.json();
+        alert(data.detail?.message || "Status tidak dapat diubah");
+        return;
+      }
       await openDetail(caseId);
       await load();
     });
@@ -171,6 +218,9 @@ $("query-input").addEventListener("keydown", (event) => {
   if (event.key === "Enter") scan($("query-input").value);
 });
 $("refresh-button").addEventListener("click", () => load());
+["category-filter", "risk-filter", "status-filter"].forEach((id) => {
+  $(id).addEventListener("change", renderFeed);
+});
 $("close-detail").addEventListener("click", () => {
   $("detail-panel").hidden = true;
 });
@@ -179,6 +229,7 @@ document.querySelectorAll(".nav").forEach((button) => {
     document.querySelectorAll(".nav").forEach((item) => item.classList.remove("active"));
     button.classList.add("active");
     state.view = button.dataset.view;
+    renderFeed();
   });
 });
 

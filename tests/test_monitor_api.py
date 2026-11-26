@@ -51,4 +51,16 @@ def test_scan_then_update_then_forward(tmp_path) -> None:
         json={"note": "Teruskan"},
     )
     assert forward.status_code == 200
-    assert "DRAFT" in Path(forward.json()["markdown_path"]).read_text()
+    packet = forward.json()
+    markdown_path = Path(packet["markdown_path"])
+    assert "DRAFT" in markdown_path.read_text()
+    download = client.get(f"/api/monitor/forwards/{markdown_path.name}")
+    assert download.status_code == 200
+    assert "DRAFT" in download.text
+
+
+def test_console_has_feed_detail_and_composer(tmp_path) -> None:
+    html = TestClient(create_monitor_app(db_path=tmp_path / "monitor.db")).get("/").text
+    for text in ["Keluhan viral", "Tanya atau scan keluhan", "Detail", "Siap Diteruskan", "Monitoring"]:
+        assert text in html
+    assert "cdn.tailwindcss.com" not in html

@@ -19,9 +19,27 @@
         <button class="nav" data-view="archive">Archive</button>
       </nav>
       <div class="filters">
-        <label>Kategori <select id="category-filter"><option value="">Semua</option></select></label>
-        <label>Risiko <select id="risk-filter"><option value="">Semua</option></select></label>
-        <label>Status <select id="status-filter"><option value="">Semua</option></select></label>
+        <label>Kategori
+          <select id="category-filter">
+            <option value="">Semua</option>
+            <option>ROAD</option><option>DRAINAGE_FLOOD</option><option>WASTE</option>
+            <option>CLEAN_WATER</option><option>CIVIL_ADMIN</option><option>HEALTH_SERVICE</option>
+            <option>PUBLIC_ORDER</option><option>TRANSPORTATION</option><option>FIRE_RESCUE</option>
+            <option>SOCIAL_AFFAIRS</option><option>EDUCATION</option><option>PARKS_HOUSING</option>
+          </select>
+        </label>
+        <label>Risiko
+          <select id="risk-filter">
+            <option value="">Semua</option><option>LOW</option><option>MEDIUM</option>
+            <option>HIGH</option><option>URGENT</option>
+          </select>
+        </label>
+        <label>Status
+          <select id="status-filter">
+            <option value="">Semua</option><option>NEW</option><option>MONITORING</option>
+            <option>READY_TO_FORWARD</option><option>FORWARDED</option><option>DISMISSED</option>
+          </select>
+        </label>
       </div>
     </aside>
     <main class="main">
@@ -29,6 +47,7 @@
         <div>
           <h1>Keluhan viral</h1>
           <p>Pantau aduan publik, cek bukti, lalu siapkan penerusan ke dinas terkait.</p>
+          <p class="hint">Klik kartu untuk membuka Detail.</p>
         </div>
         <button class="ghost" id="refresh-button">Refresh</button>
       </header>

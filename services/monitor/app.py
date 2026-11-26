@@ -5,7 +5,7 @@ import shutil
 import threading
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -71,6 +71,15 @@ def create_monitor_app(db_path: str | Path | None = None) -> FastAPI:
             limit=limit,
         )
         return {"cases": [_case_payload(case) for case in cases]}
+
+    @app.get("/api/monitor/forwards/{filename}")
+    def download_forward(filename: str) -> FileResponse:
+        if Path(filename).name != filename or filename.startswith("."):
+            raise HTTPException(status_code=404, detail="Forward not found")
+        path = forward_dir / filename
+        if not path.is_file():
+            raise HTTPException(status_code=404, detail="Forward not found")
+        return FileResponse(path)
 
     @app.get("/api/monitor/cases/{case_id}")
     def case_detail(case_id: str) -> dict:
