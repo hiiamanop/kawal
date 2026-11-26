@@ -1,296 +1,270 @@
-<div align="center">
-
 # KAWAL
-### **Kerangka Agen untuk Wadah Aduan Layanan**
-**A Local-First, Multimodal & Policy-Aware Intelligent Orchestration System for Indonesian Citizen Complaints**
 
-[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/)
-[![ONNX Runtime](https://img.shields.io/badge/ONNX%20Runtime-CPU%20Optimized-green.svg)](https://onnxruntime.ai/)
-[![Redpanda](https://img.shields.io/badge/Redpanda-Kafka%20Compatible-red.svg)](https://redpanda.com/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-blue.svg)](https://supabase.com/)
-[![OpenWA](https://img.shields.io/badge/WhatsApp-OpenWA%20Gateway-25D366.svg)](https://openwa.dev/)
-[![Tests](https://img.shields.io/badge/tests-43%20passed%20(100%25)-success.svg)](#testing--verification)
+KAWAL is a research prototype for processing Indonesian citizen complaints with
+auditable, multi-agent decisions. The current focus is an X-only harness that
+compares rule-based and LLM-backed agents on recorded public posts.
 
-</div>
+The repository still contains an earlier WhatsApp pipeline and its dashboard,
+simulator, outbox, and policy components. That pipeline is experimental and is
+not the current evaluation target.
 
----
+## Status
 
-## Executive Summary
+| Area | State |
+|---|---|
+| Core CI | `656 passed, 43 skipped, 84 deselected` |
+| Research/integration lane | Green with an explicit quarantine of 29 known failures |
+| Harness X | M1 through M6 implemented |
+| WhatsApp pipeline | Experimental, still present, not the current focus |
+| Production readiness | Not production-ready |
 
-**KAWAL** is a production-grade, distributed intelligent orchestration platform designed to transform raw, fragmented, multi-bubble, colloquial Indonesian citizen complaints over **WhatsApp** into structured, verifiable municipal tickets without hallucinations.
+The harness is useful for reproducible evaluation, not for live municipal
+dispatch. It does not create real government tickets, send replies to citizens,
+or replace human review.
 
-Unlike conventional chatbot architectures that act as naive wrappers around costly and slow cloud LLMs, KAWAL is architected with a **Local-First & Small-Model-First** philosophy:
-- **90–95% of incoming traffic is resolved locally** on CPU by custom-trained **IndoBERT Multi-Task & Span-NER ONNX** models in **~40–70 ms** at **zero marginal cost** and strict data privacy.
-- Frontier cloud multimodal reasoning is invoked selectively for less than 5% of traffic—specifically for visual scene comprehension (*VLM*) and complex causal disentanglement.
-
----
-
-## Key Engineering & Research Highlights
-
-KAWAL demonstrates applied AI and distributed systems engineering far beyond standard LLM wrappers:
-
-### 1. Local-First Multitask Neural Pipeline
-- Powered by a custom **IndoBERT Domain-Adapted (DAPT)** model compiled to **ONNX Runtime** (`city12-v7-onnx` and `city12-v4-onnx`).
-- Executes 4 inference tasks simultaneously in a single forward pass:
-  1. **Intent Classification:** Disentangles actionable citizen complaints from opinions, greetings, or spam.
-  2. **Category Routing:** Routes to 12 city department domains (Roads, Drainage/Flood, Waste, Satpol PP, Clean Water, etc.).
-  3. **Risk Stratification:** Estimates hazard levels (`LOW`, `MEDIUM`, `HIGH`, `URGENT`).
-  4. **Span-NER & Completeness:** Extracts Location (`LOC`), Object (`OBJ`), Time (`TIME`) entities, resolving whether street numbers and neighborhood details are complete.
-
-### 2. Semantic Caching & Incident Clustering (Zero Duplicate Tickets)
-- **Exact Match (0 ms):** Normalized SHA-256 text hashing for instantaneous cache hits.
-- **Dense Vector Search (PostgreSQL + pgvector):** 768-dimensional IndoBERT embeddings with portable dot-product cosine similarity.
-- **Incident Deduplication:** When 10 citizens report the same fallen tree or severe road pothole in the same neighborhood within 24 hours, KAWAL **does not flood field workers with 10 duplicate tickets**. It clusters subsequent reports under an active master ticket (`DUPLICATE_INCIDENT_LINKED`), immediately returning the active tracking number to citizens.
-- **Causal Reuse:** Saves 100% of LLM token costs by reusing verified causal root-causes across semantically similar complaints.
-
-### 3. Multimodal Vision-Language Integration
-- **Handles Captionless Images:** If a citizen sends only a photo without any accompanying text, the VLM analyzes visual damage (e.g., *"Photo displays a 15 cm deep flooded pothole across traffic lane"*), checks hazard indicators, and prompts the conversational engine to request specific address details.
-- **Automated Evidence Quality Check:** Rates photographic evidence (`HIGH`, `MEDIUM`, `LOW`) before passing it as mandatory evidence to city public works dispatchers.
-
-### 4. Dynamic Micro-Batcher & Single-Flight Concurrency Control
-- **Overcomes Single-Concurrency LLM Limits:** Solves rate-limiting constraints of single-worker LLM endpoints using thread-safe `threading.Lock` single-flight control, preventing `HTTP 429 Too Many Requests`.
-- **Dynamic Micro-Batching (300%–500% Throughput Boost):** Combines concurrent complaints arriving in close succession into **one multi-item prompt**. 5 cases are evaluated together in ~2 seconds instead of 10 seconds.
-- **Priority Queue:** Urgency-weighted scheduling automatically advances `URGENT` emergency complaints (fires, downed power lines) to the front of the batch.
-
-### 5. OPA Hard Gate & Fail-Closed PII Protection
-- Deterministic policy enforcement evaluated via **Open Policy Agent (OPA)** prior to side-effect actions and cloud egress.
-- Strictly blocks personally identifiable information (NIK, national IDs, sensitive faces) from reaching public APIs without sanitization.
-
-### 6. Resilient Distributed Architecture (Transactional Outbox & Idempotency)
-- Decoupled asynchronous event pipeline orchestrated with **PostgreSQL + Redpanda (Kafka-compatible)**.
-- **Transactional Outbox Pattern:** Ensures database updates and message broker emissions are atomically committed without split-brain anomalies.
-- **At-Least-Once Delivery & Idempotency Ledger:** Guarantees that citizen replies and department tickets are never duplicated across retries or network partitions.
-
----
-
-## System Architecture
+## What the X harness does
 
 ```text
-                               [ Citizen on WhatsApp ]
-                                          │
-                                          ▼
-                               [ OpenWA Webhook API ]
-                                          │
-                                          ▼
-                          [ services/intake/assembly.py ]
-                             (Multi-Bubble Aggregator)
-                                          │
-                            (Event: case.ready.v1)
-                                          │
-                                          ▼
-                         [ services/core/pipeline.py ]
-                        Pure 4-Mode Decision Engine
-                                          │
-                 ┌────────────────────────┴────────────────────────┐
-                 ▼                                                 ▼
-     [ Semantic Cache Lookup ]                          [ IndoBERT ONNX Runtime ]
-     - Exact Hash (0 ms)                                - Intent, Category, Risk
-     - Vector Similarity (Postgres)                     - Span-NER (Location)
-     - Incident Deduplication                           - Hybrid Completeness
-                 │                                                 │
-                 └────────────────────────┬────────────────────────┘
-                                          │
-            ┌─────────────────────────────┼─────────────────────────────┐
-            ▼                             ▼                             ▼
-   [ Decision: EXECUTE ]       [ Decision: CLARIFY ]        [ Decision: ESCALATE ]
-   - Verified Ticket Ready     - Request Missing Address    - Complex Causal / VLM Photo
-            │                             │                             │
-            │                             │                             ▼
-            │                             │                  [ Dynamic Micro-Batcher ]
-            │                             │                  - Single-Flight Lock
-            │                             │                  - Priority Queue
-            │                             │                  - Cloud LLM Call
-            │                             │                             │
-            └─────────────────────────────┼─────────────────────────────┘
-                                          │
-                                          ▼
-                            (Transactional Outbox Engine)
-                                          │
-                                  [ Redpanda Topics ]
-                         commands.ticket.v1 / commands.message.v1
-                                          │
-                                          ▼
-                            [ ToolGatewayWorker (OPA) ]
-                                          │
-                 ┌────────────────────────┴────────────────────────┐
-                 ▼                                                 ▼
-       [ Public Works Simulator ]                      [ WhatsApp Outbound Reply ]
-       (Official Ticket Issued)                        (Clarification / Receipt)
+recorded X post
+  -> ReplayXSource
+  -> deterministic Triage / Extraction / Verifier
+  -> source-intent and location guards
+  -> trust decision
+       ACCEPTED only when agents agree and guards pass
+       NEEDS_REVIEW on disagreement or missing evidence
+       REJECTED for non-actionable or non-citizen content
+  -> FileRunSink trace, case, cost, and cache provenance
 ```
 
----
+The LLM path follows the same orchestrator contract:
 
-## Repository Structure
+```text
+LLM Triage -> rule or LLM Extraction -> LLM Verifier -> rule or LLM Arbiter
+```
+
+The trust rules are deliberately conservative:
+
+- Triage and Verifier disagreement always becomes `NEEDS_REVIEW`.
+- The Arbiter explains a conflict; it never authorizes `ACCEPTED`.
+- A complaint must have a `SPECIFIC` location to be accepted.
+- News, opinions, questions, and announcements are not actionable complaints.
+- LLM output is validated against Pydantic schemas before it reaches a case.
+- LLM calls retry once on empty or invalid output and record the attempt count.
+- Prompt injection and PII are blocked before remote egress.
+
+## Semantic cache (M6)
+
+M6 adds a versioned cache for accepted analyses:
+
+- exact hash lookup;
+- pgvector HNSW lookup for high-confidence semantic matches;
+- in-memory store for offline tests;
+- source, location, category, evidence, and version guards on every reuse;
+- cache provenance in runs and batch summaries;
+- cost, hit-rate, and false-reuse metrics.
+
+Only accepted, rule-consistent, PII-free cases are cached. A cache hit still runs
+current deterministic Triage, Extraction, and Verifier guards. If any guard
+fails, the full pipeline runs.
+
+The live 18-post evaluation produced 2 exact hits, 0 false reuse, and reduced LLM
+calls from 36 to 32. A synthetic duplicate stream produced 6 exact hits out of 9
+posts and reduced LLM calls from 18 to 6. See
+[docs/evaluations/2026-11-26-harness-x-m6-cache.md](docs/evaluations/2026-11-26-harness-x-m6-cache.md).
+
+## Repository layout
 
 ```text
 kawal/
-├── artifacts/                  # IndoBERT DAPT, Multitask, & NER ONNX model artifacts
-├── contracts/
-│   └── models.py               # Pydantic data contracts (immutable, strictly typed)
-├── infra/
-│   ├── migrations/             # PostgreSQL DDL migrations (001 - 013)
-│   └── docker-compose.yml      # Redpanda, OPA, OpenWA, PostgreSQL
-├── scripts/
-│   ├── run_all_workers.py      # Multi-process supervisor for all background daemons
-│   ├── run_openwa_intake.py    # WhatsApp webhook receiver server (Port 8001)
-│   ├── run_dashboard.py        # Visual Web Inspector Dashboard (Port 8088)
-│   ├── run_case_ready_worker.py# Case decision & ONNX inference worker
-│   └── run_gateway_worker.py   # Outbound ticket & messaging gateway executor
-├── services/
-│   ├── core/
-│   │   ├── pipeline.py         # 4-Mode Decision Engine & incident orchestrator
-│   │   ├── batcher.py          # Dynamic Micro-Batcher & Single-Flight Concurrency Lock
-│   │   ├── model_gateway.py    # OpenRouter LLM Gateway with PII/egress gating
-│   │   └── opa.py              # Open Policy Agent client
-│   ├── intelligence/
-│   │   ├── embedder.py         # IndoBERT dense vector embedder (768-dim)
-│   │   ├── semantic_cache.py   # Semantic Cache & Incident Deduplication Engine
-│   │   ├── vision.py           # Multimodal Vision Analyzer 
-│   │   └── causality.py        # Causal disentanglement & root-cause resolver
-│   ├── intake/
-│   │   ├── openwa.py           # OpenWA normalizer & WhatsApp HTTP transport
-│   │   ├── social_reach.py     # Agent Reach social-media collector (X/FB/IG)
-│   │   ├── assembly.py         # Multi-bubble conversation assembler & timers
-│   │   └── send_ledger.py      # Idempotent send ledger preventing duplicate deliveries
-│   └── dashboard/
-│       └── app.py              # Visual monitoring backend & UI (FastAPI + Tailwind)
-└── tests/                      # Comprehensive test suite (43 test suites)
+├── contracts/              Pydantic request, result, and case schemas
+├── docs/                   design notes, milestone docs, evaluations
+├── fixtures/               recorded X posts and ground-truth labels
+├── infra/migrations/       PostgreSQL migrations, including pgvector
+├── scripts/                harness runners, comparison, scoring, legacy workers
+├── services/harness/       X harness agents, orchestrator, cache, sinks
+├── services/intelligence/  embedders and legacy semantic cache
+├── services/core/          legacy WhatsApp decision pipeline
+├── services/intake/        legacy WhatsApp intake and assembly
+├── services/dashboard/     legacy inspector dashboard
+├── tests/                  core, research, and integration tests
+├── docker-compose.yml      PostgreSQL/pgvector, Redpanda, OPA, simulator
+└── requirements*.txt       runtime, dev, ML, and simulator dependencies
 ```
 
----
+## Quickstart
 
-## Quickstart & Installation
+### Prerequisites
 
-### 1. Prerequisites
-- **OS:** Linux (Ubuntu 22.04+) or Windows WSL2
-- **Python:** 3.11+
-- **Docker & Docker Compose**
+- Linux, macOS, or WSL2
+- Python 3.11 or newer
+- Docker or Podman with Compose for the optional infrastructure services
 
-### 2. Virtual Environment Setup
+### Install
+
 ```bash
-# Clone the repository
-git clone https://github.com/anomalyco/opencode.git kawal
+git clone https://github.com/hiiamanop/kawal.git
 cd kawal
-
-# Create virtual environment
-python3 -m venv .venv-ml
-source .venv-ml/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt -r requirements-dev.txt
 ```
 
-### 3. Environment Configuration (`.env`)
-Copy the example configuration:
+Install `requirements-ml.txt` only if you need the local model stack:
+
+```bash
+pip install -r requirements-ml.txt
+```
+
+### Configuration
+
+Core tests run without a `.env` file or an API key. The script unsets the
+OpenRouter key so a local secret cannot turn core CI into a live-model run.
+
+For live LLM evaluation:
+
 ```bash
 cp .env.example .env
 ```
-Ensure required variables are populated:
-```env
-KAWAL_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres
-KAWAL_OPENWA_BASE_URL=http://127.0.0.1:2785
-KAWAL_OPENWA_API_KEY=owa_k1_...
-KAWAL_OPENWA_SESSION_ID=...
 
-# OpenRouter is the only remote model provider.
-KAWAL_OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-OPENROUTER_API_KEY=sk-or-v1-...
-KAWAL_OPENROUTER_MODEL=google/gemini-2.5-flash
-KAWAL_OPENROUTER_VISION_MODEL=google/gemini-2.5-flash
+Set `OPENROUTER_API_KEY` in `.env`. Never commit `.env`. The harness also accepts
+`KAWAL_OPENROUTER_MODEL`; the recorded evaluations used `tencent/hy4-flash` with
+`--no-reasoning`.
 
-# Agent Reach social-media collection.
-KAWAL_AGENT_REACH_BIN=agent-reach
-KAWAL_SOCIAL_CHANNELS=twitter,facebook,instagram
+## Run the X harness
+
+Rule-only single post:
+
+```bash
+python scripts/run_harness_x.py \
+  --fixture fixtures/x_posts/x_mgt_radio_2026159892885832085.json \
+  --out runs/demo
 ```
 
-All remote LLM/VLM calls (gated escalation, causal disambiguation, and image
-analysis) go through OpenRouter. Local IndoBERT classification, NER, and
-embedding models stay on-device.
+Batch over recorded posts:
 
-### 3a. Install Agent Reach (social media)
-Agent Reach is a separate read-only CLI (not a PyPI dependency):
 ```bash
-uv tool install https://github.com/Panniantong/Agent-Reach/releases/latest/download/agent-reach.zip
-agent-reach setup
-agent-reach channels
-```
-Optional/experimental social channels need a one-time login performed by you:
-```bash
-agent-reach login twitter
-agent-reach login facebook
-agent-reach login instagram
-```
-Then collect public posts into `social_media_posts`:
-```bash
-python scripts/run_social_collector.py --once
-# or inspect without writing to PostgreSQL
-python scripts/run_social_collector.py --dry-run --query "banjir bandung"
-```
-Collected items are exposed at `http://localhost:8088/api/social/posts`.
-
-The `web` channel works immediately through Agent Reach. X/Twitter, Facebook,
-and Instagram are Agent Reach's experimental browser channels: they require a
-local Chrome/Chromium plus a one-time login, and the collector reports
-`NEED_SETUP`/`NEED_LOGIN` per source instead of failing the whole cycle. Check
-readiness with `agent-reach doctor` and `agent-reach check twitter facebook instagram`.
-
-### 4. Start Infrastructure Containers
-```bash
-docker compose up -d redpanda opa ticket-simulator
+python scripts/run_harness_x_batch.py \
+  --fixture fixtures/x_posts \
+  --limit 18 \
+  --out runs/batch
 ```
 
-### 5. Launch All Background Workers
-KAWAL includes a unified supervisor managing all 4 background daemons with process lifecycle and log streaming:
+Rule versus LLM comparison:
+
 ```bash
+python scripts/compare_harness_agents.py \
+  --fixture fixtures/x_posts \
+  --limit 18 \
+  --model tencent/hy4-flash \
+  --input-price-per-million 0.035 \
+  --output-price-per-million 0.1405 \
+  --out runs/compare \
+  --no-reasoning
+```
+
+Score a comparison against ground-truth labels:
+
+```bash
+python scripts/score_harness_comparison.py \
+  --comparison runs/compare/comparison-<id>/comparison.json \
+  --labels fixtures/x_labels.json
+```
+
+Record or replay an LLM cassette:
+
+```bash
+# record
+python scripts/compare_harness_agents.py ... --cassette runs/cassette.json
+
+# replay without an API key
+python scripts/compare_harness_agents.py ... \
+  --cassette runs/cassette.json \
+  --replay-cassette
+```
+
+Evaluate the semantic cache:
+
+```bash
+python scripts/evaluate_harness_cache.py \
+  --fixture fixtures/x_posts \
+  --labels fixtures/x_labels.json \
+  --out runs/m6 \
+  --analysis-version harness-x-m6-v1 \
+  --cache-store memory \
+  --cache-namespace m6-eval \
+  --cache-reset \
+  --passes 2 \
+  --inner rule
+```
+
+Use `--inner llm` for the live LLM path. Use `--cache-store postgres` with
+`--cache-dsn` for pgvector. The compose Postgres image is
+`pgvector/pgvector:pg16`; run migration
+`infra/migrations/014_m6_harness_semantic_cache.sql` before a Postgres evaluation.
+
+Live X collection through Agent-Reach is optional:
+
+```bash
+python scripts/run_harness_x_batch.py \
+  --live-source \
+  --query "jalan rusak bandung" \
+  --limit 5
+```
+
+Recorded fixtures are the reproducible path. Live search depends on the local
+Agent-Reach session and the upstream platform.
+
+## Test
+
+Core, offline lane:
+
+```bash
+bash scripts/ci.sh
+```
+
+Research and integration lane with the documented quarantine:
+
+```bash
+bash scripts/research_ci.sh
+```
+
+The full, unquarantined research lane currently has 29 failures:
+
+```bash
+pytest -q -m "research or integration"
+```
+
+The blockers are listed in [tests/quarantine.txt](tests/quarantine.txt). They
+cover missing M3 artifacts, generator defects, a trained IndoBERT artifact, the
+dashboard database, and thesis report artifacts. The quarantine is visible debt,
+not a fix.
+
+## Legacy WhatsApp pipeline
+
+The worker scripts, compose services, and dashboard for the earlier pipeline are
+still present for local experiments:
+
+```bash
+docker compose up -d postgres redpanda opa ticket-simulator
 python scripts/run_all_workers.py
-```
-*Daemons started: `outbox-relay`, `intake-assembly`, `case-ready`, and `tool-gateway`.*
-
-### 6. Start Web Inspector Dashboard
-In a separate terminal tab:
-```bash
 python scripts/run_dashboard.py --port 8088
 ```
-Open **`http://localhost:8088`** in your browser to inspect live cases, state machine transitions, and audit trails.
 
----
+This path is not covered by the core CI gate and has not been verified as a
+working end-to-end service in this checkout. Do not treat it as production
+software. The current README makes no claim about live government integration or
+verified throughput for it.
 
-## Testing & Verification
+## Documentation
 
-KAWAL enforces a strict test-driven development workflow. The test suite covers 43 unit, integration, concurrency, and live neural model tests:
+- [Harness X M6](docs/harness-x-m6.md)
+- [Testing lanes and quarantine](docs/testing.md)
+- [M6 design](docs/superpowers/specs/2026-11-26-harness-x-m6-semantic-cache-design.md)
+- [M6 implementation plan](docs/superpowers/plans/2026-11-26-harness-x-m6-semantic-cache.md)
+- [Security policy](docs/SECURITY.md)
+- [Evaluation artifacts](docs/evaluations/)
 
-```bash
-pytest tests/ -v
-```
+## License
 
-### Test Coverage Highlights:
-- `test_batcher.py`: Verifies single-flight concurrency locks, priority sorting, and multi-item micro-batching.
-- `test_vision.py`: Tests VLM multimodal image comprehension via OpenRouter.
-- `test_openrouter_adapter.py`: Verifies OpenRouter adapter configuration and egress gating.
-- `test_social_reach.py`: Verifies Agent Reach JSON parsing, normalization, failure isolation, and deduplication.
-- `test_semantic_cache.py`: Verifies exact hash hits, dense vector similarity search, and tenant data isolation.
-- `test_pipeline_semantic_cache.py`: Verifies incident clustering across duplicate complaints on the same street.
-- `test_end_to_end_pipeline.py`: Full lifecycle from raw citizen message to verified ticket receipt.
-- `test_openwa_webhook.py`: WhatsApp webhook HMAC verification, timestamp normalization, and captionless image intake.
-- `test_interactive_clarification.py`: Multi-turn conversational clarification requesting missing address fields.
-
----
-
-## Performance Benchmarks
-
-| Component | Method / Technology | Latency | Marginal Cost |
-|---|---|---|---|
-| **Exact Duplicate Cache** | SHA-256 Text Hash | `< 1 ms` | $0.00 |
-| **Semantic Cache** | IndoBERT Dense Embedding + Postgres | `~15 ms` | $0.00 |
-| **Local Classification & NER** | IndoBERT Multitask ONNX (CPU) | `~40–70 ms` | $0.00 |
-| **Causal Disentanglement** | Heuristic Regex + Semantic Anchoring | `~5 ms` | $0.00 |
-| **VLM Multimodal Image Analysis** | VLM via OpenRouter | `~1.8 s` | Micro-API Cost |
-| **Micro-Batch LLM Escalation** | Dynamic Batcher (5 items/call) | `~2.0 s total` (`~400 ms`/item) | 80% Token Savings |
-
----
-
-## License & Academic Attribution
-
-Developed as part of research into **model-agnostic, trust- and policy-aware intelligent orchestration with adaptive computational escalation** for Indonesian public sector governance.
-
-Licensed under the **MIT License**.
+No license file is tracked in this checkout. Add a license before
+redistributing the code outside this repository.
