@@ -184,6 +184,7 @@ def _render_markdown(report: CacheEvaluationReport) -> str:
         "| Metric | Baseline | Cached |",
         "|---|---:|---:|",
         f"| Accepted | {report.baseline.accepted} | {report.cached.accepted} |",
+        f"| Accepted precision | {report.baseline.accepted_precision:.3f} | {report.cached.accepted_precision:.3f} |",
         f"| Decision accuracy | {report.baseline.decision_accuracy:.3f} | {report.cached.decision_accuracy:.3f} |",
         f"| False accepts | {report.baseline.false_accepts} | {report.cached.false_accepts} |",
         f"| LLM calls | {report.baseline.llm_calls} | {report.cached.llm_calls} |",

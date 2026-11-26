@@ -75,6 +75,17 @@ def _cache_run(
     )
 
 
+def test_cache_metrics_reports_accepted_precision() -> None:
+    report = score_cache_evaluation(
+        [_warmup_run(cost=0.0, recorded=True)],
+        [_cache_run(reused=True)],
+        _labels(),
+        baseline_runs=[_warmup_run(cost=0.002, recorded=False)],
+    )
+    assert report.baseline.accepted_precision == 1.0
+    assert report.cached.accepted_precision == 1.0
+
+
 def test_score_cache_evaluation_requires_explicit_baseline() -> None:
     with pytest.raises(TypeError):
         score_cache_evaluation([], [], _labels())  # type: ignore[call-arg]

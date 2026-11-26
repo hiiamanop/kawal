@@ -14,6 +14,8 @@ class CacheModeMetrics(BaseModel):
 
     total: int = Field(ge=0)
     accepted: int = Field(ge=0)
+    accepted_true: int = Field(ge=0)
+    accepted_precision: float = Field(ge=0.0, le=1.0)
     decision_correct: int = Field(ge=0)
     decision_accuracy: float = Field(ge=0.0, le=1.0)
     false_accepts: int = Field(ge=0)
@@ -56,6 +58,7 @@ def _llm_calls(run: HarnessRun) -> int:
 
 def _score_mode(runs: list[HarnessRun], labels: LabelSet) -> CacheModeMetrics:
     accepted = 0
+    accepted_true = 0
     correct = 0
     false_accepts = 0
     cost = 0.0
@@ -69,6 +72,8 @@ def _score_mode(runs: list[HarnessRun], labels: LabelSet) -> CacheModeMetrics:
         label = labels.labels.get(run.post.post_id) if run.post is not None else None
         if run.status == "COMPLETED":
             accepted += 1
+            if label is not None and label.is_complaint:
+                accepted_true += 1
         if label is not None and run.status in label.acceptable_statuses:
             correct += 1
         if run.status == "COMPLETED" and (
@@ -80,6 +85,8 @@ def _score_mode(runs: list[HarnessRun], labels: LabelSet) -> CacheModeMetrics:
     return CacheModeMetrics(
         total=total,
         accepted=accepted,
+        accepted_true=accepted_true,
+        accepted_precision=(accepted_true / accepted) if accepted else 0.0,
         decision_correct=correct,
         decision_accuracy=(correct / total) if total else 0.0,
         false_accepts=false_accepts,
