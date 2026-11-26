@@ -85,6 +85,27 @@ PROBLEM_CUES = (
     "mampet",
     "kebakaran",
 )
+CACHE_NON_ACTIONABLE_CUES = (
+    "dilansir",
+    "kata ",
+    "ujar",
+    "kapolsek",
+    "korban jiwa",
+    "warga terdampak",
+    "menurut saya",
+    "seharusnya",
+    "saya rasa",
+    "gada perubahan",
+    "ada yang tahu",
+    "ada yang tau",
+    "mau nanya",
+    "mau tanya",
+    "pengumuman",
+    "imbauan",
+    "pemadaman",
+    "jadwal",
+    "info gempa",
+)
 
 
 class SourceIntentAssessment(BaseModel):
@@ -96,6 +117,12 @@ class SourceIntentAssessment(BaseModel):
 
 def _contains_any(text: str, cues: Sequence[str]) -> bool:
     return any(cue in text for cue in cues)
+
+
+def has_non_actionable_cue(text: str) -> bool:
+    """Return True when any non-citizen cue appears, regardless of citizen cues."""
+
+    return _contains_any(text.strip().lower(), CACHE_NON_ACTIONABLE_CUES)
 
 
 def assess_source_intent(

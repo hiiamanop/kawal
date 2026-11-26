@@ -27,6 +27,12 @@ class BatchItemSummary(BaseModel):
     is_complaint: bool | None = None
     location_quality: str | None = None
     source_intent: str | None = None
+    cache_attempted: bool = False
+    cache_hit: bool = False
+    cache_reused: bool = False
+    cache_match_type: str | None = None
+    cache_similarity: float | None = None
+    llm_calls: int = Field(default=0, ge=0)
     cost_usd: float = Field(default=0.0, ge=0.0)
     latency_ms: float = Field(default=0.0, ge=0.0)
     error: str | None = None
@@ -143,6 +149,13 @@ class HarnessBatchRunner:
     @staticmethod
     def _summarize(post: SocialPost, run: HarnessRun) -> BatchItemSummary:
         case = run.case
+        cache = run.cache
+        llm_calls = sum(
+            1
+            for event in run.trace
+            if event.event == "agent.completed"
+            and event.data.get("provider") != "local"
+        )
         return BatchItemSummary(
             post_id=post.post_id,
             run_id=run.run_id,
@@ -153,6 +166,12 @@ class HarnessBatchRunner:
             is_complaint=case.triage.is_complaint if case is not None else None,
             location_quality=case.location_quality if case is not None else None,
             source_intent=case.source_intent if case is not None else None,
+            cache_attempted=cache.attempted if cache is not None else False,
+            cache_hit=cache.hit if cache is not None else False,
+            cache_reused=cache.reused if cache is not None else False,
+            cache_match_type=cache.match_type if cache is not None else None,
+            cache_similarity=cache.similarity if cache is not None else None,
+            llm_calls=llm_calls,
             cost_usd=run.cost.total_cost_usd,
             latency_ms=run.cost.total_latency_ms,
         )

@@ -133,6 +133,19 @@ class ComplaintCase(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class CacheProvenance(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    attempted: bool = False
+    hit: bool = False
+    reused: bool = False
+    match_type: Literal["EXACT", "SEMANTIC", "NONE"] = "NONE"
+    similarity: float = Field(default=0.0, ge=0.0, le=1.0)
+    source_case_id: str | None = None
+    recorded: bool = False
+    reason_codes: tuple[str, ...] = ()
+
+
 class HarnessRun(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -144,6 +157,7 @@ class HarnessRun(BaseModel):
     case: ComplaintCase | None = None
     trace: tuple[TraceEvent, ...] = ()
     cost: CostReport
+    cache: CacheProvenance | None = None
 
 
 class RunReceipt(BaseModel):

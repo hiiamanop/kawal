@@ -15,10 +15,10 @@ artifacts, or generated thesis reports. The script also unsets
 lane into an integration or live-model run. GitHub Actions uses the same script
 for the `test` job.
 
-Last local result after M5.2–M5.5:
+Last local result after M6:
 
 ```text
-611 passed, 43 skipped, 83 deselected
+672 passed, 43 skipped, 84 deselected
 ```
 
 ## Research and integration lane
@@ -32,8 +32,11 @@ blockers in [`tests/quarantine.txt`](../tests/quarantine.txt). It unsets the
 OpenRouter key because these tests must stay offline. Last local result:
 
 ```text
-52 passed, 2 skipped, 29 quarantined
+52 passed, 3 skipped, 29 quarantined
 ```
+
+The third skip is the pgvector integration test when no test database is
+configured.
 
 To see the full, unquarantined lane and its current failures:
 
@@ -56,6 +59,21 @@ The quarantine is not a fix. It keeps the research lane honest and runnable
 while the blockers stay visible. Remove a line from `tests/quarantine.txt` only
 after that test passes in a clean checkout and its blocker is resolved. Do not
 add core-lane tests to the quarantine; core tests must stay green.
+
+## M6 cache integration
+
+The pgvector path is covered by `tests/test_harness_cache_pgvector_integration.py`
+and marked `integration`. It skips unless `KAWAL_TEST_DATABASE_URL` is set.
+
+```bash
+podman compose up -d postgres
+psql "$KAWAL_TEST_DATABASE_URL" -f infra/migrations/014_m6_harness_semantic_cache.sql
+KAWAL_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres \
+  pytest -q tests/test_harness_cache_pgvector_integration.py
+```
+
+The compose Postgres image is `pgvector/pgvector:pg16`; the legacy
+`postgres:16-alpine` image does not provide the `vector` extension.
 
 ## Markers
 

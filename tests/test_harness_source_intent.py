@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from services.harness.source_intent import assess_source_intent
+from services.harness.source_intent import (
+    assess_source_intent,
+    has_non_actionable_cue,
+)
 from services.harness.sources import ReplayXSource
 
 
@@ -37,3 +40,12 @@ def test_source_intent_matches_labeled_fixtures() -> None:
         post = posts[post_id]
         assessment = assess_source_intent(post.text, post.author_handle)
         assert assessment.intent == expected, (post_id, assessment)
+
+
+def test_complaint_detail_does_not_trigger_cache_non_actionable_guard() -> None:
+    assert (
+        has_non_actionable_cue(
+            "Jalan rusak tanpa rambu peringatan, tolong segera diperbaiki"
+        )
+        is False
+    )
