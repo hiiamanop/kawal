@@ -147,13 +147,13 @@ def test_active_m3_synthetic_split_anti_leak_audit() -> None:
     assert len(audit.cross_split_text_duplicates) == 0
     assert len(audit.family_overlap) == 0
 
-    assert audit.split_trajectories["train"] == 432
-    assert audit.split_trajectories["dev"] == 144
-    assert audit.split_trajectories["test"] == 144
+    assert audit.split_trajectories["train"] == 480
+    assert audit.split_trajectories["dev"] == 120
+    assert audit.split_trajectories["test"] == 120
 
-    assert audit.split_families["train"] == 54
-    assert audit.split_families["dev"] == 18
-    assert audit.split_families["test"] == 18
+    assert audit.split_families["train"] == 96
+    assert audit.split_families["dev"] == 24
+    assert audit.split_families["test"] == 24
 
 
 def test_stratified_category_coverage() -> None:
@@ -256,7 +256,7 @@ def test_synthetic_heldout_clear_labeling() -> None:
     assert compute_file_sha256(test_synth_file) == compute_file_sha256(test_file)
 
     test_trajectories = load_trajectories_from_jsonl(test_synth_file)
-    assert len(test_trajectories) == 144
+    assert len(test_trajectories) == 120
     for t in test_trajectories:
         assert t.split == DatasetSplit.TEST
         assert t.world_truth.get("synthetic_heldout") is True
@@ -273,7 +273,7 @@ def test_synthetic_heldout_clear_labeling() -> None:
     assert heldout.get("is_synthetic") is True
     assert heldout.get("label") == "SYNTHETIC_HELDOUT"
     assert heldout.get("file") == "test_synthetic.jsonl"
-    assert heldout.get("trajectories_count") == 144
+    assert heldout.get("trajectories_count") == 120
 
     manifest_path = dataset_dir / "manifest.json"
     manifest = ArtifactManifest.from_file(manifest_path)
@@ -351,7 +351,7 @@ def test_integration_with_m3_components() -> None:
     assert len(corpus) >= 1500
 
     train_trajs = load_or_generate_dataset(str(dataset_dir / "train.jsonl"), seed=42)
-    assert len(train_trajs) == 432
+    assert len(train_trajs) == 480
 
     ner_samples = extract_trajectory_ner_samples(train_trajs)
     assert len(ner_samples) > 0
@@ -523,9 +523,9 @@ def test_exported_dataset_scale_and_family_diversity() -> None:
     assert splits["train"]["trajectories_count"] == 480
     assert splits["dev"]["trajectories_count"] == 120
     assert splits["test"]["trajectories_count"] == 120
-    assert splits["train"]["families_count"] == 48
-    assert splits["dev"]["families_count"] == 12
-    assert splits["test"]["families_count"] == 12
+    assert splits["train"]["families_count"] == 96
+    assert splits["dev"]["families_count"] == 24
+    assert splits["test"]["families_count"] == 24
 
 
 def test_exported_dataset_ner_evidence_density() -> None:

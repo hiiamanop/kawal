@@ -104,6 +104,12 @@ COMPACT_OBJECT_PATTERNS = re.compile(
     r"rambu\s+lalu\s+lintas|"
     r"tiang\s+listrik(?:\s+miring)?|"
     r"tiang\s+telepon(?:\s+roboh)?|"
+    # Public order and street facilities
+    r"kafe\s+karaoke|"
+    r"lapak\s+pedagang|"
+    r"papan\s+reklame|"
+    r"shelter\s+penumpang|atap\s+shelter|"
+    r"mesin\s+pabrik|getaran\s+mesin|"
     # Drainage / Flood / Water infrastructure
     r"pintu\s+air(?:\s+pengendali\s+banjir)?|"
     r"kolam\s+retensi(?:\s+pengendali\s+air\s+hujan)?|"

@@ -1,11 +1,6 @@
 # Research-lane quarantine.
 #
-# These are the remaining tests with a real content gap. Missing prerequisites
-# (Postgres, M3 artifacts, thesis artifacts) are skipped by the tests themselves.
+# These are tests with a real content gap. Missing prerequisites (Postgres, M3
+# artifacts, thesis artifacts) are skipped by the tests themselves.
 #
 # Remove an entry only after the underlying gap is fixed.
-
-# Six extended categories currently have only three independent families; the
-# dataset requirement is twelve per category.
-tests/test_m3_data_export.py::test_exported_dataset_scale_and_family_diversity
-tests/test_m3_dataset.py::test_family_diversity_per_category_at_least_12

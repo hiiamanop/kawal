@@ -98,7 +98,7 @@ INDEPENDENT_OBJECTS: dict[Category, list[str]] = {
     ],
     Category.PUBLIC_ORDER: [
         "juru parkir nakal menutup jalur pejalan kaki",
-        "musik hiburan malam mengganggu tidur warga",
+        "musik hiburan malam membuat warga sulit tidur",
         "keributan massa memicu ketegangan di pasar",
         "pondasi bangunan liar menutup aliran kali",
         "lapak pedagang memakan badan trotoar",
@@ -114,7 +114,7 @@ INDEPENDENT_OBJECTS: dict[Category, list[str]] = {
     ],
     Category.FIRE_RESCUE: [
         "rumah warga dilalap api akibat arus pendek",
-        "kabel listrik memercikkan bunga api",
+        "kabel jaringan listrik memercikkan bunga api",
         "koloni lebah bersengat membuat warga takut",
         "pohon tumbang menutup akses jalan",
         "gas bocor dari tabung dapur",
@@ -129,19 +129,19 @@ INDEPENDENT_OBJECTS: dict[Category, list[str]] = {
         "beras bantuan belum sampai ke penerima",
     ],
     Category.EDUCATION: [
-        "ruang kelas rusak berat atap bocor",
+        "kelas belajar rusak parah dan atapnya bocor",
         "biaya sekolah liar membebani orang tua",
         "guru kelas kurang sejak awal semester",
-        "laboratorium sekolah tidak layak pakai",
-        "buku pelajaran belum dibagikan",
+        "laboratorium di sekolah tak layak dipakai",
+        "buku materi pelajaran belum dibagikan",
         "plafon kelas runtuh menimpa meja",
     ],
     Category.PARKS_HOUSING: [
-        "lampu taman mati sejak sepekan",
+        "penerangan taman mati sejak sepekan",
         "ayunan dan perosotan rusak membahayakan",
-        "bangunan liar menutup bantaran",
+        "bangunan tanpa izin menutup bantaran",
         "permukiman kumuh tanpa drainase",
-        "pohon taman keropos rawan tumbang",
+        "pohon di taman keropos dan rawan tumbang",
         "kursi taman retak dan berkarat",
     ],
 }

@@ -210,7 +210,7 @@ CATEGORY_ANCHOR_LEXICONS: dict[Category, dict[str, tuple[str, ...]]] = {
             "armada angkutan umum",
             "jalur sepeda diserobot",
             "penyeberangan jalan zebra cross",
-            "lampu pengatur lalu lintas padam",
+            "lampu lalu lintas mati",
         ),
         "forbidden_terms": (),
     },
@@ -666,7 +666,7 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         family_id="water-sand-sediment-tap",
         category=Category.CLEAN_WATER,
         issue="semburan kran keruh bercampur butiran pasir kasar menyumbat keran",
-        landmark="deretan perumahan rajawali blok c",
+        landmark="perumahan rajawali blok c",
         jurisdiction="Kelurahan Kalijaga, Kecamatan Harjamukti",
         city="Kota Cirebon",
         urgency="HIGH",
@@ -969,6 +969,326 @@ EXTENDED_TEMPLATES: tuple[ScenarioTemplate, ...] = (
         },
     ),
 )
+
+_CURATED_FAMILIES: dict[Category, tuple[tuple[str, str, str], ...]] = {
+    Category.PUBLIC_ORDER: (
+        (
+            "po-pungli-pasar",
+            "pemerasan juru parkir di pasar",
+            "pemerasan juru parkir di pasar membuat pedagang resah",
+        ),
+        (
+            "po-karaoke",
+            "kafe karaoke berisik sampai pagi",
+            "kafe karaoke berisik sampai pagi mengganggu warga",
+        ),
+        (
+            "po-balap-gang",
+            "pembalap motor ugal-ugalan di gang",
+            "pembalap motor ugal-ugalan di gang membahayakan anak",
+        ),
+        (
+            "po-trotoar",
+            "kendaraan menepi di badan trotoar",
+            "kendaraan menepi di badan trotoar menghalangi pejalan",
+        ),
+        (
+            "po-remaja",
+            "keributan kelompok remaja di lapangan",
+            "keributan kelompok remaja di lapangan meresahkan warga",
+        ),
+        (
+            "po-lapak",
+            "lapak pedagang menutup akses pejalan",
+            "lapak pedagang menutup akses pejalan kaki",
+        ),
+        (
+            "po-calo",
+            "pemalakan calo di terminal",
+            "pemalakan calo di terminal merugikan penumpang",
+        ),
+        (
+            "po-pabrik",
+            "getaran mesin pabrik mengganggu istirahat",
+            "getaran mesin pabrik mengganggu istirahat warga",
+        ),
+        (
+            "po-gudang",
+            "pembalap jalanan di kawasan pergudangan",
+            "pembalap jalanan di kawasan pergudangan memicu kecelakaan",
+        ),
+    ),
+    Category.TRANSPORTATION: (
+        (
+            "tr-mikrolet",
+            "mikrolet berhenti di tengah lajur",
+            "mikrolet berhenti di tengah lajur menutup arus",
+        ),
+        (
+            "tr-petunjuk",
+            "papan petunjuk arah tertutup dahan",
+            "papan petunjuk arah tertutup dahan di tikungan",
+        ),
+        (
+            "tr-shelter",
+            "atap shelter penumpang roboh",
+            "atap shelter penumpang roboh menimpa kursi tunggu",
+        ),
+        (
+            "tr-bus",
+            "bus kota berhenti di bahu jalan",
+            "bus kota berhenti di bahu jalan menutup arus",
+        ),
+        (
+            "tr-pesepeda",
+            "pengendara sepeda terhimpit kendaraan",
+            "pengendara sepeda terhimpit kendaraan di jalur lambat",
+        ),
+        (
+            "tr-marka",
+            "marka penyeberangan pudar",
+            "marka penyeberangan pudar di depan sekolah",
+        ),
+        (
+            "tr-lampu",
+            "lampu merah simpang mati",
+            "lampu merah simpang mati menyebabkan antrean",
+        ),
+        (
+            "tr-taksi",
+            "taksi berhenti di larangan parkir",
+            "taksi berhenti di larangan parkir menutup tikungan",
+        ),
+        (
+            "tr-reklame",
+            "papan reklame menutupi rambu",
+            "papan reklame menutupi rambu petunjuk arah",
+        ),
+    ),
+    Category.FIRE_RESCUE: (
+        (
+            "fr-arus-pendek",
+            "rumah terbakar karena hubungan arus pendek",
+            "rumah terbakar karena hubungan arus pendek pada permukiman padat",
+        ),
+        (
+            "fr-panel",
+            "percikan api dari panel listrik",
+            "percikan api dari panel listrik membuat warga panik",
+        ),
+        (
+            "fr-lebah",
+            "lebah besar bersarang di atap",
+            "lebah besar bersarang di atap membuat anak takut",
+        ),
+        (
+            "fr-kelapa",
+            "batang kelapa tumbang menutup gang",
+            "batang kelapa tumbang menutup gang permukiman",
+        ),
+        (
+            "fr-kompor",
+            "kebocoran gas kompor rumah",
+            "kebocoran gas kompor rumah memicu bau menyengat",
+        ),
+        (
+            "fr-asap",
+            "kotak panel berasap di sekolah",
+            "kotak panel berasap di sekolah memicu kepanikan",
+        ),
+        (
+            "fr-gudang",
+            "kebakaran gudang penyimpanan",
+            "kebakaran gudang penyimpanan merembet ke rumah",
+        ),
+        (
+            "fr-tawon",
+            "tawon besar menyerang siswa",
+            "tawon besar menyerang siswa di halaman",
+        ),
+        (
+            "fr-mahoni",
+            "pohon mahoni roboh menimpa pagar",
+            "pohon mahoni roboh menimpa pagar sekolah",
+        ),
+    ),
+    Category.SOCIAL_AFFAIRS: (
+        (
+            "sa-dana",
+            "dana bantuan warga tertahan",
+            "dana bantuan warga tertahan di kelurahan",
+        ),
+        (
+            "sa-rentan",
+            "keluarga rentan tanpa pendampingan",
+            "keluarga rentan tanpa pendampingan hidup di kolong jembatan",
+        ),
+        (
+            "sa-lansia",
+            "lansia terbaring tanpa kerabat",
+            "lansia terbaring tanpa kerabat butuh perawatan",
+        ),
+        (
+            "sa-data",
+            "penerima bantuan tak cocok dengan data",
+            "penerima bantuan tak cocok dengan data membuat warga protes",
+        ),
+        (
+            "sa-anak",
+            "anak berhenti bersekolah bekerja di jalan",
+            "anak berhenti bersekolah bekerja di jalan",
+        ),
+        (
+            "sa-beras",
+            "jatah beras warga belum tiba",
+            "jatah beras warga belum tiba di posko",
+        ),
+        (
+            "sa-panti",
+            "panti asuhan kekurangan pembimbing",
+            "panti asuhan kekurangan pembimbing untuk anak",
+        ),
+        (
+            "sa-kursi-roda",
+            "kursi roda untuk lansia belum tersedia",
+            "kursi roda untuk lansia belum tersedia di puskesmas",
+        ),
+        (
+            "sa-sembako",
+            "bantuan sembako salah alamat",
+            "bantuan sembako salah alamat diterima warga lain",
+        ),
+    ),
+    Category.EDUCATION: (
+        (
+            "ed-atap",
+            "kelas belajar atapnya bocor",
+            "kelas belajar atapnya bocor saat hujan",
+        ),
+        (
+            "ed-seragam",
+            "biaya seragam memberatkan keluarga",
+            "biaya seragam memberatkan keluarga murid",
+        ),
+        (
+            "ed-honor",
+            "guru honor belum menerima upah",
+            "guru honor belum menerima upah sejak semester lalu",
+        ),
+        (
+            "ed-laboratorium",
+            "laboratorium kebanjiran saat hujan",
+            "laboratorium kebanjiran saat hujan merusak alat",
+        ),
+        (
+            "ed-buku",
+            "buku paket belum dibagikan",
+            "buku paket belum dibagikan kepada siswa",
+        ),
+        (
+            "ed-plafon",
+            "plafon ruang guru ambrol",
+            "plafon ruang guru ambrol menimpa lemari",
+        ),
+        (
+            "ed-meja",
+            "meja kursi siswa banyak patah",
+            "meja kursi siswa banyak patah di kelas",
+        ),
+        (
+            "ed-pungli",
+            "pungutan seragam sekolah memberatkan",
+            "pungutan seragam sekolah memberatkan keluarga miskin",
+        ),
+        (
+            "ed-guru",
+            "guru kelas sering tidak hadir",
+            "guru kelas sering tidak hadir dua minggu",
+        ),
+    ),
+    Category.PARKS_HOUSING: (
+        (
+            "ph-penerangan",
+            "penerangan jalur pejalan mati",
+            "penerangan jalur pejalan mati sejak awal pekan",
+        ),
+        (
+            "ph-perosotan",
+            "perosotan anak rusak",
+            "perosotan anak rusak membahayakan",
+        ),
+        (
+            "ph-gubuk",
+            "gubuk berdiri di tepi kali",
+            "gubuk berdiri di tepi kali menutup aliran",
+        ),
+        (
+            "ph-drainase",
+            "permukiman padat tanpa drainase",
+            "permukiman padat tanpa drainase saat banjir",
+        ),
+        (
+            "ph-dahan",
+            "dahan pohon peneduh mudah patah",
+            "dahan pohon peneduh mudah patah di taman",
+        ),
+        (
+            "ph-kursi",
+            "bangku taman hilang dibawa orang",
+            "bangku taman hilang dibawa orang",
+        ),
+        (
+            "ph-lift",
+            "lift rusun sering macet",
+            "lift rusun sering macet menahan warga",
+        ),
+        (
+            "ph-ayunan",
+            "ayunan besi berkarat",
+            "ayunan besi berkarat membahayakan anak",
+        ),
+        (
+            "ph-beringin",
+            "pohon beringin tumbang",
+            "pohon beringin tumbang menutup jalan taman",
+        ),
+    ),
+}
+
+
+def _build_curated_family_templates() -> tuple[ScenarioTemplate, ...]:
+    templates: list[ScenarioTemplate] = []
+    for category, families in _CURATED_FAMILIES.items():
+        base = next(
+            template for template in DEFAULT_TEMPLATES if template.category == category
+        )
+        for code, anchor, issue in families:
+            if anchor not in issue:
+                raise ValueError(f"curated issue must contain anchor: {code}")
+            templates.append(
+                ScenarioTemplate(
+                    family_id=f"curated-{code}",
+                    category=category,
+                    issue=issue,
+                    landmark=f"gang {code}",
+                    jurisdiction=f"Wil{code}, Zon{code}",
+                    city=f"Kot{code}",
+                    urgency=base.urgency,
+                    world_truth=dict(base.world_truth),
+                )
+            )
+    return tuple(templates)
+
+
+_CURATED_ANCHORS: dict[Category, tuple[str, ...]] = {
+    category: tuple(anchor for _, anchor, _ in families)
+    for category, families in _CURATED_FAMILIES.items()
+}
+for _category, _anchors in _CURATED_ANCHORS.items():
+    _entry = CATEGORY_ANCHOR_LEXICONS[_category]
+    _entry["anchors"] = tuple(_entry["anchors"]) + _anchors
+
+EXTENDED_TEMPLATES = EXTENDED_TEMPLATES + _build_curated_family_templates()
 
 ALL_SCENARIO_TEMPLATES: tuple[ScenarioTemplate, ...] = (
     DEFAULT_TEMPLATES + EXTENDED_TEMPLATES
