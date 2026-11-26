@@ -79,6 +79,11 @@ def build_parser() -> argparse.ArgumentParser:
         default="deterministic",
     )
     parser.add_argument(
+        "--embedder-path",
+        default=None,
+        help="Local IndoBERT artifact directory with config.json",
+    )
+    parser.add_argument(
         "--allow-fallback-semantic",
         action="store_true",
         help="Allow semantic reuse with the deterministic fallback embedder",
@@ -221,11 +226,12 @@ def main(argv: list[str] | None = None) -> int:
         print("No posts found for the requested evaluation", file=sys.stderr)
         return 2
 
-    embedder = (
-        DeterministicFallbackEmbedder(dim=768)
-        if args.embedder == "deterministic"
-        else IndoBertEmbedder.get_instance()
-    )
+    if args.embedder == "deterministic":
+        embedder = DeterministicFallbackEmbedder(dim=768)
+    elif args.embedder_path:
+        embedder = IndoBertEmbedder(model_path=args.embedder_path)
+    else:
+        embedder = IndoBertEmbedder.get_instance()
     try:
         store = _build_store(args)
     except (ValueError, ImportError) as exc:

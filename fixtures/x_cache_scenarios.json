@@ -1,0 +1,89 @@
+{
+  "scenarios": [
+    {
+      "scenario_id": "road-kopo-paraphrase",
+      "seed": {
+        "post_id": "seed-road-kopo",
+        "platform": "x",
+        "author_handle": "warga",
+        "text": "Min, jalan di Jl. Kopo Bandung rusak parah, ada lubang besar. Tolong segera diperbaiki."
+      },
+      "query": {
+        "post_id": "query-road-kopo",
+        "platform": "x",
+        "author_handle": "warga",
+        "text": "Jalan Kopo Bandung berlubang parah, tolong segera diperbaiki."
+      },
+      "expected_reuse": true,
+      "notes": "Same road and location, paraphrased report."
+    },
+    {
+      "scenario_id": "road-cihampelas-paraphrase",
+      "seed": {
+        "post_id": "seed-flood-cihampelas",
+        "platform": "x",
+        "author_handle": "warga",
+        "text": "Min, tolong, banjir di Jalan Cihampelas depan Hotel Grand Tjokro, air tergenang, banjir parah."
+      },
+      "query": {
+        "post_id": "query-flood-cihampelas",
+        "platform": "x",
+        "author_handle": "warga",
+        "text": "Min, tolong, air meluap di Jalan Cihampelas depan Grand Tjokro, banjir parah."
+      },
+      "expected_reuse": true,
+      "notes": "Same flood location, paraphrased report."
+    },
+    {
+      "scenario_id": "road-kopo-different-location",
+      "seed": {
+        "post_id": "seed-road-kopo-location",
+        "platform": "x",
+        "author_handle": "warga",
+        "text": "Min, jalan di Jl. Kopo Bandung rusak parah, ada lubang besar. Tolong segera diperbaiki."
+      },
+      "query": {
+        "post_id": "query-road-cimahi",
+        "platform": "x",
+        "author_handle": "warga",
+        "text": "Jalan Cimahi berlubang parah, tolong segera diperbaiki."
+      },
+      "expected_reuse": false,
+      "notes": "Same category, different location."
+    },
+    {
+      "scenario_id": "road-kopo-waste-query",
+      "seed": {
+        "post_id": "seed-road-kopo-waste",
+        "platform": "x",
+        "author_handle": "warga",
+        "text": "Min, jalan di Jl. Kopo Bandung rusak parah, ada lubang besar. Tolong segera diperbaiki."
+      },
+      "query": {
+        "post_id": "query-waste-kopo",
+        "platform": "x",
+        "author_handle": "warga",
+        "text": "Sampah menumpuk di Jl. Kopo Bandung, tolong segera diangkut."
+      },
+      "expected_reuse": false,
+      "notes": "Same location, different category."
+    },
+    {
+      "scenario_id": "road-kopo-opinion",
+      "seed": {
+        "post_id": "seed-road-kopo-opinion",
+        "platform": "x",
+        "author_handle": "warga",
+        "text": "Min, jalan di Jl. Kopo Bandung rusak parah, ada lubang besar. Tolong segera diperbaiki."
+      },
+      "query": {
+        "post_id": "query-opinion-kopo",
+        "platform": "x",
+        "author_handle": "warga",
+        "text": "Menurut saya jalan Kopo rusak parah, tolong segera diperbaiki."
+      },
+      "expected_reuse": false,
+      "notes": "Opinion with complaint words must not reuse."
+    }
+  ]
+}

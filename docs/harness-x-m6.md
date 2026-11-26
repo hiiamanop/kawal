@@ -223,13 +223,42 @@ The 18-post number is intentionally small: only accepted, rule-consistent cases
 are cacheable. The duplicate stream measures the savings when repeats actually
 exist while still exercising non-complaint posts.
 
+## Semantic calibration
+
+`fixtures/x_cache_scenarios.json` contains five near-duplicate scenarios:
+two positive paraphrases and three negative cases covering different location,
+different category, and opinion wording.
+
+Run the threshold sweep with a local IndoBERT artifact:
+
+```bash
+python scripts/evaluate_cache_scenarios.py \
+  --fixture fixtures/x_cache_scenarios.json \
+  --embedder indobert \
+  --embedder-path artifacts/indobert-base-p1 \
+  --thresholds 0.80,0.85,0.90,0.92,0.95 \
+  --out runs/m6-scenarios
+```
+
+With `indobenchmark/indobert-base-p1`:
+
+- threshold 0.80 and 0.85: precision 1.0, recall 1.0;
+- threshold 0.90 and above: precision 1.0, recall 0.5;
+- the missed positive was the Kopo paraphrase with similarity 0.860.
+
+The scenario set is small and uses a base IndoBERT model, not the trained DAPT
+artifact. Treat 0.85 as the starting point for this base model, not as a
+production default. Recalibrate against the real DAPT artifact and a larger
+near-duplicate set before lowering the default 0.92.
+
 ## Limits
 
 - Live evaluation used exact matching because the deterministic fallback
   disables semantic matching. Semantic routing is covered by tests with the
   fallback explicitly enabled.
-- Semantic thresholds are not calibrated against a large real near-duplicate
-  set.
+- Semantic thresholds are calibrated only on five synthetic scenarios with a
+  base IndoBERT model. The trained DAPT artifact and a larger real
+  near-duplicate set still need calibration.
 - Postgres integration is marked `integration` and is not part of core CI. It
   was run locally against compose: the round-trip test and the HNSW planner
   check passed, and a `--inner rule` smoke run produced 3 exact hits with zero
