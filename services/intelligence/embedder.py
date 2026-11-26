@@ -84,11 +84,18 @@ class DeterministicFallbackEmbedder(TextEmbedder):
 
 
 class IndoBertEmbedder(TextEmbedder):
-    """CPU-optimized IndoBERT DAPT embedder with attention-weighted mean pooling and L2 normalization."""
+    """CPU-optimized IndoBERT embedder with CLS or mean pooling and L2 normalization."""
 
     _instance: IndoBertEmbedder | None = None
 
-    def __init__(self, model_path: str | Path | None = None) -> None:
+    def __init__(
+        self,
+        model_path: str | Path | None = None,
+        pooling: str = "cls",
+    ) -> None:
+        if pooling not in ("cls", "mean"):
+            raise ValueError("pooling must be 'cls' or 'mean'")
+        self._pooling = pooling
         if model_path is not None:
             cand_paths = [Path(model_path).resolve()]
         else:
@@ -110,7 +117,7 @@ class IndoBertEmbedder(TextEmbedder):
             self._fallback = DeterministicFallbackEmbedder(dim=768)
             self._model = None
             self._tokenizer = None
-            self.model_id = "indobert-fallback-768"
+            self.model_id = f"indobert-fallback-768-{pooling}"
             self.is_fallback = True
             return
 
@@ -123,7 +130,9 @@ class IndoBertEmbedder(TextEmbedder):
             self._model = AutoModel.from_pretrained(str(chosen_path))
             self._model.eval()
             self._fallback = None
-            self.model_id = f"{chosen_path.name}-{_artifact_fingerprint(chosen_path)}"
+            self.model_id = (
+                f"{chosen_path.name}-{_artifact_fingerprint(chosen_path)}-{pooling}"
+            )
             self.is_fallback = False
             logger.info("IndoBertEmbedder initialized from %s", chosen_path)
         except Exception as exc:
@@ -134,13 +143,17 @@ class IndoBertEmbedder(TextEmbedder):
             self._fallback = DeterministicFallbackEmbedder(dim=768)
             self._model = None
             self._tokenizer = None
-            self.model_id = "indobert-fallback-768"
+            self.model_id = f"indobert-fallback-768-{pooling}"
             self.is_fallback = True
 
     @classmethod
-    def get_instance(cls, model_path: str | Path | None = None) -> IndoBertEmbedder:
-        if cls._instance is None:
-            cls._instance = cls(model_path=model_path)
+    def get_instance(
+        cls,
+        model_path: str | Path | None = None,
+        pooling: str = "cls",
+    ) -> IndoBertEmbedder:
+        if cls._instance is None or cls._instance._pooling != pooling:
+            cls._instance = cls(model_path=model_path, pooling=pooling)
         return cls._instance
 
     def embed_text(self, text: str) -> list[float]:
@@ -163,18 +176,20 @@ class IndoBertEmbedder(TextEmbedder):
                 return_tensors="pt",
             )
             out = self._model(**inputs)
-            # Attention-weighted mean pooling
-            mask = (
-                inputs["attention_mask"]
-                .unsqueeze(-1)
-                .expand(out.last_hidden_state.size())
-                .float()
-            )
-            sum_embeddings = self._torch.sum(out.last_hidden_state * mask, 1)
-            sum_mask = self._torch.clamp(mask.sum(1), min=1e-9)
-            mean_pooled = sum_embeddings / sum_mask
+            if self._pooling == "cls":
+                pooled = out.last_hidden_state[:, 0, :]
+            else:
+                mask = (
+                    inputs["attention_mask"]
+                    .unsqueeze(-1)
+                    .expand(out.last_hidden_state.size())
+                    .float()
+                )
+                sum_embeddings = self._torch.sum(out.last_hidden_state * mask, 1)
+                sum_mask = self._torch.clamp(mask.sum(1), min=1e-9)
+                pooled = sum_embeddings / sum_mask
 
-            vecs = mean_pooled.cpu().numpy()
+            vecs = pooled.cpu().numpy()
             norms = np.linalg.norm(vecs, axis=1, keepdims=True)
             normed = vecs / np.maximum(norms, 1e-9)
             return normed.astype(float).tolist()
